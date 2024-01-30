@@ -1,0 +1,45 @@
+﻿---
+BasedOnStyle: LLVM
+IndentWidth: 2
+TabWidth: 2
+UseTab: Never
+ColumnLimit: 140
+
+Language: Cpp
+Standard: c++20
+
+DerivePointerAlignment: false
+PointerAlignment: Left
+IndentAccessModifiers: false
+AlignAfterOpenBracket: AlwaysBreak
+AlignArrayOfStructures: Right
+AlignConsecutiveAssignments: Consecutive
+EmptyLineBeforeAccessModifier: LogicalBlock
+FixNamespaceComments: true
+BreakBeforeBraces: Linux
+PenaltyReturnTypeOnItsOwnLine: 1024
+Cpp11BracedListStyle: false
+
+SortIncludes: true
+SortUsingDeclarations: true
+AlignTrailingComments: true
+SpacesBeforeTrailingComments: 1
+
+NamespaceIndentation: None
+MaxEmptyLinesToKeep: 1
+KeepEmptyLinesAtTheStartOfBlocks: false
+
+AllowAllParametersOfDeclarationOnNextLine: true
+AllowAllArgumentsOnNextLine : true
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: Inline
+
+BitFieldColonSpacing: None
+AlignConsecutiveBitFields: Consecutive
+
+BreakConstructorInitializers: BeforeComma
+ConstructorInitializerIndentWidth: 0
