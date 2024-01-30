@@ -1,0 +1,74 @@
+[
+{
+    "name": "taskflow",
+    "source": {
+        "type": "git",
+        "url": "https://github.com/taskflow/taskflow.git",
+        "revision": "v3.6.0"
+    }
+},
+{
+    "name": "lightweightvk",
+    "source": {
+        "type": "git",
+        "url": "https://github.com/corporateshark/lightweightvk.git",
+        "revision": "d1bb51f8b345961201f689ef930137ed2da0a24f"
+    }
+},
+{
+    "name": "glm",
+    "source": {
+        "type": "git",
+        "url": "https://github.com/g-truc/glm.git",
+        "revision": "0.9.9.8"
+    }
+},
+{
+    "name": "assimp",
+    "source": {
+        "type": "git",
+        "url": "https://github.com/assimp/assimp.git",
+        "revision": "v5.3.1"
+    }
+},
+{
+    "name": "meshoptimizer",
+    "source": {
+        "type": "git",
+        "url": "https://github.com/zeux/meshoptimizer",
+        "revision": "v0.20"
+    }
+},
+{
+    "name": "glTF-Sample-Assets",
+    "source": {
+        "type": "git",
+        "url": "https://github.com/KhronosGroup/glTF-Sample-Assets.git",
+        "revision": "9f68cddff1304a4e6d47917551a573b44ef1cc47"
+    }
+},
+{
+    "name": "rply",
+    "source": {
+        "type": "archive",
+        "url": "https://w3.impa.br/~diego/software/rply/rply-1.1.4.tar.gz",
+        "sha1": "05e1491cf70dceb6962320a4279f849564ea88c5"
+    }
+},
+{
+    "name": "3d-gaussian-splatting/train",
+    "source": {
+        "type": "archive",
+        "url": "https://github.com/corporateshark/3d-gaussian-splatting/raw/master/train.zip",
+        "sha1": "b486b8e362295ed861a15c996e2da967f8427229"
+    }
+},
+{
+    "name": "bistro/Exterior",
+    "source": {
+        "type": "archive",
+        "url": "https://casual-effects.com/g3d/data10/research/model/bistro/Exterior.zip",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.116 Safari/537.36"
+    }
+}
+]
