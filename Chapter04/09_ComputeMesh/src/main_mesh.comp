@@ -1,0 +1,91 @@
+//
+layout (local_size_x = 2, local_size_y = 1, local_size_z = 1) in;
+
+#include <Chapter04/09_ComputeMesh/src/common.sp>
+
+struct VertexData {
+  vec4 pos;
+  vec4 tc;
+  vec4 norm;
+};
+
+layout (buffer_reference) buffer VertexBuffer {
+  VertexData vertices[];
+} vbo;
+
+VertexData torusKnot(vec2 uv, float p, float q)
+{
+  const float baseRadius    = 5.0;
+  const float segmentRadius = 3.0;
+  const float tubeRadius    = 0.5;
+
+  float ct = cos( uv.x );
+  float st = sin( uv.x );
+
+  float qp = q / p;
+  float qps = qp * segmentRadius;
+
+  float arg = uv.x * qp;
+  float sqp = sin( arg );
+  float cqp = cos( arg );
+
+  float BSQP = baseRadius + segmentRadius * cqp;
+
+  float dxdt = -qps * sqp * ct - st * BSQP;
+  float dydt = -qps * sqp * st + ct * BSQP;
+  float dzdt =  qps * cqp;
+
+  vec3 r    = vec3(BSQP * ct, BSQP * st, segmentRadius * sqp);
+  vec3 drdt = vec3(dxdt, dydt, dzdt);
+
+  vec3 v1 = normalize(cross(r, drdt));
+  vec3 v2 = normalize(cross(v1, drdt));
+
+  float cv = cos( uv.y );
+  float sv = sin( uv.y );
+
+  VertexData res;
+  res.pos = vec4(r + tubeRadius * ( v1 * sv + v2 * cv ), 1);
+  res.norm = vec4(cross(v1 * cv - v2 * sv, drdt ), 0);
+  return res;
+}
+
+mat3 rotY(float angle)
+{
+  float c = cos(angle), s = sin(angle);
+  return mat3(c, 0, -s, 0, 1, 0, s, 0, c);
+}
+
+mat3 rotZ(float angle)
+{
+  float c = cos(angle), s = sin(angle);
+  return mat3(c, -s, 0, s, c, 0, 0, 0, 1);
+}
+
+void main()
+{
+  uint index = gl_GlobalInvocationID.x;
+
+  vec2 numUV = vec2(pc.numU, pc.numV);
+  vec2 ij = vec2(float(index / pc.numV), float(index % pc.numV));
+
+  const vec2 maxUV1 = 2.0 * 3.141592653 * vec2(pc.P1, 1.0);
+  vec2 uv1 = ij * maxUV1 / (numUV - vec2(1));
+
+  const vec2 maxUV2 = 2.0 * 3.141592653 * vec2(pc.P2, 1.0);
+  vec2 uv2 = ij * maxUV2 / (numUV - vec2(1));
+
+  mat3 modelMatrix = rotY(0.5 * pc.time) * rotZ(0.5 * pc.time);
+
+  VertexData v1 = torusKnot(uv1, pc.P1, pc.Q1);
+  VertexData v2 = torusKnot(uv2, pc.P2, pc.Q2);
+  vec3 pos = mix(v1.pos.xyz, v2.pos.xyz, pc.morph);
+  vec3 norm = mix(v1.norm.xyz, v2.norm.xyz, pc.morph);
+
+  VertexData vtx;
+  vtx.pos  = vec4(modelMatrix * pos, 1);
+  vtx.tc   = vec4(ij / numUV, 0, 0);
+  vtx.norm = vec4(modelMatrix * norm, 0);
+
+  VertexBuffer(pc.bufferId).vertices[index] = vtx;
+}
