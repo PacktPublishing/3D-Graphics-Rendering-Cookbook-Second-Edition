@@ -36,7 +36,7 @@ Software and Hardware List
 | 1-10 | Python 3.x | Windows, Linux |
 | 1-10 | Vulkan SDK | Windows, Linux |
 
-The code runs on graphics cards as old as GeForce 740M. However, GeForce GTX 1060 or newer is strongly recommended.
+The code runs on graphics cards which support Vulkan 1.3. GeForce RTX 2060 or newer is strongly recommended.
 
 ## Instructions and Navigations
 All of the code is organized into folders. For example, Chapter01.
@@ -87,7 +87,7 @@ Sergey Kosarevsky is a rendering lead at Ubisoft RedLynx. He worked in the mobil
 Viktor Latypov is a software engineer specializing in embedded C/C++, 3D graphics, and computer vision. With more than 15 years of software development experience and a Ph.D. in Applied Mathematics, he has implemented a number of real-time renderers for medical and automotive applications over the last 10 years.
 Together with Sergey, he has co-authored two books on mobile software development in C++
 
-**Viktor Latypov**
+**Alexey Medvedev**
 Alexey Medvedev is a AR/VR tech lead at Meta.
 
 
