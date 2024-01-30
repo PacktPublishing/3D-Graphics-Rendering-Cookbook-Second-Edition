@@ -80,18 +80,25 @@ cd ..
 ```
 
 ## Get to Know the Authors
+
 **Sergey Kosarevsky**
+
 Sergey Kosarevsky is a rendering lead at Ubisoft RedLynx. He worked in the mobile industry at SPB Software, Yandex, Layar and Blippar, TWNKLS, and DAQRI, where he designed and implemented real-time rendering technology. He has more than 18 years of software development experience and more than 10 years of mobile and embedded 3D graphics experience. In his Ph.D. thesis, Sergey employed computer vision to solve mechanical engineering problems. He has co-authored several books on mobile software development in C++.
 
 **Viktor Latypov**
+
 Viktor Latypov is a software engineer specializing in embedded C/C++, 3D graphics, and computer vision. With more than 15 years of software development experience and a Ph.D. in Applied Mathematics, he has implemented a number of real-time renderers for medical and automotive applications over the last 10 years.
 Together with Sergey, he has co-authored two books on mobile software development in C++
 
 **Alexey Medvedev**
-Alexey Medvedev is a AR/VR tech lead at Meta.
+
+Alexey Medvedev is an AR/VR tech lead at Meta.
 
 
 ## Other books by the authors
+
 [Android NDK Game Development Cookbook](https://www.packtpub.com/product/android-ndk-game-development-cookbook/9781782167785?utm_source=github&utm_medium=repository&utm_campaign=9781782167785)
 
 [Mastering Android NDK](https://www.amazon.com/Mastering-Android-NDK-Sergey-Kosarevsky-ebook/dp/B0151N0GAO)
+
+[3D Graphics Rendering Cookbook](https://www.amazon.com/Graphics-Rendering-Cookbook-comprehensive-algorithms/dp/1838986197)
