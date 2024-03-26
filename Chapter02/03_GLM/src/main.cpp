@@ -70,10 +70,11 @@ int main()
         buf.cmdBeginRendering(
             { .color = { { .loadOp = lvk::LoadOp_Clear, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } } } },
             { .color = { { .texture = ctx->getCurrentSwapchainTexture() } } });
-        buf.cmdPushConstants(p * m);
+
         buf.cmdPushDebugGroupLabel("Solid cube", 0xff0000ff);
         {
           buf.cmdBindRenderPipeline(pipelineSolid);
+          buf.cmdPushConstants(p * m);
           buf.cmdDraw(36);
         }
         buf.cmdPopDebugGroupLabel();

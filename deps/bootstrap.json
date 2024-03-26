@@ -12,7 +12,7 @@
     "source": {
         "type": "git",
         "url": "https://github.com/corporateshark/lightweightvk.git",
-        "revision": "d1bb51f8b345961201f689ef930137ed2da0a24f"
+        "revision": "834883adf8d6d47b895f7aef7f4b36f66560af5b"
     }
 },
 {
@@ -20,7 +20,7 @@
     "source": {
         "type": "git",
         "url": "https://github.com/g-truc/glm.git",
-        "revision": "0.9.9.8"
+        "revision": "1.0.0"
     }
 },
 {
@@ -69,6 +69,27 @@
         "type": "archive",
         "url": "https://casual-effects.com/g3d/data10/research/model/bistro/Exterior.zip",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.116 Safari/537.36"
+    }
+},
+{
+    "name": "explosion0",
+    "source": {
+        "type": "archive",
+        "url": "https://unity3d.com/files/labs/downloads/vfx/assets01/Explosion00/Explosion00-sequence-tga.zip"
+    }
+},
+{
+    "name": "explosion1",
+    "source": {
+        "type": "archive",
+        "url": "https://unity3d.com/files/labs/downloads/vfx/assets01/Explosion01/Explosion01-sequence-tga.zip"
+    }
+},
+{
+    "name": "explosion2",
+    "source": {
+        "type": "archive",
+        "url": "https://unity3d.com/files/labs/downloads/vfx/assets01/Explosion02/Explosion02-sequence-tga.zip"
     }
 }
 ]
