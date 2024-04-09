@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.19)
 
 project(RenderingCookbook2 CXX C)
 
@@ -7,9 +7,15 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(COOKBOOK_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(COOKBOOK_DEPS_CACHE_FILE "${COOKBOOK_ROOT_DIR}/deps/.bootstrap.json")
 
+if($ENV{CLION_IDE})
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${COOKBOOK_ROOT_DIR})
+endif()
+
 find_package(Python3 COMPONENTS Interpreter)
 
 execute_process(COMMAND ${Python3_EXECUTABLE} deploy_deps.py WORKING_DIRECTORY ${COOKBOOK_ROOT_DIR} COMMAND_ERROR_IS_FATAL ANY)
+execute_process(COMMAND ${Python3_EXECUTABLE} deploy_deps.py WORKING_DIRECTORY ${COOKBOOK_ROOT_DIR}/deps/src/lightweightvk COMMAND_ERROR_IS_FATAL ANY)
+
 add_custom_command(COMMAND ${Python3_EXECUTABLE} deploy_deps.py OUTPUT ${COOKBOOK_DEPS_CACHE_FILE}
                    DEPENDS "${COOKBOOK_ROOT_DIR}/deps/bootstrap.json" WORKING_DIRECTORY ${COOKBOOK_ROOT_DIR})
 add_custom_target(Dependencies DEPENDS ${COOKBOOK_DEPS_CACHE_FILE})
@@ -75,7 +81,7 @@ add_definitions(-DGLM_ENABLE_EXPERIMENTAL)
 include_directories(.)
 include_directories(deps/src)
 include_directories(deps/src/taskflow)
-include_directories(deps/src/glm)
+include_directories(deps/src/lightweightvk/third-party/deps/src/glm)
 #include_directories(deps/src/rapidjson/include)
 #include_directories(deps/src/bullet/src)
 #include_directories(deps/src/ImGuizmo/src)
@@ -89,7 +95,9 @@ set_property(TARGET LUtils          PROPERTY FOLDER "third-party")
 set_property(TARGET meshoptimizer   PROPERTY FOLDER "third-party")
 if(WIN32)
   set_property(TARGET zlibstatic    PROPERTY FOLDER "third-party")
-  set_property(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs PROPERTY FOLDER "third-party")
+  if(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs)
+    set_property(TARGET UpdateAssimpLibsDebugSymbolsAndDLLs PROPERTY FOLDER "third-party")
+  endif()
 endif()
 set_property(TARGET uninstall       PROPERTY FOLDER "third-party")
 
