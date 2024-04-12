@@ -13,8 +13,8 @@ float g_AnimationSpeed = 1.0f;
 
 bool g_UseColoredMesh = false;
 
-constexpr uint32_t kNumU = 1024;
-constexpr uint32_t kNumV = 1024;
+constexpr uint32_t kNumU = 768;
+constexpr uint32_t kNumV = 768;
 
 void generateIndices(uint32_t* indices)
 {
@@ -234,7 +234,7 @@ int main()
 
         buf.cmdBindComputePipeline(pipelineComputeMesh);
         buf.cmdPushConstants(pc);
-        buf.cmdDispatchThreadGroups({ .width = (kNumU * kNumV) / 2 }, { .buffers = { { lvk::BufferHandle(bufferVertex) } } });
+        buf.cmdDispatchThreadGroups({ .width = (kNumU * kNumV) / 16 }, { .buffers = { { lvk::BufferHandle(bufferVertex) } } });
         if (!g_UseColoredMesh) {
           buf.cmdBindComputePipeline(pipelineComputeTexture);
           buf.cmdDispatchThreadGroups({ .width = 1024 / 16, .height = 1024 / 16 }, { .textures = { { lvk::TextureHandle(texture) } } });
