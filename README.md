@@ -1,5 +1,4 @@
-
-# 3D Graphics Rendering Cookbook - 2nd Edition
+# 3D Graphics Rendering Cookbook - 2nd Edition [![Build Status](https://github.com/PacktPublishing/3D-Graphics-Rendering-Cookbook-Second-Edition/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/PacktPublishing/3D-Graphics-Rendering-Cookbook-Second-Edition/actions)
 
 **A comprehensive guide to exploring rendering algorithms in modern Vulkan**
 
