@@ -7,6 +7,7 @@
 
 #include <vector>
 
+using glm::vec2;
 using glm::vec3;
 using glm::vec4;
 
@@ -14,6 +15,13 @@ namespace Math
 {
 	static constexpr float PI = 3.14159265359f;
 	static constexpr float TWOPI = 6.28318530718f;
+}
+
+inline vec2 clampLength(const vec2& v, float maxLength)
+{
+  const float l = length(v);
+
+  return (l > maxLength) ? normalize(v) * maxLength : v;
 }
 
 struct BoundingBox

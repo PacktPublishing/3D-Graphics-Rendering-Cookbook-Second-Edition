@@ -1,5 +1,7 @@
 ﻿#include "VulkanApp.h"
 
+#include <unordered_map>
+
 extern std::unordered_map<void*, std::string> debugGLSLSourceCode;
 
 static void shaderModuleCallback(lvk::IContext*, lvk::ShaderModuleHandle handle, int line, int col, const char* debugName)
@@ -52,6 +54,9 @@ VulkanApp::VulkanApp(const VulkanAppConfig& cfg)
     ImGuiIO& io                         = ImGui::GetIO();
     io.MousePos                         = ImVec2((float)xpos, (float)ypos);
     io.MouseDown[imguiButton]           = action == GLFW_PRESS;
+    for (auto& cb : app->callbacksMouseButton) {
+      cb(window, button, action, mods);
+    }
   });
   glfwSetCursorPosCallback(window_, [](GLFWwindow* window, double x, double y) {
     VulkanApp* app = (VulkanApp*)glfwGetWindowUserPointer(window);
@@ -83,6 +88,9 @@ VulkanApp::VulkanApp(const VulkanAppConfig& cfg)
     if (key == GLFW_KEY_SPACE) {
       app->positioner_.lookAt(app->cfg_.initialCameraPos, app->cfg_.initialCameraTarget, vec3(0.0f, 1.0f, 0.0f));
       app->positioner_.setSpeed(vec3(0));
+    }
+    for (auto& cb : app->callbacksKey) {
+      cb(window, key, scancode, action, mods);
     }
   });
 }

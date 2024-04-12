@@ -45,6 +45,9 @@ public:
   lvk::Format getDepthFormat() const;
   lvk::TextureHandle getDepthTexture() const { return depthTexture_; }
 
+  void addMouseButtonCallback(GLFWmousebuttonfun cb) { callbacksMouseButton.push_back(cb); }
+  void addKeyCallback(GLFWkeyfun cb) { callbacksKey.push_back(cb); }
+
 public:
   GLFWwindow* window_ = nullptr;
   std::unique_ptr<lvk::IContext> ctx_;
@@ -67,4 +70,7 @@ protected:
   lvk::Holder<lvk::ShaderModuleHandle> gridVert = {};
   lvk::Holder<lvk::ShaderModuleHandle> gridFrag = {};
   lvk::Holder<lvk::RenderPipelineHandle> gridPipeline = {};
+
+  std::vector<GLFWmousebuttonfun> callbacksMouseButton;
+  std::vector<GLFWkeyfun> callbacksKey;
 };

@@ -320,7 +320,7 @@ void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
 
   const vec4 white = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
-  std::vector<vertex> vertices;
+  std::vector<Vertex> vertices;
   std::vector<uint32_t> indices;
 
   std::vector<uint32_t> startVertex;
@@ -402,7 +402,7 @@ void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
   gltf.vertexBuffer = ctx->createBuffer(
       { .usage     = lvk::BufferUsageBits_Vertex,
         .storage   = lvk::StorageType_Device,
-        .size      = sizeof(vertex) * vertices.size(),
+        .size      = sizeof(Vertex) * vertices.size(),
         .data      = vertices.data(),
         .debugName = "Buffer: vertex" },
       nullptr);
@@ -420,7 +420,7 @@ void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
                        { .location = 2, .format = lvk::VertexFormat::Float4, .offset = 24 },
 							  { .location = 3, .format = lvk::VertexFormat::Float2, .offset = 40 },
 							  { .location = 4, .format = lvk::VertexFormat::Float2, .offset = 48 }, },
-    .inputBindings = { { .stride = sizeof(vertex) } },
+    .inputBindings = { { .stride = sizeof(Vertex) } },
   };
 
   gltf.vert = loadShaderModule(ctx, "data/shaders/gltf/main.vert");

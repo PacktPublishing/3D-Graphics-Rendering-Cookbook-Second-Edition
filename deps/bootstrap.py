@@ -5,7 +5,7 @@
 # sk@linderdaum.com
 #
 # The MIT License (MIT)
-# Copyright (c) 2016-2023, Sergey Kosarevsky
+# Copyright (c) 2016-2024, Sergey Kosarevsky
 #
 # ---
 # Based on https://bitbucket.org/blippar/bootstrapping-external-libs
@@ -135,7 +135,7 @@ def escapifyPath(path):
         return "\"" + path + "\""
     return path.replace("\\ ", " ")
 
-def cloneRepository(type, url, target_name, revision = None, try_only_local_operations = False):
+def cloneRepository(type, url, target_name, revision, try_only_local_operations = False, recursive = True):
     target_dir = escapifyPath(os.path.join(SRC_DIR, target_name))
     target_dir_exists = os.path.exists(target_dir)
     log("Cloning " + url + " to " + target_dir)
@@ -168,10 +168,16 @@ def cloneRepository(type, url, target_name, revision = None, try_only_local_oper
             if target_dir_exists:
                 dlog("Removing directory " + target_dir + " before cloning")
                 shutil.rmtree(target_dir)
-            dieIfNonZero(executeCommand(TOOL_COMMAND_GIT + " clone --recursive " + url + " " + target_dir))
+            if recursive:
+                dieIfNonZero(executeCommand(TOOL_COMMAND_GIT + " clone --recursive " + url + " " + target_dir))
+            else:
+                dieIfNonZero(executeCommand(TOOL_COMMAND_GIT + " clone " + url + " " + target_dir))
         elif not try_only_local_operations:
             log("Repository " + target_dir + " already exists; fetching instead of cloning")
-            dieIfNonZero(executeCommand(TOOL_COMMAND_GIT + " -C " + target_dir + " fetch --recurse-submodules"))
+            if recursive:
+                dieIfNonZero(executeCommand(TOOL_COMMAND_GIT + " -C " + target_dir + " fetch --recurse-submodules"))
+            else:
+                dieIfNonZero(executeCommand(TOOL_COMMAND_GIT + " -C " + target_dir + " fetch"))
 
         if revision is None:
             revision = "HEAD"
@@ -429,7 +435,7 @@ def runPythonScript(script_name):
     log("Running Python script " + script_name)
     patch_dir = os.path.join(BASE_DIR, "patches")
     filename = os.path.join(patch_dir, script_name)
-    dieIfNonZero(executeCommand(TOOL_COMMAND_PYTHON + " " + filename, False));
+    dieIfNonZero(executeCommand(TOOL_COMMAND_PYTHON + " " + escapifyPath(filename), False));
 
 
 def findToolCommand(command, paths_to_search, required = False):
@@ -797,6 +803,7 @@ def main(argv):
 
                 else:
                     revision = source.get('revision', None)
+                    recursive = source.get('recursive', True)
 
                     archive_name = name + ".tar.gz" # for reading or writing of snapshot archives
                     if revision is not None:
@@ -805,7 +812,7 @@ def main(argv):
                     try:
                         if force_fallback:
                             raise RuntimeError
-                        cloneRepository(src_type, src_url, name, revision)
+                        cloneRepository(src_type, src_url, name, revision, False, recursive)
 
                         if create_repo_snapshots:
                             log("Creating snapshot of library repository " + name)
@@ -829,7 +836,7 @@ def main(argv):
                             downloadAndExtractFile(fallback_src_url, SNAPSHOT_DIR, name, force_download = True)
 
                             # reset repository state to particular revision (only using local operations inside the function)
-                            cloneRepository(src_type, src_url, name, revision, True)
+                            cloneRepository(src_type, src_url, name, revision, True, True)
                         else:
                             raise
             else:
