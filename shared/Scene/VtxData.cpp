@@ -1,4 +1,4 @@
-#include "shared/scene/VtxData.h"
+#include "shared/Scene/VtxData.h"
 
 #include <algorithm>
 #include <assert.h>
