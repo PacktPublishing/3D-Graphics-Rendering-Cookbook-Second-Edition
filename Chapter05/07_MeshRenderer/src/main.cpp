@@ -271,7 +271,7 @@ private:
   lvk::Holder<lvk::RenderPipelineHandle> pipeline_;
 };
 
-const char* meshMeshes = ".cache/ch04_bistro.meshes";
+const char* meshMeshes = ".cache/ch05_bistro.meshes";
 
 int main()
 {

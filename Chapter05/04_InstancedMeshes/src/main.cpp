@@ -59,13 +59,13 @@ int main()
     static_assert(sizeof(Vertex) == 8 * sizeof(float));
 
     const aiMesh* mesh = scene->mMeshes[0];
-    std::vector<Vertex> positions;
+    std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
     for (unsigned int i = 0; i != mesh->mNumVertices; i++) {
       const aiVector3D v = mesh->mVertices[i];
       const aiVector3D t = mesh->mTextureCoords[0][i];
       const aiVector3D n = mesh->mNormals[i];
-      positions.push_back({ .pos = vec3(v.x, v.y, v.z), .uv = vec2(t.x, t.y), .n = vec3(n.x, n.y, n.z) });
+      vertices.push_back({ .pos = vec3(v.x, v.y, v.z), .uv = vec2(t.x, t.y), .n = vec3(n.x, n.y, n.z) });
     }
 
     for (unsigned int i = 0; i != mesh->mNumFaces; i++) {
@@ -79,8 +79,8 @@ int main()
     lvk::Holder<lvk::BufferHandle> vertexBuffer = ctx->createBuffer(
         { .usage     = lvk::BufferUsageBits_Storage,
           .storage   = lvk::StorageType_Device,
-          .size      = sizeof(Vertex) * positions.size(),
-          .data      = positions.data(),
+          .size      = sizeof(Vertex) * vertices.size(),
+          .data      = vertices.data(),
           .debugName = "Buffer: vertex" },
         nullptr);
     lvk::Holder<lvk::BufferHandle> indexBuffer = ctx->createBuffer(
@@ -148,7 +148,7 @@ int main()
         };
         buf.cmdBindComputePipeline(pipelineComputeMatrices);
         buf.cmdPushConstants(pc);
-        buf.cmdDispatchThreadGroups({ .width = kNumMeshes / 64 });
+        buf.cmdDispatchThreadGroups({ .width = kNumMeshes / 32 });
         buf.cmdBeginRendering(renderPass, framebuffer, { .buffers = { lvk::BufferHandle(bufferMatrices[frameId]) } });
         buf.cmdPushDebugGroupLabel("Solid cube", 0xff0000ff);
         buf.cmdBindRenderPipeline(pipelineSolid);
