@@ -4,9 +4,9 @@
 #include <assert.h>
 #include <stdio.h>
 
-bool isMeshDataValid(const char* meshFile)
+bool isMeshDataValid(const char* fileName)
 {
-  FILE* f = fopen(meshFile, "rb");
+  FILE* f = fopen(fileName, "rb");
 
   if (!f)
     return false;
@@ -32,6 +32,20 @@ bool isMeshDataValid(const char* meshFile)
 
   if (fseek(f, header.vertexDataSize, SEEK_CUR))
     return false;
+
+  return true;
+}
+
+bool isMeshHierarchyValid(const char* fileName) {
+  FILE* f = fopen(fileName, "rb");
+
+  if (!f)
+    return false;
+
+  SCOPE_EXIT
+  {
+    fclose(f);
+  };
 
   return true;
 }

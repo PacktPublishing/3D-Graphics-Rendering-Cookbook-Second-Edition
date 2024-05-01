@@ -41,6 +41,7 @@ public:
   virtual void run(DrawFrameFunc drawFrame);
   virtual void drawGrid(lvk::ICommandBuffer& buf, const mat4& proj, const vec3& origin = vec3(0.0f));
   virtual void drawFPS();
+  virtual void drawMemo();
 
   lvk::Format getDepthFormat() const;
   lvk::TextureHandle getDepthTexture() const { return depthTexture_; }

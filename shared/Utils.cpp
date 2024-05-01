@@ -32,7 +32,7 @@ std::string readShaderFile(const char* fileName)
   }
 
   fseek(file, 0L, SEEK_END);
-  const auto bytesinfile = ftell(file);
+  const size_t bytesinfile = ftell(file);
   fseek(file, 0L, SEEK_SET);
 
   char* buffer           = (char*)alloca(bytesinfile + 1);

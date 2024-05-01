@@ -58,7 +58,8 @@ struct MeshData {
 
 static_assert(sizeof(BoundingBox) == sizeof(float) * 6);
 
-bool isMeshDataValid(const char* meshFile);
+bool isMeshDataValid(const char* fileName);
+bool isMeshHierarchyValid(const char* fileName);
 MeshFileHeader loadMeshData(const char* meshFile, MeshData& out);
 void saveMeshData(const char* fileName, const MeshData& m);
 
@@ -66,11 +67,6 @@ void recalculateBoundingBoxes(MeshData& m);
 
 // combine a list of meshes to a single mesh container
 MeshFileHeader mergeMeshData(MeshData& m, const std::vector<MeshData*> md);
-
-template <typename T> inline void mergeVectors(std::vector<T>& v1, const std::vector<T>& v2)
-{
-  v1.insert(v1.end(), v2.begin(), v2.end());
-}
 
 // use to write values into MeshData::vertexData
 template <typename T> inline void put(std::vector<uint8_t>& v, const T& value)

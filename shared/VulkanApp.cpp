@@ -144,6 +144,19 @@ void VulkanApp::run(DrawFrameFunc drawFrame)
   }
 }
 
+void VulkanApp::drawMemo()
+{
+  ImGui::SetNextWindowPos(ImVec2(10, 10));
+  ImGui::Begin(
+      "Keyboard hints:", nullptr,
+      ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoCollapse);
+  ImGui::Text("W/S/A/D - camera movement");
+  ImGui::Text("1/2 - camera up/down");
+  ImGui::Text("Shift - fast movement");
+  ImGui::Text("Space - reset view");
+  ImGui::End();
+}
+
 void VulkanApp::drawFPS()
 {
   if (const ImGuiViewport* v = ImGui::GetMainViewport()) {

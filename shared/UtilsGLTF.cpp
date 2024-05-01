@@ -1,7 +1,7 @@
 #include "UtilsGLTF.h"
 
 bool assignUVandSampler(
-    const glTFGlobalSamplers& samplers, aiMaterial* const& mtlDescriptor, aiTextureType textureType, uint32_t& uvIndex,
+    const glTFGlobalSamplers& samplers, const aiMaterial* mtlDescriptor, aiTextureType textureType, uint32_t& uvIndex,
     uint32_t& textureSampler, int index)
 {
   aiString path;
@@ -24,7 +24,7 @@ bool assignUVandSampler(
 namespace
 {
 void loadMaterialTexture(
-    aiMaterial* const& mtlDescriptor, aiTextureType textureType, const char* assetFolder, lvk::Holder<lvk::TextureHandle>& textureHandle,
+    const aiMaterial* mtlDescriptor, aiTextureType textureType, const char* assetFolder, lvk::Holder<lvk::TextureHandle>& textureHandle,
     const std::unique_ptr<lvk::IContext>& ctx, bool sRGB, int index = 0)
 {
   if (mtlDescriptor->GetTextureCount(textureType) > 0) {
@@ -43,17 +43,17 @@ void loadMaterialTexture(
 }
 } // namespace
 
-glTFMaterialData setupglTFMaterialData(
-    const std::unique_ptr<lvk::IContext>& ctx, const glTFGlobalSamplers& samplers, aiMaterial* const& mtlDescriptor,
-    const char* assetFolder, glTFDataHolder& glTFDataholder)
+glTFMaterialDataGPU setupglTFMaterialData(
+    const std::unique_ptr<lvk::IContext>& ctx, const glTFGlobalSamplers& samplers, const aiMaterial* mtlDescriptor, const char* assetFolder,
+    glTFDataHolder& glTFDataholder)
 {
-  std::unique_ptr<glTFMaterialTextures> mat = std::make_unique<glTFMaterialTextures>();
+  glTFMaterialTextures mat;
 
-  uint32_t materialType = 0;
+  uint32_t materialTypeFlags = MaterialType_Invalid;
 
-  static int whitePixel = 0xFFFFFFFF;
+  const uint32_t whitePixel = 0xFFFFFFFF;
 
-  mat->white = ctx->createTexture(
+  mat.white = ctx->createTexture(
       {
           .type       = lvk::TextureType_2D,
           .format     = lvk::Format_RGBA_SRGB8,
@@ -64,24 +64,26 @@ glTFMaterialData setupglTFMaterialData(
   },
       "white1x1");
 
-  aiShadingMode shademode = (aiShadingMode)-1;
-  if (mtlDescriptor->Get(AI_MATKEY_SHADING_MODEL, shademode) == AI_SUCCESS) {
-    materialType = shademode == aiShadingMode_Unlit ? Unlit : 0;
+  aiShadingMode shadingMode = aiShadingMode_NoShading;
+  if (mtlDescriptor->Get(AI_MATKEY_SHADING_MODEL, shadingMode) == AI_SUCCESS) {
+    if (shadingMode == aiShadingMode_Unlit) {
+      materialTypeFlags = MaterialType_Unlit;
+    }
   }
 
-  loadMaterialTexture(mtlDescriptor, aiTextureType_BASE_COLOR, assetFolder, mat->baseColorTexture, ctx, true);
-  loadMaterialTexture(mtlDescriptor, aiTextureType_METALNESS, assetFolder, mat->surfacePropertiesTexture, ctx, false);
+  loadMaterialTexture(mtlDescriptor, aiTextureType_BASE_COLOR, assetFolder, mat.baseColorTexture, ctx, true);
+  loadMaterialTexture(mtlDescriptor, aiTextureType_METALNESS, assetFolder, mat.surfacePropertiesTexture, ctx, false);
 
-  materialType = MetallicRoughness;
+  materialTypeFlags = MaterialType_MetallicRoughness;
 
-  // if (mat->baseColorTexture.valid()) {
+  // if (mat.baseColorTexture.valid()) {
   //   materialType = MetallicRoughness;
   // } else {
   //   // FIXME
-  //   loadMaterialTexture(mtlDescriptor, aiTextureType_DIFFUSE, assetFolder, mat->baseColorTexture, ctx, true);
-  //   loadMaterialTexture(mtlDescriptor, aiTextureType_SPECULAR, assetFolder, mat->surfacePropertiesTexture, ctx, true);
+  //   loadMaterialTexture(mtlDescriptor, aiTextureType_DIFFUSE, assetFolder, mat.baseColorTexture, ctx, true);
+  //   loadMaterialTexture(mtlDescriptor, aiTextureType_SPECULAR, assetFolder, mat.surfacePropertiesTexture, ctx, true);
 
-  //  if (mat->baseColorTexture.valid()) {
+  //  if (mat.baseColorTexture.valid()) {
   //    materialType = SpecularGlossiness;
   //  } else {
   //    printf("Unknown material type\n");
@@ -91,57 +93,57 @@ glTFMaterialData setupglTFMaterialData(
   //}
 
   // Load common textures
-  loadMaterialTexture(mtlDescriptor, aiTextureType_LIGHTMAP, assetFolder, mat->occlusionTexture, ctx, false);
-  loadMaterialTexture(mtlDescriptor, aiTextureType_EMISSIVE, assetFolder, mat->emissiveTexture, ctx, true);
-  loadMaterialTexture(mtlDescriptor, aiTextureType_NORMALS, assetFolder, mat->normalTexture, ctx, false);
+  loadMaterialTexture(mtlDescriptor, aiTextureType_LIGHTMAP, assetFolder, mat.occlusionTexture, ctx, false);
+  loadMaterialTexture(mtlDescriptor, aiTextureType_EMISSIVE, assetFolder, mat.emissiveTexture, ctx, true);
+  loadMaterialTexture(mtlDescriptor, aiTextureType_NORMALS, assetFolder, mat.normalTexture, ctx, false);
 
   // Sheen
-  loadMaterialTexture(mtlDescriptor, aiTextureType_SHEEN, assetFolder, mat->sheenColorTexture, ctx, true, 0);
-  loadMaterialTexture(mtlDescriptor, aiTextureType_SHEEN, assetFolder, mat->sheenRoughnessTexture, ctx, false, 1);
+  loadMaterialTexture(mtlDescriptor, aiTextureType_SHEEN, assetFolder, mat.sheenColorTexture, ctx, true, 0);
+  loadMaterialTexture(mtlDescriptor, aiTextureType_SHEEN, assetFolder, mat.sheenRoughnessTexture, ctx, false, 1);
 
   // Clearcoat
-  loadMaterialTexture(mtlDescriptor, aiTextureType_CLEARCOAT, assetFolder, mat->clearCoatTexture, ctx, true, 0);
-  loadMaterialTexture(mtlDescriptor, aiTextureType_CLEARCOAT, assetFolder, mat->clearCoatRoughnessTexture, ctx, false, 1);
-  loadMaterialTexture(mtlDescriptor, aiTextureType_CLEARCOAT, assetFolder, mat->clearCoatNormalTexture, ctx, false, 2);
+  loadMaterialTexture(mtlDescriptor, aiTextureType_CLEARCOAT, assetFolder, mat.clearCoatTexture, ctx, true, 0);
+  loadMaterialTexture(mtlDescriptor, aiTextureType_CLEARCOAT, assetFolder, mat.clearCoatRoughnessTexture, ctx, false, 1);
+  loadMaterialTexture(mtlDescriptor, aiTextureType_CLEARCOAT, assetFolder, mat.clearCoatNormalTexture, ctx, false, 2);
 
   // Specular
-  loadMaterialTexture(mtlDescriptor, aiTextureType_SPECULAR, assetFolder, mat->specularTexture, ctx, true, 0);
-  loadMaterialTexture(mtlDescriptor, aiTextureType_SPECULAR, assetFolder, mat->specularColorTexture, ctx, true, 1);
+  loadMaterialTexture(mtlDescriptor, aiTextureType_SPECULAR, assetFolder, mat.specularTexture, ctx, true, 0);
+  loadMaterialTexture(mtlDescriptor, aiTextureType_SPECULAR, assetFolder, mat.specularColorTexture, ctx, true, 1);
 
   // Transmission
-  loadMaterialTexture(mtlDescriptor, aiTextureType_TRANSMISSION, assetFolder, mat->transmissionTexture, ctx, true, 0);
+  loadMaterialTexture(mtlDescriptor, aiTextureType_TRANSMISSION, assetFolder, mat.transmissionTexture, ctx, true, 0);
 
   // Volume
-  loadMaterialTexture(mtlDescriptor, aiTextureType_TRANSMISSION, assetFolder, mat->thicknessTexture, ctx, true, 1);
+  loadMaterialTexture(mtlDescriptor, aiTextureType_TRANSMISSION, assetFolder, mat.thicknessTexture, ctx, true, 1);
 
   // Iridescence
-  // loadMaterialTexture(mtlDescriptor, aiTextureType_IRID, assetFolder, mat->specularTexture, ctx, true, 0);
+  // loadMaterialTexture(mtlDescriptor, aiTextureType_IRID, assetFolder, mat.specularTexture, ctx, true, 0);
 
   // Anistoropy
 
-  glTFMaterialData res = {
+  glTFMaterialDataGPU res = {
     .baseColorFactor                  = vec4(1.0f, 1.0f, 1.0f, 1.0f),
     .metallicRoughnessNormalOcclusion = vec4(1.0f, 1.0f, 1.0f, 1.0f),
     .specularFactors                  = vec4(1.0f, 1.0f, 1.0f, 1.0f),
     .emissiveFactorAlphaCutoff        = vec4(0.0f, 0.0f, 0.0f, 0.5f),
-    .occlusionTexture                 = mat->occlusionTexture.index(),
-    .emissiveTexture                  = mat->emissiveTexture.valid() ? mat->emissiveTexture.index() : mat->white.index(),
-    .baseColorTexture                 = mat->baseColorTexture.valid() ? mat->baseColorTexture.index() : mat->white.index(),
-    .surfacePropertiesTexture         = mat->surfacePropertiesTexture.valid() ? mat->surfacePropertiesTexture.index() : mat->white.index(),
-    .normalTexture                    = mat->normalTexture.valid() ? mat->normalTexture.index() : mat->white.index(),
-    .sheenColorTexture                = mat->sheenColorTexture.index(),
-    .sheenRoughnessTexture            = mat->sheenRoughnessTexture.index(),
-    .clearCoatTexture                 = mat->clearCoatTexture.valid() ? mat->clearCoatTexture.index() : mat->white.index(),
-    .clearCoatRoughnessTexture   = mat->clearCoatRoughnessTexture.valid() ? mat->clearCoatRoughnessTexture.index() : mat->white.index(),
-    .clearCoatNormalTexture      = mat->clearCoatNormalTexture.valid() ? mat->clearCoatNormalTexture.index() : mat->white.index(),
-    .specularTexture             = mat->specularTexture.valid() ? mat->specularTexture.index() : mat->white.index(),
-    .specularColorTexture        = mat->specularColorTexture.valid() ? mat->specularColorTexture.index() : mat->white.index(),
-    .transmissionTexture         = mat->transmissionTexture.index(),
-    .thicknessTexture            = mat->thicknessTexture.index(),
-    .iridescenceTexture          = mat->iridescenceTexture.index(),
-    .iridescenceThicknessTexture = mat->iridescenceThicknessTexture.index(),
-    .anisotropyTexture           = mat->anisotropyTexture.index(),
-    .materialType                = materialType,
+    .occlusionTexture                 = mat.occlusionTexture.index(),
+    .emissiveTexture                  = mat.emissiveTexture.valid() ? mat.emissiveTexture.index() : mat.white.index(),
+    .baseColorTexture                 = mat.baseColorTexture.valid() ? mat.baseColorTexture.index() : mat.white.index(),
+    .surfacePropertiesTexture         = mat.surfacePropertiesTexture.valid() ? mat.surfacePropertiesTexture.index() : mat.white.index(),
+    .normalTexture                    = mat.normalTexture.valid() ? mat.normalTexture.index() : mat.white.index(),
+    .sheenColorTexture                = mat.sheenColorTexture.index(),
+    .sheenRoughnessTexture            = mat.sheenRoughnessTexture.index(),
+    .clearCoatTexture                 = mat.clearCoatTexture.valid() ? mat.clearCoatTexture.index() : mat.white.index(),
+    .clearCoatRoughnessTexture        = mat.clearCoatRoughnessTexture.valid() ? mat.clearCoatRoughnessTexture.index() : mat.white.index(),
+    .clearCoatNormalTexture           = mat.clearCoatNormalTexture.valid() ? mat.clearCoatNormalTexture.index() : mat.white.index(),
+    .specularTexture                  = mat.specularTexture.valid() ? mat.specularTexture.index() : mat.white.index(),
+    .specularColorTexture             = mat.specularColorTexture.valid() ? mat.specularColorTexture.index() : mat.white.index(),
+    .transmissionTexture              = mat.transmissionTexture.index(),
+    .thicknessTexture                 = mat.thicknessTexture.index(),
+    .iridescenceTexture               = mat.iridescenceTexture.index(),
+    .iridescenceThicknessTexture      = mat.iridescenceThicknessTexture.index(),
+    .anisotropyTexture                = mat.anisotropyTexture.index(),
+    .materialTypeFlags                = materialTypeFlags,
   };
 
   aiColor4D aiColor;
@@ -151,18 +153,18 @@ glTFMaterialData setupglTFMaterialData(
   assignUVandSampler(samplers, mtlDescriptor, aiTextureType_DIFFUSE, res.baseColorTextureUV, res.baseColorTextureSampler);
 
   if (mtlDescriptor->Get(AI_MATKEY_COLOR_EMISSIVE, aiColor) == AI_SUCCESS) {
-    // mat->emissiveFactor = vec3(aiColor.r, aiColor.g, aiColor.b);
+    // mat.emissiveFactor = vec3(aiColor.r, aiColor.g, aiColor.b);
     res.emissiveFactorAlphaCutoff = vec4(aiColor.r, aiColor.g, aiColor.b, 0.5f);
   }
   assignUVandSampler(samplers, mtlDescriptor, aiTextureType_EMISSIVE, res.emissiveTextureUV, res.emissiveTextureSampler);
 
   ai_real emissiveStrength = 1.0f;
   if (mtlDescriptor->Get(AI_MATKEY_EMISSIVE_INTENSITY, emissiveStrength) == AI_SUCCESS) {
-    // mat->emissiveFactor = vec3(aiColor.r, aiColor.g, aiColor.b);
+    // mat.emissiveFactor = vec3(aiColor.r, aiColor.g, aiColor.b);
     res.emissiveFactorAlphaCutoff *= vec4(emissiveStrength, emissiveStrength, emissiveStrength, 1.0f);
   }
 
-  if (materialType == MetallicRoughness) {
+  if (materialTypeFlags & MaterialType_MetallicRoughness) {
     ai_real metallicFactor;
     if (mtlDescriptor->Get(AI_MATKEY_METALLIC_FACTOR, metallicFactor) == AI_SUCCESS) {
       res.metallicRoughnessNormalOcclusion.x = metallicFactor;
@@ -174,7 +176,7 @@ glTFMaterialData setupglTFMaterialData(
     if (mtlDescriptor->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughnessFactor) == AI_SUCCESS) {
       res.metallicRoughnessNormalOcclusion.y = roughnessFactor;
     }
-  } else if (materialType == SpecularGlossiness) {
+  } else if (materialTypeFlags & MaterialType_SpecularGlossiness) {
     ai_real specularFactor[3];
     if (mtlDescriptor->Get(AI_MATKEY_SPECULAR_FACTOR, specularFactor) == AI_SUCCESS) {
       res.specularGlossiness.x = specularFactor[0];
@@ -205,11 +207,11 @@ glTFMaterialData setupglTFMaterialData(
   aiString alphaMode = aiString("OPAQUE");
   if (mtlDescriptor->Get(AI_MATKEY_GLTF_ALPHAMODE, alphaMode) == AI_SUCCESS) {
     if (alphaMode == aiString("MASK")) {
-      res.alphaMode = (uint32_t)glTFMaterialData::AlphaMode::eMask;
+      res.alphaMode = glTFMaterialDataGPU::AlphaMode_Mask;
     } else if (alphaMode == aiString("BLEND")) {
-      res.alphaMode = (uint32_t)glTFMaterialData::AlphaMode::eBlend;
+      res.alphaMode = glTFMaterialDataGPU::AlphaMode_Blend;
     } else {
-      res.alphaMode = (uint32_t)glTFMaterialData::AlphaMode::eOpaque;
+      res.alphaMode = glTFMaterialDataGPU::AlphaMode_Opaque;
     }
   }
 
@@ -221,7 +223,7 @@ glTFMaterialData setupglTFMaterialData(
   // Extensions
   // Sheen
   {
-    bool useSheen = !mat->sheenColorTexture.empty() || !mat->sheenRoughnessTexture.empty();
+    bool useSheen = !mat.sheenColorTexture.empty() || !mat.sheenRoughnessTexture.empty();
     aiColor4D sheenColorFactor;
     if (mtlDescriptor->Get(AI_MATKEY_SHEEN_COLOR_FACTOR, sheenColorFactor) == AI_SUCCESS) {
       res.sheenFactors = vec4(sheenColorFactor.r, sheenColorFactor.g, sheenColorFactor.b, sheenColorFactor.a);
@@ -242,13 +244,13 @@ glTFMaterialData setupglTFMaterialData(
     }
 
     if (useSheen) {
-      res.materialType |= Sheen;
+      res.materialTypeFlags |= MaterialType_Sheen;
     }
   }
 
   // Clear coat
   {
-    bool useClearCoat = !mat->clearCoatTexture.empty() || !mat->clearCoatRoughnessTexture.empty() || !mat->clearCoatNormalTexture.empty();
+    bool useClearCoat = !mat.clearCoatTexture.empty() || !mat.clearCoatRoughnessTexture.empty() || !mat.clearCoatNormalTexture.empty();
     ai_real clearcoatFactor;
     if (mtlDescriptor->Get(AI_MATKEY_CLEARCOAT_FACTOR, clearcoatFactor) == AI_SUCCESS) {
       res.clearcoatTransmissionTickness.x = clearcoatFactor;
@@ -277,13 +279,13 @@ glTFMaterialData setupglTFMaterialData(
     }
 
     if (useClearCoat) {
-      res.materialType |= ClearCoat;
+      res.materialTypeFlags |= MaterialType_ClearCoat;
     }
   }
 
   // Specular
   {
-    bool useSpecular = !mat->specularColorTexture.empty() || !mat->specularTexture.empty();
+    bool useSpecular = !mat.specularColorTexture.empty() || !mat.specularTexture.empty();
 
     ai_real specularFactor;
     if (mtlDescriptor->Get(AI_MATKEY_SPECULAR_FACTOR, specularFactor) == AI_SUCCESS) {
@@ -302,12 +304,36 @@ glTFMaterialData setupglTFMaterialData(
     assignUVandSampler(samplers, mtlDescriptor, aiTextureType_SPECULAR, res.specularColorTextureUV, res.specularColorTextureSampler, 1);
 
     if (useSpecular) {
-      res.materialType |= Specular;
+      res.materialTypeFlags |= MaterialType_Specular;
     }
   }
 
+  mat.wasLoaded = true;
+
   glTFDataholder.textures.push_back(std::move(mat));
+
   return res;
+}
+
+static uint32_t getNumVertices(const aiScene& scene)
+{
+  uint32_t num = 0;
+  for (uint32_t i = 0; i != scene.mNumMeshes; i++) {
+    num += scene.mMeshes[i]->mNumVertices;
+  }
+  return num;
+}
+
+static uint32_t getNumIndices(const aiScene& scene)
+{
+  uint32_t num = 0;
+  for (uint32_t i = 0; i != scene.mNumMeshes; i++) {
+    for (uint32_t j = 0; j != scene.mMeshes[i]->mNumFaces; j++) {
+      LVK_ASSERT(scene.mMeshes[i]->mFaces[j].mNumIndices == 3);
+      num += scene.mMeshes[i]->mFaces[j].mNumIndices;
+    }
+  }
+  return num;
 }
 
 void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
@@ -317,8 +343,10 @@ void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
     printf("Unable to load %s\n", glTFName);
     exit(255);
   }
-
-  const vec4 white = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+  SCOPE_EXIT
+  {
+    aiReleaseImport(scene);
+  };
 
   std::vector<Vertex> vertices;
   std::vector<uint32_t> indices;
@@ -329,22 +357,29 @@ void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
   startVertex.push_back(0);
   startIndex.push_back(0);
 
+  vertices.reserve(getNumVertices(*scene));
+  indices.reserve(getNumIndices(*scene));
+
   for (uint32_t m = 0; m < scene->mNumMeshes; ++m) {
     const aiMesh* mesh = scene->mMeshes[m];
 
-    for (unsigned int i = 0; i != mesh->mNumVertices; i++) {
-      const aiVector3D v = mesh->mVertices[i];
-      vec3 n             = mesh->mNormals ? vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z) : vec3(0.0f, 1.0f, 0.0f);
-      vec4 color =
-          mesh->mColors[0] ? vec4(mesh->mColors[0][i].r, mesh->mColors[0][i].g, mesh->mColors[0][i].b, mesh->mColors[0][i].a) : white;
-      vec2 uv0 = mesh->mTextureCoords[0] ? vec2(mesh->mTextureCoords[0][i].x, 1.0f - mesh->mTextureCoords[0][i].y) : vec2(0.0f, 0.0f);
-      vec2 uv1 = mesh->mTextureCoords[1] ? vec2(mesh->mTextureCoords[1][i].x, 1.0f - mesh->mTextureCoords[1][i].y) : vec2(0.0f, 0.0f);
-
-      vertices.push_back({ vec3(v.x, v.y, v.z), n, color, uv0, uv1 });
+    for (uint32_t i = 0; i != mesh->mNumVertices; i++) {
+      const aiVector3D v   = mesh->mVertices[i];
+      const aiVector3D n   = mesh->mNormals ? mesh->mNormals[i] : aiVector3D(0.0f, 1.0f, 0.0f);
+      const aiColor4D c    = mesh->mColors[0] ? mesh->mColors[0][i] : aiColor4D(1.0f, 1.0f, 1.0f, 1.0f);
+      const aiVector3D uv0 = mesh->mTextureCoords[0] ? mesh->mTextureCoords[0][i] : aiVector3D(0.0f, 0.0f, 0.0f);
+      const aiVector3D uv1 = mesh->mTextureCoords[1] ? mesh->mTextureCoords[1][i] : aiVector3D(0.0f, 0.0f, 0.0f);
+      vertices.push_back({
+          .position = vec3(v.x, v.y, v.z),
+          .normal   = vec3(n.x, n.y, n.z),
+          .color    = vec4(c.r, c.g, c.b, c.a),
+          .uv0      = vec2(uv0.x, 1.0f - uv0.y),
+          .uv1      = vec2(uv1.x, 1.0f - uv1.y),
+      });
     }
 
     startVertex.push_back((uint32_t)vertices.size());
-    for (unsigned int i = 0; i != mesh->mNumFaces; i++) {
+    for (uint32_t i = 0; i != mesh->mNumFaces; i++) {
       for (int j = 0; j != 3; j++) {
         indices.push_back(mesh->mFaces[i].mIndices[j]);
       }
@@ -359,39 +394,43 @@ void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
 
   auto& ctx = gltf.app.ctx_;
 
-  for (auto mtl = 0; mtl < scene->mNumMaterials; ++mtl) {
-    const auto mtlDescriptor        = scene->mMaterials[mtl];
+  for (unsigned int mtl = 0; mtl < scene->mNumMaterials; ++mtl) {
+    const aiMaterial* mtlDescriptor = scene->mMaterials[mtl];
     gltf.matPerFrame.materials[mtl] = setupglTFMaterialData(ctx, gltf.samplers, mtlDescriptor, glTFDataPath, gltf.glTFDataholder);
   }
 
-
-  gltf.nodesStorage.push_back({ .name      = scene->mRootNode->mName.C_Str() ? scene->mRootNode->mName.C_Str() : "root",
-                                .transform = AiMatrix4x4ToGlm(&scene->mRootNode->mTransformation) });
+  gltf.nodesStorage.push_back({
+      .name      = scene->mRootNode->mName.C_Str() ? scene->mRootNode->mName.C_Str() : "root",
+      .transform = AiMatrix4x4ToGlm(&scene->mRootNode->mTransformation),
+  });
 
   gltf.root = gltf.nodesStorage.size() - 1;
 
-
   std::function<void(const aiNode* rootNode, glTFNodeRef gltfNode)> traverseTree = [&](const aiNode* rootNode, glTFNodeRef gltfNode) {
-    for (auto m = 0; m < rootNode->mNumMeshes; ++m) {
+    for (unsigned int m = 0; m < rootNode->mNumMeshes; ++m) {
       const uint32_t meshIdx = rootNode->mMeshes[m];
       const aiMesh* mesh     = scene->mMeshes[meshIdx];
 
-      gltf.meshesStorage.push_back({ .primitive    = PrimitiveType::eTriangle,
-                                     .vertexOffset = startVertex[meshIdx],
-                                     .vertexCount  = mesh->mNumVertices,
-                                     .indexOffset  = startIndex[meshIdx],
-                                     .indexCount   = mesh->mNumFaces * 3,
-                                     .matIdx       = mesh->mMaterialIndex,
-                                     // FIXME
-            .opaque = gltf.matPerFrame.materials[mesh->mMaterialIndex].alphaMode != (uint32_t)glTFMaterialData::AlphaMode::eBlend });
+      gltf.meshesStorage.push_back({
+          .primitive    = lvk::Topology_Triangle,
+          .vertexOffset = startVertex[meshIdx],
+          .vertexCount  = mesh->mNumVertices,
+          .indexOffset  = startIndex[meshIdx],
+          .indexCount   = mesh->mNumFaces * 3,
+          .matIdx       = mesh->mMaterialIndex,
+          // FIXME
+          .opaque = gltf.matPerFrame.materials[mesh->mMaterialIndex].alphaMode != glTFMaterialDataGPU::AlphaMode_Blend,
+      });
       gltf.nodesStorage[gltfNode].meshes.push_back(gltf.meshesStorage.size() - 1);
     }
     for (glTFNodeRef i = 0; i < rootNode->mNumChildren; i++) {
       const aiNode* node = rootNode->mChildren[i];
-      glTFNode childNode({ .name      = node->mName.C_Str() ? node->mName.C_Str() : "node",
-                           .transform = gltf.nodesStorage[gltfNode].transform * AiMatrix4x4ToGlm(&node->mTransformation) });
+      const glTFNode childNode({
+          .name      = node->mName.C_Str() ? node->mName.C_Str() : "node",
+          .transform = gltf.nodesStorage[gltfNode].transform * AiMatrix4x4ToGlm(&node->mTransformation),
+      });
       gltf.nodesStorage.push_back(childNode);
-      auto nodeIdx = gltf.nodesStorage.size() - 1;
+      const size_t nodeIdx = gltf.nodesStorage.size() - 1;
       gltf.nodesStorage[gltfNode].children.push_back(nodeIdx);
       traverseTree(node, nodeIdx);
     }
@@ -454,7 +493,6 @@ void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
       .cullMode    = lvk::CullMode_Back,
   });
 
-
   gltf.matBuffer = ctx->createBuffer({
       .usage     = lvk::BufferUsageBits_Uniform,
       .storage   = lvk::StorageType_HostVisible,
@@ -463,16 +501,17 @@ void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
       .debugName = "PerFrame materials",
   });
 
-  EnvironmentsPerFrame envPerFrame;
-  envPerFrame.environments[0] = {
-    .envMapTexture                  = gltf.envMapTextures.envMapTexture.index(),
-    .envMapTextureSampler           = gltf.samplers.clamp.index(),
-    .envMapTextureIrradiance        = gltf.envMapTextures.envMapTextureIrradiance.index(),
-    .envMapTextureIrradianceSampler = gltf.samplers.clamp.index(),
-    .lutBRDFTexture                 = gltf.envMapTextures.texBRDF_LUT.index(),
-    .lutBRDFTextureSampler          = gltf.samplers.clamp.index(),
-    .envMapTextureCharlie           = gltf.envMapTextures.envMapTextureCharlie.index(),
-    .envMapTextureCharlieSampler    = gltf.samplers.clamp.index(),
+  const EnvironmentsPerFrame envPerFrame = {
+    .environments = { {
+        .envMapTexture                  = gltf.envMapTextures.envMapTexture.index(),
+        .envMapTextureSampler           = gltf.samplers.clamp.index(),
+        .envMapTextureIrradiance        = gltf.envMapTextures.envMapTextureIrradiance.index(),
+        .envMapTextureIrradianceSampler = gltf.samplers.clamp.index(),
+        .lutBRDFTexture                 = gltf.envMapTextures.texBRDF_LUT.index(),
+        .lutBRDFTextureSampler          = gltf.samplers.clamp.index(),
+        .envMapTextureCharlie           = gltf.envMapTextures.envMapTextureCharlie.index(),
+        .envMapTextureCharlieSampler    = gltf.samplers.clamp.index(),
+    } },
   };
 
   gltf.envBuffer = ctx->createBuffer({
@@ -492,8 +531,6 @@ void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
   });
 
   LVK_ASSERT(gltf.pipelineSolid.valid());
-
-  aiReleaseImport(scene);
 }
 
 void buildTransformsList(glTFContext& gltf)
@@ -504,8 +541,8 @@ void buildTransformsList(glTFContext& gltf)
 
   std::function<void(glTFNodeRef & gltfNode)> traverseTree = [&](glTFNodeRef& nodeRef) {
     auto& node = gltf.nodesStorage[nodeRef];
-    for (auto meshId : node.meshes) {
-      auto mesh = gltf.meshesStorage[meshId];
+    for (glTFNodeRef meshId : node.meshes) {
+      const glTFMesh& mesh = gltf.meshesStorage[meshId];
       gltf.transforms.push_back(
           { .model = node.transform, .matId = mesh.matIdx, .nodeRef = nodeRef, .meshRef = meshId, .opaque = mesh.opaque });
       if (mesh.opaque) {
@@ -514,14 +551,14 @@ void buildTransformsList(glTFContext& gltf)
         gltf.transparentNodes.push_back(gltf.transforms.size() - 1);
       }
     }
-    for (auto child : node.children) {
+    for (glTFNodeRef child : node.children) {
       traverseTree(child);
     }
   };
 
   traverseTree(gltf.root);
 
-  auto& ctx            = gltf.app.ctx_;
+  auto& ctx = gltf.app.ctx_;
 
   gltf.transformBuffer.reset();
 
@@ -532,8 +569,6 @@ void buildTransformsList(glTFContext& gltf)
       .data      = &gltf.transforms[0],
       .debugName = "Per Frame data",
   });
-
-  //ctx->upload(gltf.transformBuffer, &gltf.transforms, gltf.transforms.size() * sizeof(glTFTransforms));
 }
 
 void sortTransparentNodes(glTFContext& gltf, const vec3& cameraPos)
@@ -614,7 +649,7 @@ void renderglTF(glTFContext& gltf, const mat4& m, const mat4& v, const mat4& p, 
         buf.cmdPopDebugGroupLabel();
       }
 
-    buf.cmdBindRenderPipeline(gltf.pipelineTransparent);
+      buf.cmdBindRenderPipeline(gltf.pipelineTransparent);
       for (auto transformId : gltf.transparentNodes) {
         auto transform = gltf.transforms[transformId];
 
@@ -632,4 +667,28 @@ void renderglTF(glTFContext& gltf, const mat4& m, const mat4& v, const mat4& p, 
     buf.cmdEndRendering();
   }
   ctx->submit(buf, ctx->getCurrentSwapchainTexture());
+}
+
+MaterialType detectMaterialType(const aiMaterial* mtl)
+{
+  aiShadingMode shadingMode = aiShadingMode_NoShading;
+
+  if (mtl->Get(AI_MATKEY_SHADING_MODEL, shadingMode) == AI_SUCCESS) {
+    if (shadingMode == aiShadingMode_Unlit) {
+      return MaterialType_Unlit;
+    }
+  }
+
+  if (shadingMode == aiShadingMode_PBR_BRDF) {
+    ai_real factor = 0;
+    if (mtl->Get(AI_MATKEY_GLOSSINESS_FACTOR, factor) == AI_SUCCESS) {
+      return MaterialType_SpecularGlossiness;
+    } else if (mtl->Get(AI_MATKEY_METALLIC_FACTOR, factor) == AI_SUCCESS) {
+      return MaterialType_MetallicRoughness;
+    }
+  }
+
+  LLOGW("Unknown material type\n");
+
+  return MaterialType_Invalid;
 }
