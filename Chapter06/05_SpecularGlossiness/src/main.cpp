@@ -69,10 +69,10 @@ void loadMaterialTexture(
 }
 
 SpecularGlossinessDataGPU setupSpecularGlossinessData(
-    const std::unique_ptr<lvk::IContext>& ctx, const glTFGlobalSamplers& samplers, const aiMaterial* mtlDescriptor, const char* assetFolder,
-    glTFDataHolder& glTFDataholder)
+    const std::unique_ptr<lvk::IContext>& ctx, const GLTFGlobalSamplers& samplers, const aiMaterial* mtlDescriptor, const char* assetFolder,
+    GLTFDataHolder& glTFDataholder)
 {
-  glTFMaterialTextures mat;
+  GLTFMaterialTextures mat;
 
   const MaterialType materialType = detectMaterialType(mtlDescriptor);
 
@@ -156,11 +156,11 @@ SpecularGlossinessDataGPU setupSpecularGlossinessData(
   aiString alphaMode = aiString("OPAQUE");
   if (mtlDescriptor->Get(AI_MATKEY_GLTF_ALPHAMODE, alphaMode) == AI_SUCCESS) {
     if (alphaMode == aiString("MASK")) {
-      res.alphaMode = glTFMaterialDataGPU::AlphaMode_Mask;
+      res.alphaMode = GLTFMaterialDataGPU::AlphaMode_Mask;
     } else if (alphaMode == aiString("BLEND")) {
-      res.alphaMode = glTFMaterialDataGPU::AlphaMode_Blend;
+      res.alphaMode = GLTFMaterialDataGPU::AlphaMode_Blend;
     } else {
-      res.alphaMode = glTFMaterialDataGPU::AlphaMode_Opaque;
+      res.alphaMode = GLTFMaterialDataGPU::AlphaMode_Opaque;
     }
   }
 
@@ -235,7 +235,7 @@ int main()
       std::string name;
       glm::mat4 transform;
       std::vector<Node> children;
-      std::vector<glTFMesh> meshes;
+      std::vector<GLTFMesh> meshes;
     };
 
     Node root({ .name      = scene->mRootNode->mName.C_Str() ? scene->mRootNode->mName.C_Str() : "root",
@@ -266,7 +266,7 @@ int main()
 
     traverseTree(scene->mRootNode, root);
 
-    glTFGlobalSamplers samplers(ctx);
+    GLTFGlobalSamplers samplers(ctx);
     EnvironmentMapTextures envMapTextures(ctx);
 
     lvk::Holder<lvk::BufferHandle> vertexBuffer = ctx->createBuffer(
@@ -306,7 +306,7 @@ int main()
     });
 
     SpecularGlossinessMaterialsPerFrame matPerFrame;
-    glTFDataHolder glTFDataholder;
+    GLTFDataHolder glTFDataholder;
 
     for (unsigned int mtl = 0; mtl < scene->mNumMaterials; ++mtl) {
       const aiMaterial* mtlDescriptor = scene->mMaterials[mtl];

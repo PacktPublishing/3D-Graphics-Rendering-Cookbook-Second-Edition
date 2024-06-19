@@ -97,7 +97,6 @@ int main()
       .cullMode    = lvk::CullMode_Back,
   });
 
-   // the storage must be alive until the pipeline exists
   const uint32_t isWireframe = 1;
 
   lvk::Holder<lvk::RenderPipelineHandle> pipelineWireframe = ctx->createRenderPipeline({

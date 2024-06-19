@@ -192,7 +192,10 @@ float computeLod(float pdf) {
   // We achieved good results by using the original formulation from Krivanek & Colbert adapted to cubemaps
 
   // https://cgg.mff.cuni.cz/~jaroslav/papers/2007-sketch-fis/Final_sap_0073.pdf
-  float lod = 0.5 * log2( 6.0 * float(perFrameData.width) * float(perFrameData.height) / (float(perFrameData.sampleCount) * pdf));
+  float width = float(perFrameData.width);
+  float height = float(perFrameData.height);
+  float sampleCount = float(perFrameData.sampleCount);
+  float lod = 0.5 * log2( 6.0 * with * height / (sampleCount * pdf));
 
   return lod;
 }

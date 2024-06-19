@@ -9,7 +9,7 @@ struct InputAttributes {
   vec2 uv[kMaxAttributes];
 };
 
-struct MetallicRoughness {
+struct SpecularGlossinessDataGPU {
   vec4 baseColorFactor;
   vec4 metallicRoughnessNormalOcclusion; // packed metallicFactor, roughnessFactor, normalScale, occlusionStrength
   vec4 specularGlossiness;               // packed specularFactor.xyz, glossiness 
@@ -34,7 +34,7 @@ struct MetallicRoughness {
   uint padding[3];
 };
 
-struct EnvironmentMap {
+struct EnvironmentMapDataGPU {
   uint envMapTexture;
   uint envMapTextureSampler;
   uint envMapTextureIrradiance;
@@ -44,108 +44,90 @@ struct EnvironmentMap {
 };
 
 layout(std430, buffer_reference) readonly buffer Materials {
-  MetallicRoughness material[];
+  SpecularGlossinessDataGPU material[];
 };
 
 layout(std430, buffer_reference) readonly buffer Environments {
-  EnvironmentMap environment[];
+  EnvironmentMapDataGPU environment[];
 };
 
-MetallicRoughness getMaterial(uint idx) {
+SpecularGlossinessDataGPU getMaterial(uint idx) {
   return perFrame.materials.material[idx]; 
 }
 
-EnvironmentMap getEnvironmentMap(uint idx) {
+EnvironmentMapDataGPU getEnvironmentMap(uint idx) {
   return perFrame.environments.environment[idx]; 
 }
 
-float getMetallicFactor(uint idx) {
-  MetallicRoughness mat = getMaterial(idx);
+float getMetallicFactor(SpecularGlossinessDataGPU mat) {
   return mat.metallicRoughnessNormalOcclusion.x;
 }
 
-float getRoughnessFactor(uint idx) {
-  MetallicRoughness mat = getMaterial(idx);
+float getRoughnessFactor(SpecularGlossinessDataGPU mat) {
   return mat.metallicRoughnessNormalOcclusion.y;
 }
 
-float getNormalScale(uint idx) {
-  MetallicRoughness mat = getMaterial(idx);
+float getNormalScale(SpecularGlossinessDataGPU mat) {
   return mat.metallicRoughnessNormalOcclusion.z;
 }
 
-float getOcclusionFactor(uint idx) {
-  MetallicRoughness mat = getMaterial(idx);
+float getOcclusionFactor(SpecularGlossinessDataGPU mat) {
   return mat.metallicRoughnessNormalOcclusion.w;
 }
 
-uint getMaterialType(uint idx) {
-  MetallicRoughness mat = getMaterial(idx);
+uint getMaterialType(SpecularGlossinessDataGPU mat) {
   return mat.materialType;
 }
 
-vec3 getSpecularFactor(uint idx) {
-  MetallicRoughness mat = getMaterial(idx);
+vec3 getSpecularFactor(SpecularGlossinessDataGPU mat) {
   return mat.specularGlossiness.xyz;
 }
 
-float getGlossinessFactor(uint idx) {
-  MetallicRoughness mat = getMaterial(idx);
+float getGlossinessFactor(SpecularGlossinessDataGPU mat) {
   return mat.specularGlossiness.w;
 }
 
 
-vec2 getNormalUV(InputAttributes tc, uint idx) {
-  MetallicRoughness mat = getMaterial(idx);
+vec2 getNormalUV(InputAttributes tc, SpecularGlossinessDataGPU mat) {
   return tc.uv[mat.normalTextureUV];
 }
 
-vec4 sampleAO(InputAttributes tc, uint idx) {
-  MetallicRoughness mat = getMaterial(idx);
+vec4 sampleAO(InputAttributes tc, SpecularGlossinessDataGPU mat) {
   return textureBindless2D(mat.occlusionTexture, mat.occlusionTextureSampler, tc.uv[mat.occlusionTextureUV]);// * mat.metallicRoughnessNormalOcclusion.w;
 }
 
-vec4 sampleEmissive(InputAttributes tc, uint idx) {
-  MetallicRoughness mat = getMaterial(idx);
+vec4 sampleEmissive(InputAttributes tc, SpecularGlossinessDataGPU mat) {
   return textureBindless2D(mat.emissiveTexture, mat.emissiveTextureSampler, tc.uv[mat.emissiveTextureUV]) * vec4(mat.emissiveFactorAlphaCutoff.xyz, 1.0f);
 }
 
-vec4 sampleAlbedo(InputAttributes tc, uint idx) {
-  MetallicRoughness mat = getMaterial(idx);
+vec4 sampleAlbedo(InputAttributes tc, SpecularGlossinessDataGPU mat) {
   return textureBindless2D(mat.baseColorTexture, mat.baseColorTextureSampler, tc.uv[mat.baseColorTextureUV]) * mat.baseColorFactor;
 }
 
-vec4 sampleMetallicRoughness(InputAttributes tc, uint idx) {
-  MetallicRoughness mat = getMaterial(idx);
+vec4 sampleMetallicRoughness(InputAttributes tc, SpecularGlossinessDataGPU mat) {
   return textureBindless2D(mat.metallicRoughnessTexture, mat.metallicRoughnessTextureSampler, tc.uv[mat.metallicRoughnessTextureUV]);
 }
 
-vec4 sampleNormal(InputAttributes tc, uint idx) {
-  MetallicRoughness mat = getMaterial(idx);
+vec4 sampleNormal(InputAttributes tc, SpecularGlossinessDataGPU mat) {
   return textureBindless2D(mat.normalTexture, mat.normalTextureSampler, tc.uv[mat.normalTextureUV]);// * mat.metallicRoughnessNormalOcclusion.z;
 }
 
-vec4 sampleBRDF_LUT(vec2 tc, uint idx) {
-  EnvironmentMap map = getEnvironmentMap(idx);
+vec4 sampleBRDF_LUT(vec2 tc, EnvironmentMapDataGPU map) {
   return textureBindless2D(map.texBRDF_LUT, map.texBRDF_LUTSampler, tc);
 }
 
-vec4 sampleEnvMap(vec3 tc, uint idx) {
-  EnvironmentMap map = getEnvironmentMap(idx);
+vec4 sampleEnvMap(vec3 tc, EnvironmentMapDataGPU map) {
   return textureBindlessCube(map.envMapTexture, map.envMapTextureSampler, tc);
 }
 
-vec4 sampleEnvMapLod(vec3 tc, float lod, uint idx) {
-  EnvironmentMap map = getEnvironmentMap(idx);
+vec4 sampleEnvMapLod(vec3 tc, float lod, EnvironmentMapDataGPU map) {
   return textureBindlessCubeLod(map.envMapTexture, map.envMapTextureSampler, tc, lod);
 }
 
-vec4 sampleEnvMapIrradiance(vec3 tc, uint idx) {
-  EnvironmentMap map = getEnvironmentMap(idx);
+vec4 sampleEnvMapIrradiance(vec3 tc, EnvironmentMapDataGPU map) {
   return textureBindlessCube(map.envMapTextureIrradiance, map.envMapTextureIrradianceSampler, tc);
 }
 
-int sampleEnvMapQueryLevels(uint idx) {
-  EnvironmentMap map = getEnvironmentMap(idx);
-  return textureBindlessQueryLevels2D(map.envMapTexture);
+int sampleEnvMapQueryLevels(EnvironmentMapDataGPU map) {
+  return textureBindlessQueryLevelsCube(map.envMapTexture);
 }

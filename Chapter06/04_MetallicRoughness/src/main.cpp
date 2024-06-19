@@ -52,11 +52,11 @@ struct MetallicRoughnessMaterialsPerFrame {
   MetallicRoughnessDataGPU materials[kMaxMaterials];
 };
 
-glTFMaterialTextures loadMaterialTextures(
+GLTFMaterialTextures loadMaterialTextures(
     const std::unique_ptr<lvk::IContext>& ctx, const char* texAOFile, const char* texEmissiveFile, const char* texAlbedoFile,
     const char* texMeRFile, const char* texNormalFile)
 {
-  glTFMaterialTextures mat;
+  GLTFMaterialTextures mat;
 
   mat.baseColorTexture = loadTexture(ctx, texAlbedoFile, lvk::TextureType_2D, true);
   if (mat.baseColorTexture.empty()) {
@@ -89,7 +89,7 @@ glTFMaterialTextures loadMaterialTextures(
 }
 
 MetallicRoughnessDataGPU setupMetallicRoughnessData(
-    const glTFGlobalSamplers& samplers, const glTFMaterialTextures& mat, const aiMaterial* mtlDescriptor)
+    const GLTFGlobalSamplers& samplers, const GLTFMaterialTextures& mat, const aiMaterial* mtlDescriptor)
 {
   MetallicRoughnessDataGPU res = {
     .baseColorFactor                  = vec4(1.0f, 1.0f, 1.0f, 1.0f),
@@ -173,7 +173,7 @@ int main()
     const aiMesh* mesh = scene->mMeshes[0];
 
     std::vector<Vertex> vertices;
-    for (unsigned int i = 0; i != mesh->mNumVertices; i++) {
+    for (uint32_t i = 0; i != mesh->mNumVertices; i++) {
       const aiVector3D v   = mesh->mVertices[i];
       const aiVector3D n   = mesh->mNormals ? mesh->mNormals[i] : aiVector3D(0.0f, 1.0f, 0.0f);
       const aiColor4D c    = mesh->mColors[0] ? mesh->mColors[0][i] : aiColor4D(1.0f, 1.0f, 1.0f, 1.0f);
@@ -208,7 +208,7 @@ int main()
           .data      = indices.data(),
           .debugName = "Buffer: index" });
 
-    glTFMaterialTextures mat = loadMaterialTextures(
+    GLTFMaterialTextures mat = loadMaterialTextures(
         ctx, "deps/src/glTF-Sample-Assets/Models/DamagedHelmet/glTF/Default_AO.jpg",
         "deps/src/glTF-Sample-Assets/Models/DamagedHelmet/glTF/Default_emissive.jpg",
         "deps/src/glTF-Sample-Assets/Models/DamagedHelmet/glTF/Default_albedo.jpg",
@@ -218,7 +218,7 @@ int main()
       exit(255);
     }
 
-    glTFGlobalSamplers samplers(ctx);
+    GLTFGlobalSamplers samplers(ctx);
     EnvironmentMapTextures envMapTextures(ctx);
 
     const lvk::VertexInput vdesc = {

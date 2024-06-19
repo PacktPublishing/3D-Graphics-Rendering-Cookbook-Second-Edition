@@ -1,7 +1,7 @@
 #include "UtilsGLTF.h"
 
 bool assignUVandSampler(
-    const glTFGlobalSamplers& samplers, const aiMaterial* mtlDescriptor, aiTextureType textureType, uint32_t& uvIndex,
+    const GLTFGlobalSamplers& samplers, const aiMaterial* mtlDescriptor, aiTextureType textureType, uint32_t& uvIndex,
     uint32_t& textureSampler, int index)
 {
   aiString path;
@@ -43,11 +43,11 @@ void loadMaterialTexture(
 }
 } // namespace
 
-glTFMaterialDataGPU setupglTFMaterialData(
-    const std::unique_ptr<lvk::IContext>& ctx, const glTFGlobalSamplers& samplers, const aiMaterial* mtlDescriptor, const char* assetFolder,
-    glTFDataHolder& glTFDataholder)
+GLTFMaterialDataGPU setupglTFMaterialData(
+    const std::unique_ptr<lvk::IContext>& ctx, const GLTFGlobalSamplers& samplers, const aiMaterial* mtlDescriptor, const char* assetFolder,
+    GLTFDataHolder& glTFDataholder, bool& useVolumetric)
 {
-  glTFMaterialTextures mat;
+  GLTFMaterialTextures mat;
 
   uint32_t materialTypeFlags = MaterialType_Invalid;
 
@@ -76,22 +76,6 @@ glTFMaterialDataGPU setupglTFMaterialData(
 
   materialTypeFlags = MaterialType_MetallicRoughness;
 
-  // if (mat.baseColorTexture.valid()) {
-  //   materialType = MetallicRoughness;
-  // } else {
-  //   // FIXME
-  //   loadMaterialTexture(mtlDescriptor, aiTextureType_DIFFUSE, assetFolder, mat.baseColorTexture, ctx, true);
-  //   loadMaterialTexture(mtlDescriptor, aiTextureType_SPECULAR, assetFolder, mat.surfacePropertiesTexture, ctx, true);
-
-  //  if (mat.baseColorTexture.valid()) {
-  //    materialType = SpecularGlossiness;
-  //  } else {
-  //    printf("Unknown material type\n");
-  //    materialType = MetallicRoughness;
-  //    // exit(256);
-  //  }
-  //}
-
   // Load common textures
   loadMaterialTexture(mtlDescriptor, aiTextureType_LIGHTMAP, assetFolder, mat.occlusionTexture, ctx, false);
   loadMaterialTexture(mtlDescriptor, aiTextureType_EMISSIVE, assetFolder, mat.emissiveTexture, ctx, true);
@@ -119,9 +103,9 @@ glTFMaterialDataGPU setupglTFMaterialData(
   // Iridescence
   // loadMaterialTexture(mtlDescriptor, aiTextureType_IRID, assetFolder, mat.specularTexture, ctx, true, 0);
 
-  // Anistoropy
+  // Anisotropy
 
-  glTFMaterialDataGPU res = {
+  GLTFMaterialDataGPU res = {
     .baseColorFactor                  = vec4(1.0f, 1.0f, 1.0f, 1.0f),
     .metallicRoughnessNormalOcclusion = vec4(1.0f, 1.0f, 1.0f, 1.0f),
     .specularFactors                  = vec4(1.0f, 1.0f, 1.0f, 1.0f),
@@ -138,8 +122,8 @@ glTFMaterialDataGPU setupglTFMaterialData(
     .clearCoatNormalTexture           = mat.clearCoatNormalTexture.valid() ? mat.clearCoatNormalTexture.index() : mat.white.index(),
     .specularTexture                  = mat.specularTexture.valid() ? mat.specularTexture.index() : mat.white.index(),
     .specularColorTexture             = mat.specularColorTexture.valid() ? mat.specularColorTexture.index() : mat.white.index(),
-    .transmissionTexture              = mat.transmissionTexture.index(),
-    .thicknessTexture                 = mat.thicknessTexture.index(),
+    .transmissionTexture              = mat.transmissionTexture.valid() ? mat.transmissionTexture.index() : mat.white.index(),
+    .thicknessTexture                 = mat.thicknessTexture.valid() ? mat.thicknessTexture.index() : mat.white.index(),
     .iridescenceTexture               = mat.iridescenceTexture.index(),
     .iridescenceThicknessTexture      = mat.iridescenceThicknessTexture.index(),
     .anisotropyTexture                = mat.anisotropyTexture.index(),
@@ -160,7 +144,6 @@ glTFMaterialDataGPU setupglTFMaterialData(
 
   ai_real emissiveStrength = 1.0f;
   if (mtlDescriptor->Get(AI_MATKEY_EMISSIVE_INTENSITY, emissiveStrength) == AI_SUCCESS) {
-    // mat.emissiveFactor = vec3(aiColor.r, aiColor.g, aiColor.b);
     res.emissiveFactorAlphaCutoff *= vec4(emissiveStrength, emissiveStrength, emissiveStrength, 1.0f);
   }
 
@@ -207,11 +190,11 @@ glTFMaterialDataGPU setupglTFMaterialData(
   aiString alphaMode = aiString("OPAQUE");
   if (mtlDescriptor->Get(AI_MATKEY_GLTF_ALPHAMODE, alphaMode) == AI_SUCCESS) {
     if (alphaMode == aiString("MASK")) {
-      res.alphaMode = glTFMaterialDataGPU::AlphaMode_Mask;
+      res.alphaMode = GLTFMaterialDataGPU::AlphaMode_Mask;
     } else if (alphaMode == aiString("BLEND")) {
-      res.alphaMode = glTFMaterialDataGPU::AlphaMode_Blend;
+      res.alphaMode = GLTFMaterialDataGPU::AlphaMode_Blend;
     } else {
-      res.alphaMode = glTFMaterialDataGPU::AlphaMode_Opaque;
+      res.alphaMode = GLTFMaterialDataGPU::AlphaMode_Opaque;
     }
   }
 
@@ -253,14 +236,14 @@ glTFMaterialDataGPU setupglTFMaterialData(
     bool useClearCoat = !mat.clearCoatTexture.empty() || !mat.clearCoatRoughnessTexture.empty() || !mat.clearCoatNormalTexture.empty();
     ai_real clearcoatFactor;
     if (mtlDescriptor->Get(AI_MATKEY_CLEARCOAT_FACTOR, clearcoatFactor) == AI_SUCCESS) {
-      res.clearcoatTransmissionTickness.x = clearcoatFactor;
-      useClearCoat                        = true;
+      res.clearcoatTransmissionThickness.x = clearcoatFactor;
+      useClearCoat                         = true;
     }
 
     ai_real clearcoatRoughnessFactor;
     if (mtlDescriptor->Get(AI_MATKEY_CLEARCOAT_ROUGHNESS_FACTOR, clearcoatRoughnessFactor) == AI_SUCCESS) {
-      res.clearcoatTransmissionTickness.y = clearcoatRoughnessFactor;
-      useClearCoat                        = true;
+      res.clearcoatTransmissionThickness.y = clearcoatRoughnessFactor;
+      useClearCoat                         = true;
     }
 
     if (assignUVandSampler(
@@ -308,6 +291,61 @@ glTFMaterialDataGPU setupglTFMaterialData(
     }
   }
 
+  // Transmission
+  {
+    bool useTransmission = !mat.transmissionTexture.empty();
+
+    ai_real transmissionFactor = 0.0f;
+    if (mtlDescriptor->Get(AI_MATKEY_TRANSMISSION_FACTOR, transmissionFactor) == AI_SUCCESS) {
+      res.clearcoatTransmissionThickness.z = transmissionFactor;
+      useTransmission                      = true;
+    }
+
+    if (useTransmission) {
+      res.materialTypeFlags |= MaterialType_Transmission;
+      useVolumetric = true;
+    }
+
+    assignUVandSampler(samplers, mtlDescriptor, aiTextureType_TRANSMISSION, res.transmissionTextureUV, res.transmissionTextureSampler, 0);
+  }
+
+  {
+    bool useVolume = !mat.thicknessTexture.empty();
+
+    ai_real thicknessFactor = 0.0f;
+    if (mtlDescriptor->Get(AI_MATKEY_VOLUME_THICKNESS_FACTOR, thicknessFactor) == AI_SUCCESS) {
+      res.clearcoatTransmissionThickness.w = thicknessFactor;
+      useVolume                            = true;
+    }
+
+    ai_real attenuationDistance = 0.0f;
+    if (mtlDescriptor->Get(AI_MATKEY_VOLUME_ATTENUATION_DISTANCE, attenuationDistance) == AI_SUCCESS) {
+      res.attenuation.w = attenuationDistance;
+      useVolume         = true;
+    }
+
+    aiColor4D volumeAttnuationColor;
+    if (mtlDescriptor->Get(AI_MATKEY_VOLUME_ATTENUATION_COLOR, volumeAttnuationColor) == AI_SUCCESS) {
+      res.attenuation.x = volumeAttnuationColor.r;
+      res.attenuation.y = volumeAttnuationColor.g;
+      res.attenuation.z = volumeAttnuationColor.b;
+      useVolume         = true;
+    }
+
+    if (useVolume) {
+      res.materialTypeFlags |= MaterialType_Transmission | MaterialType_Volume;
+      useVolumetric = true;
+    }
+
+    assignUVandSampler(samplers, mtlDescriptor, aiTextureType_TRANSMISSION, res.thicknessTextureUV, res.thicknessTextureSampler, 1);
+  }
+
+  // IOR
+  ai_real ior;
+  if (mtlDescriptor->Get(AI_MATKEY_REFRACTI, ior) == AI_SUCCESS) {
+    res.ior = ior;
+  }
+
   mat.wasLoaded = true;
 
   glTFDataholder.textures.push_back(std::move(mat));
@@ -336,7 +374,7 @@ static uint32_t getNumIndices(const aiScene& scene)
   return num;
 }
 
-void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
+void loadglTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
 {
   const aiScene* scene = aiImportFile(glTFName, aiProcess_Triangulate);
   if (!scene || !scene->HasMeshes()) {
@@ -396,7 +434,8 @@ void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
 
   for (unsigned int mtl = 0; mtl < scene->mNumMaterials; ++mtl) {
     const aiMaterial* mtlDescriptor = scene->mMaterials[mtl];
-    gltf.matPerFrame.materials[mtl] = setupglTFMaterialData(ctx, gltf.samplers, mtlDescriptor, glTFDataPath, gltf.glTFDataholder);
+    gltf.matPerFrame.materials[mtl] =
+        setupglTFMaterialData(ctx, gltf.samplers, mtlDescriptor, glTFDataPath, gltf.glTFDataholder, gltf.volumetricMaterial);
   }
 
   gltf.nodesStorage.push_back({
@@ -406,7 +445,7 @@ void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
 
   gltf.root = gltf.nodesStorage.size() - 1;
 
-  std::function<void(const aiNode* rootNode, glTFNodeRef gltfNode)> traverseTree = [&](const aiNode* rootNode, glTFNodeRef gltfNode) {
+  std::function<void(const aiNode* rootNode, GLTFNodeRef gltfNode)> traverseTree = [&](const aiNode* rootNode, GLTFNodeRef gltfNode) {
     for (unsigned int m = 0; m < rootNode->mNumMeshes; ++m) {
       const uint32_t meshIdx = rootNode->mMeshes[m];
       const aiMesh* mesh     = scene->mMeshes[meshIdx];
@@ -418,14 +457,16 @@ void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
           .indexOffset  = startIndex[meshIdx],
           .indexCount   = mesh->mNumFaces * 3,
           .matIdx       = mesh->mMaterialIndex,
-          // FIXME
-          .opaque = gltf.matPerFrame.materials[mesh->mMaterialIndex].alphaMode != glTFMaterialDataGPU::AlphaMode_Blend,
+          .sortingType =
+              gltf.matPerFrame.materials[mesh->mMaterialIndex].alphaMode == GLTFMaterialDataGPU::AlphaMode_Blend ? SortingType_Transparent
+              : gltf.matPerFrame.materials[mesh->mMaterialIndex].materialTypeFlags & MaterialType_Transmission   ? SortingType_Transmission
+                                                                                                                 : SortingType_Opaque,
       });
       gltf.nodesStorage[gltfNode].meshes.push_back(gltf.meshesStorage.size() - 1);
     }
-    for (glTFNodeRef i = 0; i < rootNode->mNumChildren; i++) {
+    for (GLTFNodeRef i = 0; i < rootNode->mNumChildren; i++) {
       const aiNode* node = rootNode->mChildren[i];
-      const glTFNode childNode({
+      const GLTFNode childNode({
           .name      = node->mName.C_Str() ? node->mName.C_Str() : "node",
           .transform = gltf.nodesStorage[gltfNode].transform * AiMatrix4x4ToGlm(&node->mTransformation),
       });
@@ -438,20 +479,20 @@ void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
 
   traverseTree(scene->mRootNode, gltf.root);
 
-  gltf.vertexBuffer = ctx->createBuffer(
-      { .usage     = lvk::BufferUsageBits_Vertex,
-        .storage   = lvk::StorageType_Device,
-        .size      = sizeof(Vertex) * vertices.size(),
-        .data      = vertices.data(),
-        .debugName = "Buffer: vertex" },
-      nullptr);
-  gltf.indexBuffer = ctx->createBuffer(
-      { .usage     = lvk::BufferUsageBits_Index,
-        .storage   = lvk::StorageType_Device,
-        .size      = sizeof(uint32_t) * indices.size(),
-        .data      = indices.data(),
-        .debugName = "Buffer: index" },
-      nullptr);
+  gltf.vertexBuffer = ctx->createBuffer({
+      .usage     = lvk::BufferUsageBits_Vertex,
+      .storage   = lvk::StorageType_Device,
+      .size      = sizeof(Vertex) * vertices.size(),
+      .data      = vertices.data(),
+      .debugName = "Buffer: vertex",
+  });
+  gltf.indexBuffer  = ctx->createBuffer({
+       .usage     = lvk::BufferUsageBits_Index,
+       .storage   = lvk::StorageType_Device,
+       .size      = sizeof(uint32_t) * indices.size(),
+       .data      = indices.data(),
+       .debugName = "Buffer: index",
+  });
 
   const lvk::VertexInput vdesc = {
     .attributes    = { { .location = 0, .format = lvk::VertexFormat::Float3, .offset = 0  },
@@ -487,7 +528,6 @@ void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
                 .srcAlphaBlendFactor = lvk::BlendFactor_SrcAlpha,
                 .dstRGBBlendFactor   = lvk::BlendFactor_OneMinusDstColor,
                 .dstAlphaBlendFactor = lvk::BlendFactor_OneMinusDstAlpha,
-
       } },
       .depthFormat = gltf.app.getDepthFormat(),
       .cullMode    = lvk::CullMode_Back,
@@ -512,6 +552,8 @@ void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
         .envMapTextureCharlie           = gltf.envMapTextures.envMapTextureCharlie.index(),
         .envMapTextureCharlieSampler    = gltf.samplers.clamp.index(),
     } },
+                                             .lights       = { getDummyLight(), },
+															.lightCount=1,
   };
 
   gltf.envBuffer = ctx->createBuffer({
@@ -525,7 +567,7 @@ void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
   gltf.perFrameBuffer = ctx->createBuffer({
       .usage     = lvk::BufferUsageBits_Uniform,
       .storage   = lvk::StorageType_HostVisible,
-      .size      = sizeof(glTFFrameData),
+      .size      = sizeof(GLTFFrameData),
       .data      = &gltf.frameData,
       .debugName = "Per Frame data",
   });
@@ -533,25 +575,28 @@ void loadglTF(glTFContext& gltf, const char* glTFName, const char* glTFDataPath)
   LVK_ASSERT(gltf.pipelineSolid.valid());
 }
 
-void buildTransformsList(glTFContext& gltf)
+void buildTransformsList(GLTFContext& gltf)
 {
   gltf.transforms.clear();
   gltf.opaqueNodes.clear();
+  gltf.transmissionNodes.clear();
   gltf.transparentNodes.clear();
 
-  std::function<void(glTFNodeRef & gltfNode)> traverseTree = [&](glTFNodeRef& nodeRef) {
-    auto& node = gltf.nodesStorage[nodeRef];
-    for (glTFNodeRef meshId : node.meshes) {
-      const glTFMesh& mesh = gltf.meshesStorage[meshId];
+  std::function<void(GLTFNodeRef & gltfNode)> traverseTree = [&](GLTFNodeRef& nodeRef) {
+    const GLTFNode& node = gltf.nodesStorage[nodeRef];
+    for (GLTFNodeRef meshId : node.meshes) {
+      const GLTFMesh& mesh = gltf.meshesStorage[meshId];
       gltf.transforms.push_back(
-          { .model = node.transform, .matId = mesh.matIdx, .nodeRef = nodeRef, .meshRef = meshId, .opaque = mesh.opaque });
-      if (mesh.opaque) {
-        gltf.opaqueNodes.push_back(gltf.transforms.size() - 1);
-      } else {
+          { .model = node.transform, .matId = mesh.matIdx, .nodeRef = nodeRef, .meshRef = meshId, .sortingType = mesh.sortingType });
+      if (mesh.sortingType == SortingType_Transparent) {
         gltf.transparentNodes.push_back(gltf.transforms.size() - 1);
+      } else if (mesh.sortingType == SortingType_Transmission) {
+        gltf.transmissionNodes.push_back(gltf.transforms.size() - 1);
+      } else {
+        gltf.opaqueNodes.push_back(gltf.transforms.size() - 1);
       }
     }
-    for (glTFNodeRef child : node.children) {
+    for (GLTFNodeRef child : node.children) {
       traverseTree(child);
     }
   };
@@ -565,13 +610,13 @@ void buildTransformsList(glTFContext& gltf)
   gltf.transformBuffer = ctx->createBuffer({
       .usage     = lvk::BufferUsageBits_Uniform,
       .storage   = lvk::StorageType_HostVisible,
-      .size      = gltf.transforms.size() * sizeof(glTFTransforms),
+      .size      = gltf.transforms.size() * sizeof(GLTFTransforms),
       .data      = &gltf.transforms[0],
       .debugName = "Per Frame data",
   });
 }
 
-void sortTransparentNodes(glTFContext& gltf, const vec3& cameraPos)
+void sortTransparentNodes(GLTFContext& gltf, const vec3& cameraPos)
 {
   // glTF spec expects to sort based on pivot positions (not sure correct way though)
   std::sort(gltf.transparentNodes.begin(), gltf.transparentNodes.end(), [&](uint32_t a, uint32_t b) {
@@ -581,22 +626,25 @@ void sortTransparentNodes(glTFContext& gltf, const vec3& cameraPos)
   });
 }
 
-void renderglTF(glTFContext& gltf, const mat4& m, const mat4& v, const mat4& p, bool rebuildRenderList)
+void renderglTF(GLTFContext& gltf, const mat4& m, const mat4& v, const mat4& p, bool rebuildRenderList)
 {
   auto& ctx = gltf.app.ctx_;
 
-  auto camInv = glm::inverse(v) * vec4(0.0f, 0.0f, 1.0f, 1.0f);
+  const vec4 camPos = glm::inverse(v) * vec4(0.0f, 0.0f, 1.0f, 1.0f);
 
   if (rebuildRenderList || gltf.transforms.empty()) {
     buildTransformsList(gltf);
   }
 
-  sortTransparentNodes(gltf, camInv);
+  sortTransparentNodes(gltf, camPos);
+
+  const bool screenCopy = gltf.isScreenCopyRequired();
 
   gltf.frameData = {
+    .model     = m,
     .view      = v,
     .proj      = p,
-    .cameraPos = camInv,
+    .cameraPos = camPos,
   };
 
   struct PushConstants {
@@ -606,67 +654,154 @@ void renderglTF(glTFContext& gltf, const mat4& m, const mat4& v, const mat4& p, 
     uint64_t transforms;
     uint32_t transformId;
     uint32_t envId;
+    uint32_t transmissionFramebuffer;
+    uint32_t transmissionFramebufferSampler;
   } pushConstants = {
-    .draw         = ctx->gpuAddress(gltf.perFrameBuffer),
-    .materials    = ctx->gpuAddress(gltf.matBuffer),
-    .environments = ctx->gpuAddress(gltf.envBuffer),
-    .transforms   = ctx->gpuAddress(gltf.transformBuffer),
-    .transformId  = 0,
-    .envId        = 0,
+    .draw                           = ctx->gpuAddress(gltf.perFrameBuffer),
+    .materials                      = ctx->gpuAddress(gltf.matBuffer),
+    .environments                   = ctx->gpuAddress(gltf.envBuffer),
+    .transforms                     = ctx->gpuAddress(gltf.transformBuffer),
+    .transformId                    = 0,
+    .envId                          = 0,
+    .transmissionFramebuffer        = 0,
+    .transmissionFramebufferSampler = gltf.samplers.clamp.index(),
   };
 
-  ctx->upload(gltf.perFrameBuffer, &gltf.frameData, sizeof(glTFFrameData));
+  ctx->upload(gltf.perFrameBuffer, &gltf.frameData, sizeof(GLTFFrameData));
 
-  const lvk::RenderPass renderPass = {
-    .color = { { .loadOp = lvk::LoadOp_Clear, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } } },
-    .depth = { .loadOp = lvk::LoadOp_Clear, .clearDepth = 1.0f }
-  };
+  const bool isSizeChanged = ctx->getDimensions(ctx->getCurrentSwapchainTexture()) != ctx->getDimensions(gltf.offscreenTex[0]);
 
-  const lvk::Framebuffer framebuffer = {
-    .color        = { { .texture = ctx->getCurrentSwapchainTexture() } },
-    .depthStencil = { .texture = gltf.app.getDepthTexture() },
+  if (gltf.offscreenTex[0].empty() || isSizeChanged) {
+    const lvk::Dimensions res = ctx->getDimensions(ctx->getCurrentSwapchainTexture());
+
+    for (lvk::Holder<lvk::TextureHandle>& holder : gltf.offscreenTex) {
+      holder = ctx->createTexture({
+          .type         = lvk::TextureType_2D,
+          .format       = ctx->getSwapchainFormat(),
+          .dimensions   = {res.width, res.height},
+          .usage        = lvk::TextureUsageBits_Attachment | lvk::TextureUsageBits_Sampled,
+          .numMipLevels = lvk::calcNumMipLevels(res.width, res.height),
+          .debugName    = "offscreenTex",
+      });
+    }
+  }
+
+  auto drawUI = [&](lvk::ICommandBuffer& buf, const lvk::Framebuffer& framebuffer) {
+    gltf.app.drawGrid(buf, p, vec3(0, -1.0f, 0));
+    gltf.app.imgui_->beginFrame(framebuffer);
+    gltf.app.drawFPS();
+    gltf.app.drawMemo();
+    gltf.app.imgui_->endFrame(buf);
   };
 
   lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
-  {
-    buf.cmdBeginRendering(renderPass, framebuffer);
-    buf.cmdBindVertexBuffer(0, gltf.vertexBuffer, 0);
-    buf.cmdBindIndexBuffer(gltf.indexBuffer, lvk::IndexFormat_UI32);
 
-    buf.cmdBindDepthState(gltf.dState);
+  {
+    // 1st pass
+    pushConstants.transmissionFramebuffer = 0;
+
+    const lvk::RenderPass renderPass = {
+      .color = { { .loadOp = lvk::LoadOp_Clear, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } } },
+      .depth = { .loadOp = lvk::LoadOp_Clear, .clearDepth = 1.0f },
+    };
+
+    const lvk::Framebuffer framebuffer = {
+      .color        = { { .texture = screenCopy ? gltf.offscreenTex[gltf.currentOffscreenTex] : ctx->getCurrentSwapchainTexture() } },
+      .depthStencil = { .texture = gltf.app.getDepthTexture() },
+    };
+
     {
+      buf.cmdBeginRendering(renderPass, framebuffer);
+      buf.cmdBindVertexBuffer(0, gltf.vertexBuffer, 0);
+      buf.cmdBindIndexBuffer(gltf.indexBuffer, lvk::IndexFormat_UI32);
+
+      buf.cmdBindDepthState({ .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true });
+
       buf.cmdBindRenderPipeline(gltf.pipelineSolid);
-      for (auto transformId : gltf.opaqueNodes) {
-        auto transform = gltf.transforms[transformId];
+      for (uint32_t transformId : gltf.opaqueNodes) {
+        const GLTFTransforms transform = gltf.transforms[transformId];
 
         pushConstants.transformId = transformId;
         buf.cmdPushDebugGroupLabel(gltf.nodesStorage[transform.nodeRef].name.c_str(), 0xff0000ff);
         {
           buf.cmdPushConstants(pushConstants);
-          auto submesh = gltf.meshesStorage[transform.meshRef];
+          const GLTFMesh submesh = gltf.meshesStorage[transform.meshRef];
           buf.cmdDrawIndexed(submesh.indexCount, 1, submesh.indexOffset, submesh.vertexOffset);
         }
         buf.cmdPopDebugGroupLabel();
       }
-
-      buf.cmdBindRenderPipeline(gltf.pipelineTransparent);
-      for (auto transformId : gltf.transparentNodes) {
-        auto transform = gltf.transforms[transformId];
-
-        pushConstants.transformId = transformId;
-        buf.cmdPushDebugGroupLabel(gltf.nodesStorage[transform.nodeRef].name.c_str(), 0x00FF00ff);
-        {
-          buf.cmdPushConstants(pushConstants);
-          auto submesh = gltf.meshesStorage[transform.meshRef];
-          buf.cmdDrawIndexed(submesh.indexCount, 1, submesh.indexOffset, submesh.vertexOffset);
-        }
-        buf.cmdPopDebugGroupLabel();
+      if (!screenCopy) {
+        drawUI(buf, framebuffer);
       }
+      buf.cmdEndRendering();
     }
+  }
+
+  if (!gltf.transmissionNodes.empty() || !gltf.transparentNodes.empty()) {
+    // 2nd pass
+    const lvk::RenderPass renderPass = {
+      .color = { { .loadOp = lvk::LoadOp_Load } },
+      .depth = { .loadOp = lvk::LoadOp_Load },
+    };
+
+    const lvk::Framebuffer framebuffer = {
+      .color        = { { .texture = ctx->getCurrentSwapchainTexture() } },
+      .depthStencil = { .texture = gltf.app.getDepthTexture() },
+    };
+
+    if (screenCopy) {
+      buf.cmdCopyImage(
+          gltf.offscreenTex[gltf.currentOffscreenTex], ctx->getCurrentSwapchainTexture(),
+          ctx->getDimensions(ctx->getCurrentSwapchainTexture()));
+      buf.cmdGenerateMipmap(gltf.offscreenTex[gltf.currentOffscreenTex]);
+
+      pushConstants.transmissionFramebuffer = gltf.offscreenTex[gltf.currentOffscreenTex].index();
+    }
+
+    buf.cmdBeginRendering(renderPass, framebuffer, { .textures = { lvk::TextureHandle(gltf.offscreenTex[gltf.currentOffscreenTex]) } });
+    buf.cmdBindVertexBuffer(0, gltf.vertexBuffer, 0);
+    buf.cmdBindIndexBuffer(gltf.indexBuffer, lvk::IndexFormat_UI32);
+
+    buf.cmdBindDepthState({ .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true });
+
+    // Volumetric opaque
+    buf.cmdBindRenderPipeline(gltf.pipelineSolid);
+    for (uint32_t transformId : gltf.transmissionNodes) {
+      const GLTFTransforms transform = gltf.transforms[transformId];
+
+      pushConstants.transformId = transformId;
+      buf.cmdPushDebugGroupLabel(gltf.nodesStorage[transform.nodeRef].name.c_str(), 0x00FF00ff);
+      {
+        buf.cmdPushConstants(pushConstants);
+        const GLTFMesh submesh = gltf.meshesStorage[transform.meshRef];
+        buf.cmdDrawIndexed(submesh.indexCount, 1, submesh.indexOffset, submesh.vertexOffset);
+      }
+      buf.cmdPopDebugGroupLabel();
+    }
+
+    //
+    buf.cmdBindRenderPipeline(gltf.pipelineTransparent);
+    for (uint32_t transformId : gltf.transparentNodes) {
+      const GLTFTransforms transform = gltf.transforms[transformId];
+
+      pushConstants.transformId = transformId;
+      buf.cmdPushDebugGroupLabel(gltf.nodesStorage[transform.nodeRef].name.c_str(), 0x00FF00ff);
+      {
+        buf.cmdPushConstants(pushConstants);
+        const GLTFMesh submesh = gltf.meshesStorage[transform.meshRef];
+        buf.cmdDrawIndexed(submesh.indexCount, 1, submesh.indexOffset, submesh.vertexOffset);
+      }
+      buf.cmdPopDebugGroupLabel();
+    }
+
+    drawUI(buf, framebuffer);
 
     buf.cmdEndRendering();
   }
+
   ctx->submit(buf, ctx->getCurrentSwapchainTexture());
+
+  gltf.currentOffscreenTex = (gltf.currentOffscreenTex + 1) % LVK_ARRAY_NUM_ELEMENTS(gltf.offscreenTex);
 }
 
 MaterialType detectMaterialType(const aiMaterial* mtl)
@@ -691,4 +826,22 @@ MaterialType detectMaterialType(const aiMaterial* mtl)
   LLOGW("Unknown material type\n");
 
   return MaterialType_Invalid;
+}
+
+LightDataGPU getDummyLight()
+{
+  LightDataGPU light;
+  light.direction = vec3(0, 0, 1);
+  light.range     = 10000.0;
+
+  light.color     = vec3(1, 1, 1);
+  light.intensity = 1.0;
+
+  light.position     = vec3(0, 0, -5);
+  light.innerConeCos = 0.0;
+
+  light.outerConeCos = 0.78;
+  light.type         = LightType_Directional;
+
+  return light;
 }

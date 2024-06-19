@@ -53,81 +53,66 @@ MetallicRoughnessDataGPU getMaterial(uint idx) {
   return perFrame.materials.material[idx]; 
 }
 
-EnvironmentMapDataGPU getEnvironmentMap(uint idx) {
+EnvironmentMapDataGPU getEnvironment(uint idx) {
   return perFrame.environments.environment[idx]; 
 }
 
-float getMetallicFactor(uint idx) {
-  MetallicRoughnessDataGPU mat = getMaterial(idx);
+float getMetallicFactor(MetallicRoughnessDataGPU mat) {
   return mat.metallicRoughnessNormalOcclusion.x;
 }
 
-float getRoughnessFactor(uint idx) {
-  MetallicRoughnessDataGPU mat = getMaterial(idx);
+float getRoughnessFactor(MetallicRoughnessDataGPU mat) {
   return mat.metallicRoughnessNormalOcclusion.y;
 }
 
-float getNormalScale(uint idx) {
-  MetallicRoughnessDataGPU mat = getMaterial(idx);
+float getNormalScale(MetallicRoughnessDataGPU mat) {
   return mat.metallicRoughnessNormalOcclusion.z;
 }
 
-float getOcclusionFactor(uint idx) {
-  MetallicRoughnessDataGPU mat = getMaterial(idx);
+float getOcclusionFactor(MetallicRoughnessDataGPU mat) {
   return mat.metallicRoughnessNormalOcclusion.w;
 }
 
-vec2 getNormalUV(InputAttributes tc, uint idx) {
-  MetallicRoughnessDataGPU mat = getMaterial(idx);
+vec2 getNormalUV(InputAttributes tc, MetallicRoughnessDataGPU mat) {
   return tc.uv[mat.normalTextureUV];
 }
 
-vec4 sampleAO(InputAttributes tc, uint idx) {
-  MetallicRoughnessDataGPU mat = getMaterial(idx);
+vec4 sampleAO(InputAttributes tc, MetallicRoughnessDataGPU mat) {
   return textureBindless2D(mat.occlusionTexture, mat.occlusionTextureSampler, tc.uv[mat.occlusionTextureUV]);
 }
 
-vec4 sampleEmissive(InputAttributes tc, uint idx) {
-  MetallicRoughnessDataGPU mat = getMaterial(idx);
+vec4 sampleEmissive(InputAttributes tc, MetallicRoughnessDataGPU mat) {
   return textureBindless2D(mat.emissiveTexture, mat.emissiveTextureSampler, tc.uv[mat.emissiveTextureUV]) * vec4(mat.emissiveFactorAlphaCutoff.xyz, 1.0f);
 }
 
-vec4 sampleAlbedo(InputAttributes tc, uint idx) {
-  MetallicRoughnessDataGPU mat = getMaterial(idx);
+vec4 sampleAlbedo(InputAttributes tc, MetallicRoughnessDataGPU mat) {
   return textureBindless2D(mat.baseColorTexture, mat.baseColorTextureSampler, tc.uv[mat.baseColorTextureUV]) * mat.baseColorFactor;
 }
 
-vec4 sampleMetallicRoughness(InputAttributes tc, uint idx) {
-  MetallicRoughnessDataGPU mat = getMaterial(idx);
+vec4 sampleMetallicRoughness(InputAttributes tc, MetallicRoughnessDataGPU mat) {
   return textureBindless2D(mat.metallicRoughnessTexture, mat.metallicRoughnessTextureSampler, tc.uv[mat.metallicRoughnessTextureUV]);
 }
 
-vec4 sampleNormal(InputAttributes tc, uint idx) {
-  MetallicRoughnessDataGPU mat = getMaterial(idx);
+vec4 sampleNormal(InputAttributes tc, MetallicRoughnessDataGPU mat) {
   return textureBindless2D(mat.normalTexture, mat.normalTextureSampler, tc.uv[mat.normalTextureUV]);
 }
 
-vec4 sampleBRDF_LUT(vec2 tc, uint idx) {
-  EnvironmentMapDataGPU map = getEnvironmentMap(idx);
+vec4 sampleBRDF_LUT(vec2 tc, EnvironmentMapDataGPU map) {
   return textureBindless2D(map.texBRDF_LUT, map.texBRDF_LUTSampler, tc);
 }
 
-vec4 sampleEnvMap(vec3 tc, uint idx) {
-  EnvironmentMapDataGPU map = getEnvironmentMap(idx);
+vec4 sampleEnvMap(vec3 tc, EnvironmentMapDataGPU map) {
   return textureBindlessCube(map.envMapTexture, map.envMapTextureSampler, tc);
 }
 
-vec4 sampleEnvMapLod(vec3 tc, float lod, uint idx) {
-  EnvironmentMapDataGPU map = getEnvironmentMap(idx);
+vec4 sampleEnvMapLod(vec3 tc, float lod, EnvironmentMapDataGPU map) {
   return textureBindlessCubeLod(map.envMapTexture, map.envMapTextureSampler, tc, lod);
 }
 
-vec4 sampleEnvMapIrradiance(vec3 tc, uint idx) {
-  EnvironmentMapDataGPU map = getEnvironmentMap(idx);
+vec4 sampleEnvMapIrradiance(vec3 tc, EnvironmentMapDataGPU map) {
   return textureBindlessCube(map.envMapTextureIrradiance, map.envMapTextureIrradianceSampler, tc);
 }
 
-int sampleEnvMapQueryLevels(uint idx) {
-  EnvironmentMapDataGPU map = getEnvironmentMap(idx);
-  return textureBindlessQueryLevels2D(map.envMapTexture);
+int sampleEnvMapQueryLevels(EnvironmentMapDataGPU map) {
+  return textureBindlessQueryLevelsCube(map.envMapTexture);
 }

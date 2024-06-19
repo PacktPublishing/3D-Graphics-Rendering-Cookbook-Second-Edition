@@ -27,9 +27,10 @@ struct PBRInfo {
 // specularWeight is introduced with KHR_materials_specular
 vec3 getIBLRadianceLambertian(float NdotV, vec3 n, float roughness, vec3 diffuseColor, vec3 F0, float specularWeight) {
   vec2 brdfSamplePoint = clamp(vec2(NdotV, roughness), vec2(0.0, 0.0), vec2(1.0, 1.0));
-  vec2 f_ab = sampleBRDF_LUT(brdfSamplePoint, getMaterialId()).rg;
+  EnvironmentMapDataGPU envMap =  getEnvironment(getEnvironmentId());
+  vec2 f_ab = sampleBRDF_LUT(brdfSamplePoint, envMap).rg;
 
-  vec3 irradiance = sampleEnvMapIrradiance(n.xyz, getEnvironmentId()).rgb;
+  vec3 irradiance = sampleEnvMapIrradiance(n.xyz, envMap).rgb;
 
   // see https://bruop.github.io/ibl/#single_scattering_results at Single Scattering Results
   // Roughness dependent fresnel, from Fdez-Aguera
@@ -53,14 +54,15 @@ vec3 getIBLRadianceContributionGGX(PBRInfo pbrInputs, float specularWeight) {
   vec3 n = pbrInputs.n;
   vec3 v =  pbrInputs.v;
   vec3 reflection = -normalize(reflect(v, n));
-  float mipCount = float(sampleEnvMapQueryLevels(getMaterialId()));
+  EnvironmentMapDataGPU envMap =  getEnvironment(getEnvironmentId());
+  float mipCount = float(sampleEnvMapQueryLevels(envMap));
   float lod = pbrInputs.perceptualRoughness * (mipCount - 1);
 
   // retrieve a scale and bias to F0. See [1], Figure 3
   vec2 brdfSamplePoint = clamp(vec2(pbrInputs.NdotV, pbrInputs.perceptualRoughness), vec2(0.0, 0.0), vec2(1.0, 1.0));
-  vec3 brdf = sampleBRDF_LUT(brdfSamplePoint, getMaterialId()).rgb;
+  vec3 brdf = sampleBRDF_LUT(brdfSamplePoint, envMap).rgb;
   // HDR envmaps are already linear
-  vec3 specularLight = sampleEnvMapLod(reflection.xyz, lod, getEnvironmentId()).rgb;
+  vec3 specularLight = sampleEnvMapLod(reflection.xyz, lod, envMap).rgb;
 
   // see https://bruop.github.io/ibl/#single_scattering_results at Single Scattering Results
   // Roughness dependent fresnel, from Fdez-Aguera
@@ -111,18 +113,18 @@ float microfacetDistribution(PBRInfo pbrInputs) {
 PBRInfo calculatePBRInputsMetallicRoughness( vec4 albedo, vec3 normal, vec3 cameraPos, vec3 worldPos, vec4 mrSample) {
   PBRInfo pbrInputs;
 
-  float perceptualRoughness = getRoughnessFactor(getMaterialId());
-  float metallic = getMetallicFactor(getMaterialId());
+  MetallicRoughnessDataGPU mat = getMaterial(getMaterialId());
+  float perceptualRoughness = getRoughnessFactor(mat);
+  float metallic = getMetallicFactor(mat) * mrSample.b;
+  metallic = clamp(metallic, 0.0, 1.0);
 
   // Roughness is stored in the 'g' channel, metallic is stored in the 'b' channel.
   // This layout intentionally reserves the 'r' channel for (optional) occlusion map data
   perceptualRoughness = mrSample.g * perceptualRoughness;
-  metallic = mrSample.b * metallic;
-
   const float c_MinRoughness = 0.04;
 
   perceptualRoughness = clamp(perceptualRoughness, c_MinRoughness, 1.0);
-  metallic = clamp(metallic, 0.0, 1.0);
+
   // Roughness is authored as perceptual roughness; as is convention,
   // convert to material roughness by squaring the perceptual roughness [2].
   float alphaRoughness = perceptualRoughness * perceptualRoughness;
@@ -162,13 +164,13 @@ PBRInfo calculatePBRInputsMetallicRoughness( vec4 albedo, vec3 normal, vec3 came
 vec3 calculatePBRLightContribution( inout PBRInfo pbrInputs, vec3 lightDirection, vec3 lightColor ) {
   vec3 n = pbrInputs.n;
   vec3 v = pbrInputs.v;
-  vec3 l = normalize(lightDirection);  // Vector from surface point to light
-  vec3 h = normalize(l+v);        // Half vector between both l and v
+  vec3 ld = normalize(lightDirection);  // Vector from surface point to light
+  vec3 h = normalize(ld+v);        // Half vector between both l and v
 
   float NdotV = pbrInputs.NdotV;
-  float NdotL = clamp(dot(n, l), 0.001, 1.0);
+  float NdotL = clamp(dot(n, ld), 0.001, 1.0);
   float NdotH = clamp(dot(n, h), 0.0, 1.0);
-  float LdotH = clamp(dot(l, h), 0.0, 1.0);
+  float LdotH = clamp(dot(ld, h), 0.0, 1.0);
   float VdotH = clamp(dot(v, h), 0.0, 1.0);
 
   vec3 color = vec3(0);

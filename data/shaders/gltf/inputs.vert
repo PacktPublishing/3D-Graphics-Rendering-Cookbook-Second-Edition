@@ -6,33 +6,18 @@ layout (location = 2) in vec4 color;
 layout (location = 3) in vec2 uv0;
 layout (location = 4) in vec2 uv1;
 
-vec3 getPosition()
-{
-	return pos;
+vec3 getPosition() {
+  return pos;
 }
 
-vec3 getNormal()
-{
-	return normal;
+vec3 getNormal() {
+  return normal;
 }
 
-vec4 getColor()
-{
-	return color;
+vec4 getColor() {
+  return color;
 }
 
-vec2 getTexCoord(uint i)
-{
-	return i == 0 ? uv0 : uv1;
-}
-
-//FIXME:
-mat4 getModel() 
-{
-	return perFrame.transforms.transforms[perFrame.transformId].model;
-}
-
-mat4 getViewProjection() 
-{
-	return perFrame.drawable.proj * perFrame.drawable.view;
+vec2 getTexCoord(uint i) {
+  return i == 0 ? uv0 : uv1;
 }

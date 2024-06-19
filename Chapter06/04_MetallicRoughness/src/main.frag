@@ -14,22 +14,22 @@ void main()
   tc.uv[0] = uv0uv1.xy;
   tc.uv[1] = uv0uv1.zw;
 
-  vec4 Kao = sampleAO(tc, getMaterialId());
-  vec4 Ke  = sampleEmissive(tc, getMaterialId());
-  vec4 Kd  = sampleAlbedo(tc, getMaterialId()) * color;
-  vec4 mrSample = sampleMetallicRoughness(tc, getMaterialId());
+  MetallicRoughnessDataGPU mat = getMaterial(getMaterialId());
+
+  vec4 Kao = sampleAO(tc, mat);
+  vec4 Ke  = sampleEmissive(tc, mat);
+  vec4 Kd  = sampleAlbedo(tc, mat) * color;
+  vec4 mrSample = sampleMetallicRoughness(tc, mat);
 
   // world-space normal
   vec3 n = normalize(normal);
 
-  vec3 normalSample = sampleNormal(tc, getMaterialId()).xyz;
+  vec3 normalSample = sampleNormal(tc, mat).xyz;
 
   // normal mapping
-  n = perturbNormal(n, worldPos, normalSample, getNormalUV(tc, getMaterialId()));
+  n = perturbNormal(n, worldPos, normalSample, getNormalUV(tc, mat));
 
-  if (!gl_FrontFacing) {
-    n *= -1.0f;
-  }
+  if (!gl_FrontFacing) n *= -1.0f;
 
   PBRInfo pbrInputs = calculatePBRInputsMetallicRoughness(Kd, n, perFrame.drawable.cameraPos.xyz, worldPos, mrSample);
 
@@ -53,8 +53,8 @@ void main()
 //  out_FragColor = Ke;
 //  out_FragColor = Kd;
 //  vec2 MeR = mrSample.yz;
-//  MeR.x *= getMetallicFactor(getMaterialId());
-//  MeR.y *= getRoughnessFactor(getMaterialId());
+//  MeR.x *= getMetallicFactor(mat);
+//  MeR.y *= getRoughnessFactor(mat);
 //  out_FragColor = vec4(MeR.y,MeR.y,MeR.y, 1.0);
 //  out_FragColor = mrSample;
 };
