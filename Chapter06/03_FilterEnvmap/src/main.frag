@@ -195,7 +195,7 @@ float computeLod(float pdf) {
   float width = float(perFrameData.width);
   float height = float(perFrameData.height);
   float sampleCount = float(perFrameData.sampleCount);
-  float lod = 0.5 * log2( 6.0 * with * height / (sampleCount * pdf));
+  float lod = 0.5 * log2( 6.0 * width * height / (sampleCount * pdf));
 
   return lod;
 }
