@@ -16,7 +16,7 @@ This book covers the following exciting features:
 * Improve the performance of legacy Vulkan applications with Vulkan 1.3
 * Manage a substantial amount of content in real-time 3D rendering engines
 * Discover how to debug and profile graphics applications
-* Understand how to use the bindless philosophy in Vulkan
+* Understand how to use the bindless approach in Vulkan
 * Integrate various rendering techniques into a single application
 * Find out how to develop Vulkan applications
 * Implement a physically based glTF2 rendering pipeline from scratch
@@ -31,13 +31,14 @@ Software and Hardware List
 | Chapter | Software required | OS required |
 | -------- | ------------------------------------ | ----------------------------------- |
 | 1-10 | Microsoft Visual Studio 2022 | Windows |
-| 1-10 | GCC 12 | Linux |
+| 1-10 | GCC 13 | Linux |
 | 1-10 | Python 3.x | Windows, Linux |
 | 1-10 | Vulkan SDK | Windows, Linux |
 
 The code runs on graphics cards which support Vulkan 1.3. GeForce RTX 2060 or newer is strongly recommended.
 
 ## Instructions and Navigations
+
 All of the code is organized into folders. For example, Chapter01.
 
 The code will look like the following:
@@ -82,7 +83,12 @@ cd ..
 
 **Sergey Kosarevsky**
 
-Sergey Kosarevsky is a rendering lead at Ubisoft RedLynx. He worked in the mobile industry at SPB Software, Yandex, Layar and Blippar, TWNKLS, and DAQRI, where he designed and implemented real-time rendering technology. He has more than 18 years of software development experience and more than 10 years of mobile and embedded 3D graphics experience. In his Ph.D. thesis, Sergey employed computer vision to solve mechanical engineering problems. He has co-authored several books on mobile software development in C++.
+Sergey Kosarevsky is a former rendering lead at Ubisoft RedLynx. He currently leads Vulkan development at Meta.
+He worked in the mobile industry at SPB Software, Yandex, Layar and Blippar, TWNKLS, and DAQRI,
+where he designed and implemented real-time rendering technology.
+He has more than 18 years of software development experience and more than 10 years of mobile
+and embedded 3D graphics experience. In his Ph.D. thesis, Sergey employed computer vision to
+solve mechanical engineering problems. He has co-authored several books on mobile software development in C++.
 
 **Viktor Latypov**
 
@@ -91,7 +97,7 @@ Together with Sergey, he has co-authored two books on mobile software developmen
 
 **Alexey Medvedev**
 
-Alexey Medvedev is an AR/VR tech lead at Meta.
+Alexey Medvedev is a technical expert with a rich background in game development. He currently serves as the AR Technical Lead at Meta, where he brings his passion for cutting-edge technology to drive innovation. Prior to joining Meta, Alexey honed his skills at prominent companies such as Crytek, Blizzard, and 2K, making significant contributions to the gaming industry.
 
 
 ## Other books by the authors
