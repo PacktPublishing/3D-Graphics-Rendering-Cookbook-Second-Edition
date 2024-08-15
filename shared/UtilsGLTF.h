@@ -1,4 +1,5 @@
 #pragma once
+
 #include "VulkanApp.h"
 
 #include <assimp/GltfMaterial.h>
@@ -23,7 +24,7 @@ enum MaterialType : uint32_t {
 
 const uint32_t kMaxMaterials    = 128;
 const uint32_t kMaxEnvironments = 4;
-const uint32_t kMaxLights = 4;
+const uint32_t kMaxLights       = 4;
 
 using glm::mat4;
 using glm::vec2;
@@ -74,17 +75,19 @@ struct EnvironmentMapDataGPU {
 };
 
 struct LightDataGPU {
-  vec3 direction;
-  float range;
+  vec3 direction = vec3(0, 0, 1);
+  float range    = 10000.0;
 
-  vec3 color;
-  float intensity;
+  vec3 color      = vec3(1, 1, 1);
+  float intensity = 1.0;
 
-  vec3 position;
-  float innerConeCos;
+  vec3 position = vec3(0, 0, -5);
 
-  float outerConeCos;
-  LightType type;
+  float innerConeCos = 0.0;
+  float outerConeCos = 0.78;
+
+  LightType type = LightType_Directional;
+
   int padding[2];
 };
 
@@ -419,7 +422,6 @@ struct GLTFContext {
   bool isScreenCopyRequired() const { return volumetricMaterial; }
 };
 
-void loadglTF(GLTFContext& context, const char* gltfName, const char* glTFDataPath);
-void renderglTF(GLTFContext& context, const mat4& m, const mat4& v, const mat4& p, bool rebuildRenderList = false);
+void loadGLTF(GLTFContext& context, const char* gltfName, const char* glTFDataPath);
+void renderGLTF(GLTFContext& context, const mat4& model, const mat4& view, const mat4& proj, bool rebuildRenderList = false);
 MaterialType detectMaterialType(const aiMaterial* mtl);
-LightDataGPU getDummyLight();

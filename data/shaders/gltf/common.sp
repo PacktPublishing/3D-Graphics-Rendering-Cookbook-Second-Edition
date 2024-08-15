@@ -1,5 +1,7 @@
 //
 
+// gl_BaseInstance - transformId
+
 layout(std430, buffer_reference) buffer Materials;
 layout(std430, buffer_reference) buffer Environments;
 
@@ -26,23 +28,14 @@ layout(push_constant) uniform PerFrameData {
   PerDrawData drawable;
   Materials materials;
   Environments environments;
-  Transforms  transforms;
-  uint transformId;
+  Transforms transforms;
   uint envId;
   uint transmissionFramebuffer;
   uint transmissionFramebufferSampler;
 } perFrame;
 
-uint getMaterialId() {
-  return perFrame.transforms.transforms[perFrame.transformId].matId;
-}
-
 uint getEnvironmentId() {
   return perFrame.envId;
-}
-
-mat4 getModel() {
-  return perFrame.drawable.model * perFrame.transforms.transforms[perFrame.transformId].model;
 }
 
 mat4 getViewProjection() {

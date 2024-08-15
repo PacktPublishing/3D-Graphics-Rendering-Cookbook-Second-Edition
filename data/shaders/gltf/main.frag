@@ -1,12 +1,15 @@
-﻿#include <data/shaders/gltf/inputs.frag>
-#include <data/shaders/gltf/PBR.sp>
+﻿//
 
 layout (location=0) in vec4 uv0uv1;
 layout (location=1) in vec3 normal;
 layout (location=2) in vec3 worldPos;
 layout (location=3) in vec4 color;
+layout (location=4) in flat int oBaseInstance;
 
 layout (location=0) out vec4 out_FragColor;
+
+#include <data/shaders/gltf/inputs.frag>
+#include <data/shaders/gltf/PBR.sp>
 
 void main()
 {
@@ -40,7 +43,6 @@ void main()
 
   pbrInputs.v = v;
   pbrInputs.NdotV = clamp(abs(dot(pbrInputs.n, pbrInputs.v)), 0.001, 1.0);
-  pbrInputs.ior = getIOR(mat);
 
   if (isSheen) {
     pbrInputs.sheenColorFactor = getSheenColorFactor(tc, mat).rgb;

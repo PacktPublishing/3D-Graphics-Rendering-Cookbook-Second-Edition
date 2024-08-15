@@ -374,7 +374,7 @@ static uint32_t getNumIndices(const aiScene& scene)
   return num;
 }
 
-void loadglTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
+void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
 {
   const aiScene* scene = aiImportFile(glTFName, aiProcess_Triangulate);
   if (!scene || !scene->HasMeshes()) {
@@ -497,7 +497,7 @@ void loadglTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
   const lvk::VertexInput vdesc = {
     .attributes    = { { .location = 0, .format = lvk::VertexFormat::Float3, .offset = 0  },
 							  { .location = 1, .format = lvk::VertexFormat::Float3, .offset = 12 },
-                       { .location = 2, .format = lvk::VertexFormat::Float4, .offset = 24 },
+							  { .location = 2, .format = lvk::VertexFormat::Float4, .offset = 24 },
 							  { .location = 3, .format = lvk::VertexFormat::Float2, .offset = 40 },
 							  { .location = 4, .format = lvk::VertexFormat::Float2, .offset = 48 }, },
     .inputBindings = { { .stride = sizeof(Vertex) } },
@@ -552,8 +552,8 @@ void loadglTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
         .envMapTextureCharlie           = gltf.envMapTextures.envMapTextureCharlie.index(),
         .envMapTextureCharlieSampler    = gltf.samplers.clamp.index(),
     } },
-                                             .lights       = { getDummyLight(), },
-															.lightCount=1,
+    .lights       = { LightDataGPU() },
+    .lightCount   = 1,
   };
 
   gltf.envBuffer = ctx->createBuffer({
@@ -603,11 +603,9 @@ void buildTransformsList(GLTFContext& gltf)
 
   traverseTree(gltf.root);
 
-  auto& ctx = gltf.app.ctx_;
-
   gltf.transformBuffer.reset();
 
-  gltf.transformBuffer = ctx->createBuffer({
+  gltf.transformBuffer = gltf.app.ctx_->createBuffer({
       .usage     = lvk::BufferUsageBits_Uniform,
       .storage   = lvk::StorageType_HostVisible,
       .size      = gltf.transforms.size() * sizeof(GLTFTransforms),
@@ -626,11 +624,11 @@ void sortTransparentNodes(GLTFContext& gltf, const vec3& cameraPos)
   });
 }
 
-void renderglTF(GLTFContext& gltf, const mat4& m, const mat4& v, const mat4& p, bool rebuildRenderList)
+void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const mat4& proj, bool rebuildRenderList)
 {
   auto& ctx = gltf.app.ctx_;
 
-  const vec4 camPos = glm::inverse(v) * vec4(0.0f, 0.0f, 1.0f, 1.0f);
+  const vec4 camPos = glm::inverse(view)[3];
 
   if (rebuildRenderList || gltf.transforms.empty()) {
     buildTransformsList(gltf);
@@ -638,12 +636,10 @@ void renderglTF(GLTFContext& gltf, const mat4& m, const mat4& v, const mat4& p, 
 
   sortTransparentNodes(gltf, camPos);
 
-  const bool screenCopy = gltf.isScreenCopyRequired();
-
   gltf.frameData = {
-    .model     = m,
-    .view      = v,
-    .proj      = p,
+    .model     = model,
+    .view      = view,
+    .proj      = proj,
     .cameraPos = camPos,
   };
 
@@ -652,7 +648,6 @@ void renderglTF(GLTFContext& gltf, const mat4& m, const mat4& v, const mat4& p, 
     uint64_t materials;
     uint64_t environments;
     uint64_t transforms;
-    uint32_t transformId;
     uint32_t envId;
     uint32_t transmissionFramebuffer;
     uint32_t transmissionFramebufferSampler;
@@ -661,7 +656,6 @@ void renderglTF(GLTFContext& gltf, const mat4& m, const mat4& v, const mat4& p, 
     .materials                      = ctx->gpuAddress(gltf.matBuffer),
     .environments                   = ctx->gpuAddress(gltf.envBuffer),
     .transforms                     = ctx->gpuAddress(gltf.transformBuffer),
-    .transformId                    = 0,
     .envId                          = 0,
     .transmissionFramebuffer        = 0,
     .transmissionFramebufferSampler = gltf.samplers.clamp.index(),
@@ -687,14 +681,17 @@ void renderglTF(GLTFContext& gltf, const mat4& m, const mat4& v, const mat4& p, 
   }
 
   auto drawUI = [&](lvk::ICommandBuffer& buf, const lvk::Framebuffer& framebuffer) {
-    gltf.app.drawGrid(buf, p, vec3(0, -1.0f, 0));
+    gltf.app.drawGrid(buf, proj, vec3(0, -1.0f, 0));
     gltf.app.imgui_->beginFrame(framebuffer);
     gltf.app.drawFPS();
     gltf.app.drawMemo();
+    gltf.app.drawCameras();
     gltf.app.imgui_->endFrame(buf);
   };
 
   lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
+
+  const bool screenCopy = gltf.isScreenCopyRequired();
 
   {
     // 1st pass
@@ -718,16 +715,13 @@ void renderglTF(GLTFContext& gltf, const mat4& m, const mat4& v, const mat4& p, 
       buf.cmdBindDepthState({ .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true });
 
       buf.cmdBindRenderPipeline(gltf.pipelineSolid);
+      buf.cmdPushConstants(pushConstants);
       for (uint32_t transformId : gltf.opaqueNodes) {
         const GLTFTransforms transform = gltf.transforms[transformId];
 
-        pushConstants.transformId = transformId;
         buf.cmdPushDebugGroupLabel(gltf.nodesStorage[transform.nodeRef].name.c_str(), 0xff0000ff);
-        {
-          buf.cmdPushConstants(pushConstants);
-          const GLTFMesh submesh = gltf.meshesStorage[transform.meshRef];
-          buf.cmdDrawIndexed(submesh.indexCount, 1, submesh.indexOffset, submesh.vertexOffset);
-        }
+        const GLTFMesh submesh = gltf.meshesStorage[transform.meshRef];
+        buf.cmdDrawIndexed(submesh.indexCount, 1, submesh.indexOffset, submesh.vertexOffset, transformId);
         buf.cmdPopDebugGroupLabel();
       }
       if (!screenCopy) {
@@ -756,6 +750,7 @@ void renderglTF(GLTFContext& gltf, const mat4& m, const mat4& v, const mat4& p, 
       buf.cmdGenerateMipmap(gltf.offscreenTex[gltf.currentOffscreenTex]);
 
       pushConstants.transmissionFramebuffer = gltf.offscreenTex[gltf.currentOffscreenTex].index();
+      buf.cmdPushConstants(pushConstants);
     }
 
     buf.cmdBeginRendering(renderPass, framebuffer, { .textures = { lvk::TextureHandle(gltf.offscreenTex[gltf.currentOffscreenTex]) } });
@@ -768,14 +763,9 @@ void renderglTF(GLTFContext& gltf, const mat4& m, const mat4& v, const mat4& p, 
     buf.cmdBindRenderPipeline(gltf.pipelineSolid);
     for (uint32_t transformId : gltf.transmissionNodes) {
       const GLTFTransforms transform = gltf.transforms[transformId];
-
-      pushConstants.transformId = transformId;
       buf.cmdPushDebugGroupLabel(gltf.nodesStorage[transform.nodeRef].name.c_str(), 0x00FF00ff);
-      {
-        buf.cmdPushConstants(pushConstants);
-        const GLTFMesh submesh = gltf.meshesStorage[transform.meshRef];
-        buf.cmdDrawIndexed(submesh.indexCount, 1, submesh.indexOffset, submesh.vertexOffset);
-      }
+      const GLTFMesh submesh = gltf.meshesStorage[transform.meshRef];
+      buf.cmdDrawIndexed(submesh.indexCount, 1, submesh.indexOffset, submesh.vertexOffset, transformId);
       buf.cmdPopDebugGroupLabel();
     }
 
@@ -783,14 +773,9 @@ void renderglTF(GLTFContext& gltf, const mat4& m, const mat4& v, const mat4& p, 
     buf.cmdBindRenderPipeline(gltf.pipelineTransparent);
     for (uint32_t transformId : gltf.transparentNodes) {
       const GLTFTransforms transform = gltf.transforms[transformId];
-
-      pushConstants.transformId = transformId;
       buf.cmdPushDebugGroupLabel(gltf.nodesStorage[transform.nodeRef].name.c_str(), 0x00FF00ff);
-      {
-        buf.cmdPushConstants(pushConstants);
-        const GLTFMesh submesh = gltf.meshesStorage[transform.meshRef];
-        buf.cmdDrawIndexed(submesh.indexCount, 1, submesh.indexOffset, submesh.vertexOffset);
-      }
+      const GLTFMesh submesh = gltf.meshesStorage[transform.meshRef];
+      buf.cmdDrawIndexed(submesh.indexCount, 1, submesh.indexOffset, submesh.vertexOffset, transformId);
       buf.cmdPopDebugGroupLabel();
     }
 
@@ -826,22 +811,4 @@ MaterialType detectMaterialType(const aiMaterial* mtl)
   LLOGW("Unknown material type\n");
 
   return MaterialType_Invalid;
-}
-
-LightDataGPU getDummyLight()
-{
-  LightDataGPU light;
-  light.direction = vec3(0, 0, 1);
-  light.range     = 10000.0;
-
-  light.color     = vec3(1, 1, 1);
-  light.intensity = 1.0;
-
-  light.position     = vec3(0, 0, -5);
-  light.innerConeCos = 0.0;
-
-  light.outerConeCos = 0.78;
-  light.type         = LightType_Directional;
-
-  return light;
 }

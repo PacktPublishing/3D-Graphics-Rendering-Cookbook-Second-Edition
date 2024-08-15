@@ -21,3 +21,7 @@ vec4 getColor() {
 vec2 getTexCoord(uint i) {
   return i == 0 ? uv0 : uv1;
 }
+
+mat4 getModel() {
+  return perFrame.drawable.model * perFrame.transforms.transforms[gl_BaseInstance].model;
+}

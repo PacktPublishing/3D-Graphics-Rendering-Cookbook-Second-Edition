@@ -72,26 +72,24 @@ struct MetallicRoughnessDataGPU {
   uint padding[2];
 };
 
-struct Light
-{
-    vec3 direction;
-    float range;
+struct Light {
+  vec3 direction;
+  float range;
 
-    vec3 color;
-    float intensity;
+  vec3 color;
+  float intensity;
 
-    vec3 position;
-    float innerConeCos;
+  vec3 position;
+  float innerConeCos;
 
-    float outerConeCos;
-    int type;
-    int padding[2];
+  float outerConeCos;
+  int type;
+  int padding[2];
 };
 
 const int LightType_Directional = 0;
 const int LightType_Point = 1;
 const int LightType_Spot = 2;
-
 
 struct EnvironmentMapDataGPU {
   uint envMapTexture;
@@ -278,4 +276,12 @@ uint getLightsCount() {
 
 Light getLight(uint i) {
   return perFrame.environments.lights[i]; 
+}
+
+mat4 getModel() {
+  return perFrame.drawable.model * perFrame.transforms.transforms[oBaseInstance].model;
+}
+
+uint getMaterialId() {
+  return perFrame.transforms.transforms[oBaseInstance].matId;
 }

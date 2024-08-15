@@ -157,6 +157,35 @@ void VulkanApp::drawMemo()
   ImGui::End();
 }
 
+void VulkanApp::drawCameras()
+{
+  if (!cfg_.showCamerasUI) {
+    return;
+   }
+
+  ImGui::SetNextWindowPos(ImVec2(10, 200));
+  ImGui::Begin(
+      "Cameras:", nullptr,
+      ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse);
+  const char* items[]             = { "AAAA", "BBBB", "CCCC",    "DDDD", "EEEE",    "FFFF", "GGGG",       "HHHH", "IIII",
+                                      "JJJJ", "KKKK", "LLLLLLL", "MMMM", "OOOOOOO", "PPPP", "QQQQQQQQQQ", "RRR",  "SSSS" };
+  static const char* current_item = NULL;
+  //static int current_item         = 0;
+  if (ImGui::BeginCombo("##combo", current_item)) // The second parameter is the label previewed before opening the combo.
+  {
+    for (int n = 0; n < IM_ARRAYSIZE(items); n++) {
+      bool is_selected = (current_item == items[n]); // You can store your selection however you want, outside or inside your objects
+        if (ImGui::Selectable(items[n], is_selected))
+            current_item = items[n];
+        if (is_selected)
+            ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+    }
+    ImGui::EndCombo();
+  }
+  ImGui::End();
+}
+
+
 void VulkanApp::drawFPS()
 {
   if (const ImGuiViewport* v = ImGui::GetMainViewport()) {

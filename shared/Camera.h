@@ -28,9 +28,11 @@ public:
 
 	glm::mat4 getViewMatrix() const { return positioner_->getViewMatrix(); }
 	glm::vec3 getPosition() const { return positioner_->getPosition(); }
+   glm::mat4 getProjMatrix() const { return proj_; }
 
 private:
 	const CameraPositionerInterface* positioner_;
+   glm::mat4 proj_;
 };
 
 class CameraPositioner_FirstPerson final: public CameraPositionerInterface

@@ -30,6 +30,7 @@ using DrawFrameFunc = std::function<void(uint32_t width, uint32_t height, float 
 struct VulkanAppConfig {
   vec3 initialCameraPos    = vec3(0.0f, 0.0f, -2.5f);
   vec3 initialCameraTarget = vec3(0.0f, 0.0f, 0.0f);
+  bool showCamerasUI       = false;
 };
 
 class VulkanApp
@@ -42,6 +43,9 @@ public:
   virtual void drawGrid(lvk::ICommandBuffer& buf, const mat4& proj, const vec3& origin = vec3(0.0f));
   virtual void drawFPS();
   virtual void drawMemo();
+  virtual void drawCameras();
+
+  void addCamera();
 
   lvk::Format getDepthFormat() const;
   lvk::TextureHandle getDepthTexture() const { return depthTexture_; }
