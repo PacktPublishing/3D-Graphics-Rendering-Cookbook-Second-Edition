@@ -57,6 +57,8 @@ With the following software and hardware list you can run all code files present
 Downloading assets and dependencies:
 ------------------------------------
 
+Ensure that you’ve installed Git LFS https://git-lfs.com. This tool is essential for handling large files in Git, so it's important to have it set up before you proceed.
+
 Run the `deploy_deps.py` script from the root folder of this repository. Make sure you have ~15Gb of free space before you download the assets and build the source code.
 
 Models downloaded from Morgan McGuire's [Computer Graphics Archive](https://casual-effects.com/data)
