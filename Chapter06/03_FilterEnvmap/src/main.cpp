@@ -289,6 +289,9 @@ int main()
   process_cubemap(
       ctx, "data/piazza_bologni_1k.hdr", "data/piazza_bologni_1k_prefilter.ktx", "data/piazza_bologni_1k_irradiance.ktx",
       "data/piazza_bologni_1k_charlie.ktx");
+  process_cubemap(
+      ctx, "data/immenstadter_horn_2k.hdr", "data/immenstadter_horn_2k_prefilter.ktx", "data/immenstadter_horn_2k_irradiance.ktx",
+      "data/immenstadter_horn_2k_charlie.ktx");
 
   ctx.reset();
   return 0;

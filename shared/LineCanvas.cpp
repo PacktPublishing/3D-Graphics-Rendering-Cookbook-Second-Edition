@@ -188,6 +188,10 @@ void LineCanvas3D::render(lvk::IContext& ctx, const lvk::Framebuffer& desc, lvk:
 {
   LVK_PROFILER_FUNCTION();
 
+  if (lines_.empty()) {
+    return;
+  }
+
   const uint32_t requiredSize = lines_.size() * sizeof(LineData);
 
   if (currentBufferSize_[currentFrame_] < requiredSize) {

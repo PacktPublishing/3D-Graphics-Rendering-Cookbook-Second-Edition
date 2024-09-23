@@ -324,11 +324,11 @@ GLTFMaterialDataGPU setupglTFMaterialData(
       useVolume         = true;
     }
 
-    aiColor4D volumeAttnuationColor;
-    if (mtlDescriptor->Get(AI_MATKEY_VOLUME_ATTENUATION_COLOR, volumeAttnuationColor) == AI_SUCCESS) {
-      res.attenuation.x = volumeAttnuationColor.r;
-      res.attenuation.y = volumeAttnuationColor.g;
-      res.attenuation.z = volumeAttnuationColor.b;
+    aiColor4D volumeAttenuationColor;
+    if (mtlDescriptor->Get(AI_MATKEY_VOLUME_ATTENUATION_COLOR, volumeAttenuationColor) == AI_SUCCESS) {
+      res.attenuation.x = volumeAttenuationColor.r;
+      res.attenuation.y = volumeAttenuationColor.g;
+      res.attenuation.z = volumeAttenuationColor.b;
       useVolume         = true;
     }
 
@@ -387,6 +387,8 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
   };
 
   std::vector<Vertex> vertices;
+  std::vector<VertexBoneData> skinningData;
+  
   std::vector<uint32_t> indices;
 
   std::vector<uint32_t> startVertex;
@@ -395,8 +397,12 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
   startVertex.push_back(0);
   startIndex.push_back(0);
 
+
   vertices.reserve(getNumVertices(*scene));
   indices.reserve(getNumIndices(*scene));
+  skinningData.resize(getNumVertices(*scene));
+
+  uint32_t numBones = 0;
 
   for (uint32_t m = 0; m < scene->mNumMeshes; ++m) {
     const aiMesh* mesh = scene->mMeshes[m];
@@ -423,6 +429,36 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
       }
     }
     startIndex.push_back((uint32_t)indices.size());
+
+	 // load bones
+    for (int bone = 0; bone < mesh->mNumBones; ++bone) {
+      uint32_t boneId(numBones);
+      std::string boneName = mesh->mBones[bone]->mName.C_Str();
+      if (!gltf.bonesStorage.contains(boneName)) {
+        gltf.bonesStorage[boneName] = { boneId, aiMatrix4x4ToMat4(mesh->mBones[bone]->mOffsetMatrix) };
+        numBones++;
+      } else {
+        boneId = gltf.bonesStorage[boneName].boneId;
+      }
+
+      auto weights   = mesh->mBones[bone]->mWeights;
+      int numWeights = mesh->mBones[bone]->mNumWeights;
+
+      for (int w = 0; w < numWeights; ++w) {
+        int vertexId = weights[w].mVertexId;
+        float weight = weights[w].mWeight;
+        assert(vertexId <= vertices.size());
+        auto& vertex = skinningData[vertexId];
+
+        for (int i = 0; i < MAX_BONES_PER_VERTEX; ++i) {
+          if (vertex.boneId[i] != 0ul) {
+            vertex.weight[i] = weight;
+            vertex.boneId[i] = boneId;
+            break;
+          }
+        }
+      }
+    }
   }
 
   if (!scene->mRootNode) {
@@ -435,12 +471,12 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
   for (unsigned int mtl = 0; mtl < scene->mNumMaterials; ++mtl) {
     const aiMaterial* mtlDescriptor = scene->mMaterials[mtl];
     gltf.matPerFrame.materials[mtl] =
-        setupglTFMaterialData(ctx, gltf.samplers, mtlDescriptor, glTFDataPath, gltf.glTFDataholder, gltf.volumetricMaterial);
+        setupglTFMaterialData(ctx, gltf.samplers, mtlDescriptor, glTFDataPath, gltf.glTFDataholder, gltf.isVolumetricMaterial);
   }
 
   gltf.nodesStorage.push_back({
       .name      = scene->mRootNode->mName.C_Str() ? scene->mRootNode->mName.C_Str() : "root",
-      .transform = AiMatrix4x4ToGlm(&scene->mRootNode->mTransformation),
+      .transform = aiMatrix4x4ToMat4(scene->mRootNode->mTransformation),
   });
 
   gltf.root = gltf.nodesStorage.size() - 1;
@@ -468,7 +504,7 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
       const aiNode* node = rootNode->mChildren[i];
       const GLTFNode childNode({
           .name      = node->mName.C_Str() ? node->mName.C_Str() : "node",
-          .transform = gltf.nodesStorage[gltfNode].transform * AiMatrix4x4ToGlm(&node->mTransformation),
+          .transform = gltf.nodesStorage[gltfNode].transform * aiMatrix4x4ToMat4(node->mTransformation),
       });
       gltf.nodesStorage.push_back(childNode);
       const size_t nodeIdx = gltf.nodesStorage.size() - 1;
@@ -582,12 +618,17 @@ void buildTransformsList(GLTFContext& gltf)
   gltf.transmissionNodes.clear();
   gltf.transparentNodes.clear();
 
-  std::function<void(GLTFNodeRef & gltfNode)> traverseTree = [&](GLTFNodeRef& nodeRef) {
+  std::function<void(GLTFNodeRef gltfNode)> traverseTree = [&](GLTFNodeRef nodeRef) {
     const GLTFNode& node = gltf.nodesStorage[nodeRef];
     for (GLTFNodeRef meshId : node.meshes) {
       const GLTFMesh& mesh = gltf.meshesStorage[meshId];
-      gltf.transforms.push_back(
-          { .model = node.transform, .matId = mesh.matIdx, .nodeRef = nodeRef, .meshRef = meshId, .sortingType = mesh.sortingType });
+      gltf.transforms.push_back({
+          .model       = node.transform,
+          .matId       = mesh.matIdx,
+          .nodeRef     = nodeRef,
+          .meshRef     = meshId,
+          .sortingType = mesh.sortingType,
+      });
       if (mesh.sortingType == SortingType_Transparent) {
         gltf.transparentNodes.push_back(gltf.transforms.size() - 1);
       } else if (mesh.sortingType == SortingType_Transmission) {
@@ -603,8 +644,6 @@ void buildTransformsList(GLTFContext& gltf)
 
   traverseTree(gltf.root);
 
-  gltf.transformBuffer.reset();
-
   gltf.transformBuffer = gltf.app.ctx_->createBuffer({
       .usage     = lvk::BufferUsageBits_Uniform,
       .storage   = lvk::StorageType_HostVisible,
@@ -618,9 +657,9 @@ void sortTransparentNodes(GLTFContext& gltf, const vec3& cameraPos)
 {
   // glTF spec expects to sort based on pivot positions (not sure correct way though)
   std::sort(gltf.transparentNodes.begin(), gltf.transparentNodes.end(), [&](uint32_t a, uint32_t b) {
-    float distA = glm::length(cameraPos - vec3(gltf.transforms[a].model[3]));
-    float distB = glm::length(cameraPos - vec3(gltf.transforms[b].model[3]));
-    return distA < distB;
+    float sqrDistA = glm::length2(cameraPos - vec3(gltf.transforms[a].model[3]));
+    float sqrDistB = glm::length2(cameraPos - vec3(gltf.transforms[b].model[3]));
+    return sqrDistA < sqrDistB;
   });
 }
 
@@ -811,4 +850,21 @@ MaterialType detectMaterialType(const aiMaterial* mtl)
   LLOGW("Unknown material type\n");
 
   return MaterialType_Invalid;
+}
+
+void printPrefix(int ofs)
+{
+  for (int i = 0; i < ofs; i++)
+    printf("\t");
+}
+
+void printMat4(const aiMatrix4x4& m)
+{
+  if (!m.IsIdentity()) {
+    for (int i = 0; i < 4; i++)
+      for (int j = 0; j < 4; j++)
+        printf("%f ;", m[i][j]);
+  } else {
+    printf(" Identity");
+  }
 }

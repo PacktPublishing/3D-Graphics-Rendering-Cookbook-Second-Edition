@@ -127,7 +127,7 @@ void main()
     if (NdotL > 0.0 || NdotV > 0.0) {
       // Calculation of analytical light
       // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#acknowledgments AppendixB
-      vec3 intensity = getLighIntensity(light, pointToLight);
+      vec3 intensity = getLightIntensity(light, pointToLight);
 
       lights_diffuse += intensity * NdotL *  getBRDFLambertian(pbrInputs.reflectance0, pbrInputs.reflectance90, pbrInputs.diffuseColor, pbrInputs.specularWeight, VdotH);
       lights_specular += intensity * NdotL * getBRDFSpecularGGX(pbrInputs.reflectance0, pbrInputs.reflectance90, pbrInputs.alphaRoughness, pbrInputs.specularWeight, VdotH, NdotL, NdotV, NdotH);
@@ -151,7 +151,7 @@ void main()
       pointToLight -= transmissionRay;
       l = normalize(pointToLight);
 
-      vec3 intensity = getLighIntensity(light, pointToLight);
+      vec3 intensity = getLightIntensity(light, pointToLight);
       vec3 transmittedLight = intensity * getPunctualRadianceTransmission(n, v, l, pbrInputs.alphaRoughness, pbrInputs.reflectance0, pbrInputs.clearcoatF90, pbrInputs.diffuseColor, pbrInputs.ior);
 
       if (isVolume) {

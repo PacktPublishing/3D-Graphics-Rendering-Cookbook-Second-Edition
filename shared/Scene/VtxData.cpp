@@ -36,7 +36,8 @@ bool isMeshDataValid(const char* fileName)
   return true;
 }
 
-bool isMeshHierarchyValid(const char* fileName) {
+bool isMeshHierarchyValid(const char* fileName)
+{
   FILE* f = fopen(fileName, "rb");
 
   if (!f)
@@ -46,6 +47,31 @@ bool isMeshHierarchyValid(const char* fileName) {
   {
     fclose(f);
   };
+
+  return true;
+}
+
+bool isMeshMaterialsValid(const char* fileName)
+{
+  FILE* f = fopen(fileName, "rb");
+
+  if (!f)
+    return false;
+
+  SCOPE_EXIT
+  {
+    fclose(f);
+  };
+
+  uint64_t numMaterials  = 0;
+  uint64_t materialsSize = 0;
+
+  if (fread(&numMaterials, 1, sizeof(numMaterials), f) != sizeof(numMaterials))
+    return false;
+  if (fread(&materialsSize, 1, sizeof(materialsSize), f) != sizeof(materialsSize))
+    return false;
+  if (numMaterials * sizeof(Material) != materialsSize)
+    return false;
 
   return true;
 }
@@ -112,6 +138,48 @@ MeshFileHeader loadMeshData(const char* meshFile, MeshData& out)
   return header;
 }
 
+void loadMeshDataMaterials(const char* fileName, MeshData& out)
+{
+  FILE* f = fopen(fileName, "rb");
+
+  if (!f) {
+    printf("Cannot open '%s'.\n", fileName);
+    assert(false);
+    exit(EXIT_FAILURE);
+  }
+
+  uint64_t numMaterials  = 0;
+  uint64_t materialsSize = 0;
+
+  if (fread(&numMaterials, 1, sizeof(numMaterials), f) != sizeof(numMaterials)) {
+    printf("Unable to read numMaterials.\n");
+    assert(false);
+    exit(EXIT_FAILURE);
+  }
+  if (fread(&materialsSize, 1, sizeof(materialsSize), f) != sizeof(materialsSize)) {
+    printf("Unable to read materialsSize.\n");
+    assert(false);
+    exit(EXIT_FAILURE);
+  }
+
+  if (numMaterials * sizeof(Material) != materialsSize) {
+    printf("Corrupted material file '%s'.\n", fileName);
+    assert(false);
+    exit(EXIT_FAILURE);
+  }
+
+  out.materials.resize(numMaterials);
+  if (fread(out.materials.data(), 1, materialsSize, f) != materialsSize) {
+    printf("Unable to read material data.\n");
+    assert(false);
+    exit(EXIT_FAILURE);
+  }
+
+  loadStringList(f, out.textureFiles);
+
+  fclose(f);
+}
+
 void saveMeshData(const char* fileName, const MeshData& m)
 {
   FILE* f = fopen(fileName, "wb");
@@ -123,10 +191,10 @@ void saveMeshData(const char* fileName, const MeshData& m)
   }
 
   const MeshFileHeader header = {
-    .magicValue           = 0x12345678,
-    .meshCount            = (uint32_t)m.meshes.size(),
-    .indexDataSize        = (uint32_t)(m.indexData.size() * sizeof(uint32_t)),
-    .vertexDataSize       = (uint32_t)(m.vertexData.size()),
+    .magicValue     = 0x12345678,
+    .meshCount      = (uint32_t)m.meshes.size(),
+    .indexDataSize  = (uint32_t)(m.indexData.size() * sizeof(uint32_t)),
+    .vertexDataSize = (uint32_t)(m.vertexData.size()),
   };
 
   fwrite(&header, 1, sizeof(header), f);
@@ -135,6 +203,28 @@ void saveMeshData(const char* fileName, const MeshData& m)
   fwrite(m.boxes.data(), sizeof(BoundingBox), header.meshCount, f);
   fwrite(m.indexData.data(), 1, header.indexDataSize, f);
   fwrite(m.vertexData.data(), 1, header.vertexDataSize, f);
+
+  fclose(f);
+}
+
+void saveMeshDataMaterials(const char* fileName, const MeshData& m)
+{
+  FILE* f = fopen(fileName, "wb");
+
+  if (!f) {
+    printf("Error opening file '%s' for writing.\n", fileName);
+    assert(false);
+    exit(EXIT_FAILURE);
+  }
+
+  const uint64_t numMaterials  = m.materials.size();
+  const uint64_t materialsSize = m.materials.size() * sizeof(Material);
+
+  fwrite(&numMaterials, 1, sizeof(numMaterials), f);
+  fwrite(&materialsSize, 1, sizeof(materialsSize), f);
+  fwrite(m.materials.data(), sizeof(Material), numMaterials, f);
+
+  saveStringList(f, m.textureFiles);
 
   fclose(f);
 }
@@ -179,44 +269,57 @@ void loadBoundingBoxes(const char* fileName, std::vector<BoundingBox>& boxes)
 // combine a collection of meshes into a single MeshData container
 MeshFileHeader mergeMeshData(MeshData& m, const std::vector<MeshData*> md)
 {
-  uint32_t totalVertexDataSize = 0;
-  uint32_t totalIndexDataSize  = 0;
+  uint32_t numTotalVertices = 0;
+  uint32_t numTotalIndices  = 0;
 
-  uint32_t offs = 0;
+  if (!md.empty()) {
+    m.streams = md[0]->streams;
+  }
+
+  const uint32_t vertexSize = m.streams.getVertexSize();
+
+  uint32_t offset    = 0;
+  uint32_t mtlOffset = 0;
+
   for (const MeshData* i : md) {
+    LVK_ASSERT(m.streams == i->streams);
     mergeVectors(m.indexData, i->indexData);
     mergeVectors(m.vertexData, i->vertexData);
     mergeVectors(m.meshes, i->meshes);
     mergeVectors(m.boxes, i->boxes);
 
-    uint32_t vtxOffset = totalVertexDataSize / 8; // 8 is the number of components in per-vertex attributes: vec3 position, vec3 normal, vec2 UV
-
-    for (size_t j = 0; j != i->meshes.size(); j++)
+    for (size_t j = 0; j != i->meshes.size(); j++) {
       // m.vertexCount, m.lodCount and m.streamCount do not change
       // m.vertexOffset also does not change, because vertex offsets are local (i.e., baked into the indices)
-      m.meshes[offs + j].indexOffset += totalIndexDataSize;
+      m.meshes[offset + j].indexOffset += numTotalIndices;
+      m.meshes[offset + j].materialID += mtlOffset;
+    }
 
     // shift individual indices
-    for (size_t j = 0; j != i->indexData.size(); j++)
-      m.indexData[totalIndexDataSize + j] += vtxOffset;
+    for (size_t j = 0; j != i->indexData.size(); j++) {
+      m.indexData[numTotalIndices + j] += numTotalVertices;
+    }
 
-    offs += (uint32_t)i->meshes.size();
+    offset += (uint32_t)i->meshes.size();
+    mtlOffset += (uint32_t)i->materials.size();
 
-    totalIndexDataSize += (uint32_t)i->indexData.size();
-    totalVertexDataSize += (uint32_t)i->vertexData.size();
+    numTotalIndices += (uint32_t)i->indexData.size();
+    numTotalVertices += (uint32_t)i->vertexData.size() / vertexSize;
   }
 
   return MeshFileHeader{
-    .magicValue           = 0x12345678,
-    .meshCount            = (uint32_t)offs,
-    .indexDataSize        = static_cast<uint32_t>(totalIndexDataSize * sizeof(uint32_t)),
-    .vertexDataSize       = static_cast<uint32_t>(totalVertexDataSize),
+    .magicValue     = 0x12345678,
+    .meshCount      = (uint32_t)offset,
+    .indexDataSize  = static_cast<uint32_t>(numTotalIndices * sizeof(uint32_t)),
+    .vertexDataSize = static_cast<uint32_t>(m.vertexData.size()),
   };
 }
 
 void recalculateBoundingBoxes(MeshData& m)
 {
   LVK_ASSERT(m.streams.attributes[0].format == lvk::VertexFormat::Float3);
+
+  const uint32_t stride = m.streams.getVertexSize();
 
   m.boxes.clear();
   m.boxes.reserve(m.meshes.size());
@@ -229,7 +332,7 @@ void recalculateBoundingBoxes(MeshData& m)
 
     for (uint32_t i = 0; i != numIndices; i++) {
       const uint32_t vtxOffset = m.indexData[mesh.indexOffset + i] + mesh.vertexOffset;
-      const float* vf          = (const float*)&m.vertexData[vtxOffset * LVK_ARRAY_NUM_ELEMENTS(m.streams.attributes)];
+      const float* vf          = (const float*)&m.vertexData[vtxOffset * stride];
 
       vmin = glm::min(vmin, vec3(vf[0], vf[1], vf[2]));
       vmax = glm::max(vmax, vec3(vf[0], vf[1], vf[2]));

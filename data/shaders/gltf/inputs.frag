@@ -1,75 +1,10 @@
 #include <data/shaders/gltf/common.sp>
+#include <data/shaders/gltf/common_material.sp>
 
 const int kMaxAttributes = 2;
 
 struct InputAttributes {
   vec2 uv[kMaxAttributes];
-};
-
-struct MetallicRoughnessDataGPU {
-  vec4 baseColorFactor;
-  vec4 metallicRoughnessNormalOcclusion; // Packed metallicFactor, roughnessFactor, normalScale, occlusionStrength
-  vec4 specularGlossiness; // Packed specularFactor.xyz, glossiness 
-  vec4 sheenFactors;
-  vec4 clearcoatTransmissionTickness;
-  vec4 specularFactors;
-  vec4 attenuation;
-  vec4 emissiveFactorAlphaCutoff; // vec3 emissiveFactor + float AlphaCutoff
-  uint occlusionTexture;
-  uint occlusionTextureSampler;
-  uint occlusionTextureUV;
-  uint emissiveTexture;
-  uint emissiveTextureSampler;
-  uint emissiveTextureUV;
-  uint baseColorTexture;
-  uint baseColorTextureSampler;
-  uint baseColorTextureUV;
-  uint metallicRoughnessTexture;
-  uint metallicRoughnessTextureSampler;
-  uint metallicRoughnessTextureUV;
-  uint normalTexture;
-  uint normalTextureSampler;
-  uint normalTextureUV;
-  uint sheenColorTexture;
-  uint sheenColorTextureSampler;
-  uint sheenColorTextureUV;
-  uint sheenRoughnessTexture;
-  uint sheenRoughnessTextureSampler;
-  uint sheenRoughnessTextureUV;
-  uint clearCoatTexture;
-  uint clearCoatTextureSampler;
-  uint clearCoatTextureUV;
-  uint clearCoatRoughnessTexture;
-  uint clearCoatRoughnessTextureSampler;
-  uint clearCoatRoughnessTextureUV;
-  uint clearCoatNormalTexture;
-  uint clearCoatNormalTextureSampler;
-  uint clearCoatNormalTextureUV;
-  uint specularTexture;
-  uint specularTextureSampler;
-  uint specularTextureUV;
-  uint specularColorTexture;
-  uint specularColorTextureSampler;
-  uint specularColorTextureUV;
-  uint transmissionTexture;
-  uint transmissionTextureSampler;
-  uint transmissionTextureUV;
-  uint thicknessTexture;
-  uint thicknessTextureSampler;
-  uint thicknessTextureUV;
-  uint iridescenceTexture;
-  uint iridescenceTextureSampler;
-  uint iridescenceTextureUV;
-  uint iridescenceThicknessTexture;
-  uint iridescenceThicknessTextureSampler;
-  uint iridescenceThicknessTextureUV;
-  uint anisotropyTexture;
-  uint anisotropyTextureSampler;
-  uint anisotropyTextureUV;
-  uint alphaMode;
-  uint materialType;
-  float ior;
-  uint padding[2];
 };
 
 struct Light {
@@ -161,19 +96,19 @@ float getSheenRoughnessFactor(InputAttributes tc, MetallicRoughnessDataGPU mat) 
 }
 
 float getClearcoatFactor(InputAttributes tc, MetallicRoughnessDataGPU mat) {
-  return textureBindless2D(mat.clearCoatTexture, mat.clearCoatTextureSampler, tc.uv[mat.clearCoatTextureUV]).r * mat.clearcoatTransmissionTickness.x;
+  return textureBindless2D(mat.clearCoatTexture, mat.clearCoatTextureSampler, tc.uv[mat.clearCoatTextureUV]).r * mat.clearcoatTransmissionThickness.x;
 }
 
 float getClearcoatRoughnessFactor(InputAttributes tc, MetallicRoughnessDataGPU mat) {
-  return textureBindless2D(mat.clearCoatRoughnessTexture, mat.clearCoatRoughnessTextureSampler, tc.uv[mat.clearCoatRoughnessTextureUV]).g * mat.clearcoatTransmissionTickness.y;
+  return textureBindless2D(mat.clearCoatRoughnessTexture, mat.clearCoatRoughnessTextureSampler, tc.uv[mat.clearCoatRoughnessTextureUV]).g * mat.clearcoatTransmissionThickness.y;
 }
 
 float getTransmissionFactor(InputAttributes tc, MetallicRoughnessDataGPU mat) {
-  return textureBindless2D(mat.transmissionTexture, mat.transmissionTextureSampler, tc.uv[mat.transmissionTextureUV]).r * mat.clearcoatTransmissionTickness.z;
+  return textureBindless2D(mat.transmissionTexture, mat.transmissionTextureSampler, tc.uv[mat.transmissionTextureUV]).r * mat.clearcoatTransmissionThickness.z;
 }
 
 float getVolumeTickness(InputAttributes tc, MetallicRoughnessDataGPU mat) {
-  return textureBindless2D(mat.thicknessTexture, mat.thicknessTextureSampler, tc.uv[mat.thicknessTextureUV]).g * mat.clearcoatTransmissionTickness.w;
+  return textureBindless2D(mat.thicknessTexture, mat.thicknessTextureSampler, tc.uv[mat.thicknessTextureUV]).g * mat.clearcoatTransmissionThickness.w;
 }
 
 vec4 getVolumeAttenuation(MetallicRoughnessDataGPU mat) {

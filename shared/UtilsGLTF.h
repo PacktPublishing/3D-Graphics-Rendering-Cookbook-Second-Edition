@@ -31,26 +31,26 @@ using glm::vec2;
 using glm::vec3;
 using glm::vec4;
 
-inline glm::mat4 AiMatrix4x4ToGlm(const aiMatrix4x4* from)
+inline glm::mat4 aiMatrix4x4ToMat4(const aiMatrix4x4& from)
 {
   glm::mat4 to;
 
-  to[0][0] = (float)from->a1;
-  to[0][1] = (float)from->b1;
-  to[0][2] = (float)from->c1;
-  to[0][3] = (float)from->d1;
-  to[1][0] = (float)from->a2;
-  to[1][1] = (float)from->b2;
-  to[1][2] = (float)from->c2;
-  to[1][3] = (float)from->d2;
-  to[2][0] = (float)from->a3;
-  to[2][1] = (float)from->b3;
-  to[2][2] = (float)from->c3;
-  to[2][3] = (float)from->d3;
-  to[3][0] = (float)from->a4;
-  to[3][1] = (float)from->b4;
-  to[3][2] = (float)from->c4;
-  to[3][3] = (float)from->d4;
+  to[0][0] = (float)from.a1;
+  to[0][1] = (float)from.b1;
+  to[0][2] = (float)from.c1;
+  to[0][3] = (float)from.d1;
+  to[1][0] = (float)from.a2;
+  to[1][1] = (float)from.b2;
+  to[1][2] = (float)from.c2;
+  to[1][3] = (float)from.d2;
+  to[2][0] = (float)from.a3;
+  to[2][1] = (float)from.b3;
+  to[2][2] = (float)from.c3;
+  to[2][3] = (float)from.d3;
+  to[3][0] = (float)from.a4;
+  to[3][1] = (float)from.b4;
+  to[3][2] = (float)from.c4;
+  to[3][3] = (float)from.d4;
 
   return to;
 }
@@ -374,6 +374,23 @@ struct GLTFTransforms {
   uint32_t sortingType;
 };
 
+// Skeleton, animation, morphing
+#define MAX_BONES_PER_VERTEX 8
+
+struct VertexBoneData {
+  uint32_t boneId[MAX_BONES_PER_VERTEX] = { ~0u, ~0u, ~0u, ~0u, ~0u, ~0u, ~0u, ~0u };
+  float weight[MAX_BONES_PER_VERTEX]    = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+};
+
+struct GLTFBone {
+  uint32_t boneId;
+  glm::mat4 transform;
+};
+
+struct GLTFNodeAnimation {
+  glm::mat4 invTransform;
+};
+
 GLTFMaterialDataGPU setupglTFMaterialData(
     const std::unique_ptr<lvk::IContext>& ctx, const GLTFGlobalSamplers& samplers, aiMaterial* const& mtlDescriptor,
     const char* assetFolder, GLTFDataHolder& glTFDataholder, bool& useVolumetric);
@@ -395,6 +412,7 @@ struct GLTFContext {
 
   std::vector<GLTFNode> nodesStorage;
   std::vector<GLTFMesh> meshesStorage;
+  std::unordered_map<std::string, GLTFBone> bonesStorage;
 
   std::vector<uint32_t> opaqueNodes;
   std::vector<uint32_t> transmissionNodes;
@@ -415,13 +433,18 @@ struct GLTFContext {
 
   uint32_t currentOffscreenTex = 0;
 
+
   GLTFNodeRef root;
   VulkanApp& app;
-  bool volumetricMaterial = false;
 
-  bool isScreenCopyRequired() const { return volumetricMaterial; }
+  bool isVolumetricMaterial = false;
+
+  bool isScreenCopyRequired() const { return isVolumetricMaterial; }
 };
 
 void loadGLTF(GLTFContext& context, const char* gltfName, const char* glTFDataPath);
 void renderGLTF(GLTFContext& context, const mat4& model, const mat4& view, const mat4& proj, bool rebuildRenderList = false);
 MaterialType detectMaterialType(const aiMaterial* mtl);
+
+void printPrefix(int ofs);
+void printMat4(const aiMatrix4x4& m);

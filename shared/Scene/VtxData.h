@@ -7,7 +7,7 @@
 #include "shared/Utils.h"
 #include "shared/UtilsMath.h"
 
-constexpr const uint32_t kMaxLODs = 8;
+constexpr const uint32_t kMaxLODs = 7;
 
 // All offsets are relative to the beginning of the data block (excluding headers with a Mesh list)
 struct Mesh final {
@@ -23,7 +23,7 @@ struct Mesh final {
   uint32_t vertexCount = 0;
 
   // Offsets to LOD indices data. The last offset is used as a marker to calculate the size
-  uint32_t lodOffset[kMaxLODs] = { 0 };
+  uint32_t lodOffset[kMaxLODs + 1] = { 0 };
 
   uint32_t materialID = 0;
 
@@ -48,20 +48,46 @@ struct MeshFileHeader {
   // According to your needs, you may add additional metadata fields...
 };
 
+enum MaterialFlags {
+  sMaterialFlags_CastShadow    = 0x1,
+  sMaterialFlags_ReceiveShadow = 0x2,
+  sMaterialFlags_Transparent   = 0x4,
+};
+
+struct Material {
+  vec4 emissiveFactor      = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+  vec4 baseColorFactor     = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+  float roughness          = 1.0f;
+  float transparencyFactor = 1.0f;
+  float alphaTest          = 0.0f;
+  float metallicFactor     = 0.0f;
+  // index into MeshData::textureFiles
+  int baseColorTexture = -1;
+  int emissiveTexture  = -1;
+  int normalTexture    = -1;
+  int opacityTexture   = -1;
+  uint32_t flags       = sMaterialFlags_CastShadow | sMaterialFlags_ReceiveShadow;
+};
+
 struct MeshData {
   lvk::VertexInput streams = {};
   std::vector<uint32_t> indexData;
   std::vector<uint8_t> vertexData;
   std::vector<Mesh> meshes;
   std::vector<BoundingBox> boxes;
+  std::vector<Material> materials;
+  std::vector<std::string> textureFiles;
 };
 
 static_assert(sizeof(BoundingBox) == sizeof(float) * 6);
 
 bool isMeshDataValid(const char* fileName);
+bool isMeshMaterialsValid(const char* fileName);
 bool isMeshHierarchyValid(const char* fileName);
 MeshFileHeader loadMeshData(const char* meshFile, MeshData& out);
+void loadMeshDataMaterials(const char* meshFile, MeshData& out);
 void saveMeshData(const char* fileName, const MeshData& m);
+void saveMeshDataMaterials(const char* fileName, const MeshData& m);
 
 void recalculateBoundingBoxes(MeshData& m);
 

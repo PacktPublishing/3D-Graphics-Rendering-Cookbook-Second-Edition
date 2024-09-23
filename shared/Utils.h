@@ -45,3 +45,9 @@ template <class T, class Index = int> inline void eraseSelected(std::vector<T>& 
             static_cast<Index>(static_cast<const T*>(&item) - &v[0]));
       })));
 }
+
+void saveStringList(FILE* f, const std::vector<std::string>& lines);
+void loadStringList(FILE* f, std::vector<std::string>& lines);
+int addUnique(std::vector<std::string>& files, const std::string& file);
+std::string replaceAll(const std::string& str, const std::string& oldSubStr, const std::string& newSubStr);
+std::string lowercaseString(const std::string& s); // convert 8-bit ASCII string to upper case

@@ -58,6 +58,11 @@ VulkanApp::VulkanApp(const VulkanAppConfig& cfg)
       cb(window, button, action, mods);
     }
   });
+  glfwSetScrollCallback(window_, [](GLFWwindow* window, double dx, double dy) {
+    ImGuiIO& io    = ImGui::GetIO();
+    io.MouseWheelH = (float)dx;
+    io.MouseWheel  = (float)dy;
+  });
   glfwSetCursorPosCallback(window_, [](GLFWwindow* window, double x, double y) {
     VulkanApp* app = (VulkanApp*)glfwGetWindowUserPointer(window);
     int width, height;
@@ -83,8 +88,9 @@ VulkanApp::VulkanApp(const VulkanAppConfig& cfg)
       app->positioner_.movement_.up_ = pressed;
     if (key == GLFW_KEY_2)
       app->positioner_.movement_.down_ = pressed;
-    if (mods & GLFW_MOD_SHIFT)
-      app->positioner_.movement_.fastSpeed_ = pressed;
+
+    app->positioner_.movement_.fastSpeed_ = (mods & GLFW_MOD_SHIFT) != 0;
+
     if (key == GLFW_KEY_SPACE) {
       app->positioner_.lookAt(app->cfg_.initialCameraPos, app->cfg_.initialCameraTarget, vec3(0.0f, 1.0f, 0.0f));
       app->positioner_.setSpeed(vec3(0));

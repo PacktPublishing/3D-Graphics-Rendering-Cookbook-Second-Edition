@@ -239,7 +239,7 @@ int main()
     };
 
     Node root({ .name      = scene->mRootNode->mName.C_Str() ? scene->mRootNode->mName.C_Str() : "root",
-                .transform = AiMatrix4x4ToGlm(&scene->mRootNode->mTransformation) });
+                .transform = aiMatrix4x4ToMat4(scene->mRootNode->mTransformation) });
 
     std::function<void(const aiNode* rootNode, Node& gltfNode)> traverseTree = [&](const aiNode* rootNode, Node& gltfNode) {
       for (auto m = 0; m < rootNode->mNumMeshes; ++m) {
@@ -257,8 +257,10 @@ int main()
       }
       for (unsigned int i = 0; i < rootNode->mNumChildren; i++) {
         const aiNode* node = rootNode->mChildren[i];
-        Node childNode(
-            { .name = node->mName.C_Str() ? node->mName.C_Str() : "node", .transform = AiMatrix4x4ToGlm(&node->mTransformation) });
+        Node childNode({
+            .name      = node->mName.C_Str() ? node->mName.C_Str() : "node",
+            .transform = aiMatrix4x4ToMat4(node->mTransformation),
+        });
         traverseTree(node, childNode);
         gltfNode.children.push_back(childNode);
       }
