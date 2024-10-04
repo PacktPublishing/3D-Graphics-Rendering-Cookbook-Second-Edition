@@ -73,18 +73,18 @@ void mergeNodesWithMaterial(Scene& scene, MeshData& meshData, const std::string&
 {
   // Find material index
   const int oldMaterial = (int)std::distance(
-      std::begin(scene.materialNames_), std::find(std::begin(scene.materialNames_), std::end(scene.materialNames_), materialName));
+      std::begin(scene.materialNames), std::find(std::begin(scene.materialNames), std::end(scene.materialNames), materialName));
 
   std::vector<uint32_t> toDelete;
 
-  for (auto i = 0u; i < scene.hierarchy_.size(); i++)
-    if (scene.meshes_.contains(i) && scene.materialForNode_.contains(i) && (scene.materialForNode_.at(i) == oldMaterial))
+  for (auto i = 0u; i < scene.hierarchy.size(); i++)
+    if (scene.meshForNode.contains(i) && scene.materialForNode.contains(i) && (scene.materialForNode.at(i) == oldMaterial))
       toDelete.push_back(i);
 
   std::vector<uint32_t> meshesToMerge(toDelete.size());
 
   // Convert toDelete indices to mesh indices
-  std::transform(toDelete.begin(), toDelete.end(), meshesToMerge.begin(), [&scene](uint32_t i) { return scene.meshes_.at(i); });
+  std::transform(toDelete.begin(), toDelete.end(), meshesToMerge.begin(), [&scene](uint32_t i) { return scene.meshForNode.at(i); });
 
   // TODO: if merged mesh transforms are non-zero, then we should pre-transform individual mesh vertices in meshData using local transform
 
@@ -97,13 +97,13 @@ void mergeNodesWithMaterial(Scene& scene, MeshData& meshData, const std::string&
   // cutoff all but one of the merged meshes (insert the last saved mesh from meshesToMerge - they are all the same)
   eraseSelected(meshData.meshes, meshesToMerge);
 
-  for (auto& n : scene.meshes_)
+  for (auto& n : scene.meshForNode)
     n.second = oldToNew[n.second];
 
   // reattach the node with merged meshes [identity transforms are assumed]
-  int newNode                     = addNode(scene, 0, 1);
-  scene.meshes_[newNode]          = meshData.meshes.size() - 1;
-  scene.materialForNode_[newNode] = (uint32_t)oldMaterial;
+  int newNode                    = addNode(scene, 0, 1);
+  scene.meshForNode[newNode]     = (int)meshData.meshes.size() - 1;
+  scene.materialForNode[newNode] = (uint32_t)oldMaterial;
 
   deleteSceneNodes(scene, toDelete);
 }

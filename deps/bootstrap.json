@@ -1,18 +1,10 @@
 [
 {
-    "name": "taskflow",
-    "source": {
-        "type": "git",
-        "url": "https://github.com/taskflow/taskflow.git",
-        "revision": "v3.6.0"
-    }
-},
-{
     "name": "lightweightvk",
     "source": {
         "type": "git",
         "url": "https://github.com/corporateshark/lightweightvk.git",
-        "revision": "9e0d4d87ccc14af98f5ea27ba41d18fe638c8701"
+        "revision": "407cf9b46018a831ac5e5ab3b5d5222d61e04f9b"
     }
 },
 {
@@ -20,15 +12,7 @@
     "source": {
         "type": "git",
         "url": "https://github.com/assimp/assimp.git",
-        "revision": "v5.4.0"
-    }
-},
-{
-    "name": "meshoptimizer",
-    "source": {
-        "type": "git",
-        "url": "https://github.com/zeux/meshoptimizer",
-        "revision": "v0.20"
+        "revision": "v5.4.3"
     }
 },
 {

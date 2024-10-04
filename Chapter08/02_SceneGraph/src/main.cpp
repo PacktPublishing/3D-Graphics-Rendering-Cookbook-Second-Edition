@@ -18,7 +18,7 @@ int renderSceneTreeUI(const Scene& scene, int node, int selectedNode)
   const std::string name  = getNodeName(scene, node);
   const std::string label = name.empty() ? (std::string("Node") + std::to_string(node)) : name;
 
-  const bool isLeaf        = scene.hierarchy_[node].firstChild_ < 0;
+  const bool isLeaf        = scene.hierarchy[node].firstChild < 0;
   ImGuiTreeNodeFlags flags = isLeaf ? ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet : 0;
   if (node == selectedNode) {
     flags |= ImGuiTreeNodeFlags_Selected;
@@ -36,7 +36,7 @@ int renderSceneTreeUI(const Scene& scene, int node, int selectedNode)
   }
 
   ImGui::PushStyleColor(ImGuiCol_Text, color);
-  const bool isOpened = ImGui::TreeNodeEx(&scene.hierarchy_[node], flags, "%s", label.c_str());
+  const bool isOpened = ImGui::TreeNodeEx(&scene.hierarchy[node], flags, "%s", label.c_str());
   ImGui::PopStyleColor();
 
   ImGui::PushID(node);
@@ -47,7 +47,7 @@ int renderSceneTreeUI(const Scene& scene, int node, int selectedNode)
     }
 
     if (isOpened) {
-      for (int ch = scene.hierarchy_[node].firstChild_; ch != -1; ch = scene.hierarchy_[ch].nextSibling_) {
+      for (int ch = scene.hierarchy[node].firstChild; ch != -1; ch = scene.hierarchy[ch].nextSibling) {
         if (int subNode = renderSceneTreeUI(scene, ch, selectedNode); subNode > -1)
           selectedNode = subNode;
       }
@@ -80,10 +80,10 @@ int* textureToEdit = nullptr;
 
 bool editMaterialUI(Scene& scene, MeshData& meshData, int node, int& outUpdateMaterialIndex, TextureCache& textureCache)
 {
-  if (!scene.materialForNode_.contains(node))
+  if (!scene.materialForNode.contains(node))
     return false;
 
-  const uint32_t matIdx = scene.materialForNode_[node];
+  const uint32_t matIdx = scene.materialForNode[node];
   Material& material    = meshData.materials[matIdx];
 
   bool updated = false;
@@ -158,13 +158,13 @@ void editNodeUI(
     ImGui::Separator();
     ImGuizmo::SetID(1);
 
-    glm::mat4 globalTransform = scene.globalTransform_[node]; // fetch global transform
+    glm::mat4 globalTransform = scene.globalTransform[node]; // fetch global transform
     glm::mat4 srcTransform    = globalTransform;
-    glm::mat4 localTransform  = scene.localTransform_[node];
+    glm::mat4 localTransform  = scene.localTransform[node];
 
     if (editTransformUI(view, proj, globalTransform)) {
-      glm::mat4 deltaTransform    = glm::inverse(srcTransform) * globalTransform; // calculate delta for edited global transform
-      scene.localTransform_[node] = localTransform * deltaTransform;              // modify local transform
+      glm::mat4 deltaTransform   = glm::inverse(srcTransform) * globalTransform; // calculate delta for edited global transform
+      scene.localTransform[node] = localTransform * deltaTransform;              // modify local transform
       markAsChanged(scene, node);
     }
 
@@ -251,9 +251,9 @@ int main()
         canvas3d.clear();
         canvas3d.setMatrix(proj * view);
         // render all bounding boxes (red)
-        for (auto& node : scene.meshes_) {
-          const BoundingBox box = meshData.boxes[node.second];
-          canvas3d.box(scene.globalTransform_[node.first], box, vec4(1, 0, 0, 1));
+        for (auto& p : scene.meshForNode) {
+          const BoundingBox box = meshData.boxes[p.second];
+          canvas3d.box(scene.globalTransform[p.first], box, vec4(1, 0, 0, 1));
         }
 
         // render UI
@@ -274,10 +274,10 @@ int main()
           editNodeUI(scene, meshData, view, proj, selectedNode, updateMaterialIndex, mesh.textureCache_);
 
           // render one selected bounding box (green)
-          if (selectedNode > -1 && scene.hierarchy_[selectedNode].firstChild_ < 0) {
-            const uint32_t meshId = scene.meshes_[selectedNode];
+          if (selectedNode > -1 && scene.hierarchy[selectedNode].firstChild < 0) {
+            const uint32_t meshId = scene.meshForNode[selectedNode];
             const BoundingBox box = meshData.boxes[meshId];
-            canvas3d.box(scene.globalTransform_[selectedNode], box, vec4(0, 1, 0, 1));
+            canvas3d.box(scene.globalTransform[selectedNode], box, vec4(0, 1, 0, 1));
           }
         }
 
@@ -290,7 +290,7 @@ int main()
       ctx->submit(buf, ctx->getCurrentSwapchainTexture());
 
       if (recalculateGlobalTransforms(scene)) {
-        mesh.updateGlobalTransforms(scene.globalTransform_.data(), scene.globalTransform_.size());
+        mesh.updateGlobalTransforms(scene.globalTransform.data(), scene.globalTransform.size());
       }
       if (updateMaterialIndex > -1) {
         mesh.updateMaterial(meshData.materials.data(), updateMaterialIndex);

@@ -99,41 +99,41 @@ Material convertAIMaterial(const aiMaterial* M, std::vector<std::string>& files,
   if (aiGetMaterialFloat(M, AI_MATKEY_ROUGHNESS_FACTOR, &tmp) == AI_SUCCESS)
     D.roughness = tmp;
 
-  aiString Path;
-  aiTextureMapping Mapping;
-  unsigned int UVIndex               = 0;
-  float Blend                        = 1.0f;
-  aiTextureOp TextureOp              = aiTextureOp_Add;
-  aiTextureMapMode TextureMapMode[2] = { aiTextureMapMode_Wrap, aiTextureMapMode_Wrap };
-  unsigned int TextureFlags          = 0;
+  aiString path;
+  aiTextureMapping mapping;
+  unsigned int uvIndex               = 0;
+  float blend                        = 1.0f;
+  aiTextureOp textureOp              = aiTextureOp_Add;
+  aiTextureMapMode textureMapMode[2] = { aiTextureMapMode_Wrap, aiTextureMapMode_Wrap };
+  unsigned int textureFlags          = 0;
 
-  if (aiGetMaterialTexture(M, aiTextureType_EMISSIVE, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) ==
+  if (aiGetMaterialTexture(M, aiTextureType_EMISSIVE, 0, &path, &mapping, &uvIndex, &blend, &textureOp, textureMapMode, &textureFlags) ==
       AI_SUCCESS) {
-    D.emissiveTexture = addUnique(files, Path.C_Str());
+    D.emissiveTexture = addUnique(files, path.C_Str());
   }
 
-  if (aiGetMaterialTexture(M, aiTextureType_DIFFUSE, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) ==
+  if (aiGetMaterialTexture(M, aiTextureType_DIFFUSE, 0, &path, &mapping, &uvIndex, &blend, &textureOp, textureMapMode, &textureFlags) ==
       AI_SUCCESS) {
-    D.baseColorTexture          = addUnique(files, Path.C_Str());
-    const std::string albedoMap = std::string(Path.C_Str());
+    D.baseColorTexture          = addUnique(files, path.C_Str());
+    const std::string albedoMap = std::string(path.C_Str());
     if (albedoMap.find("grey_30") != albedoMap.npos)
       D.flags |= sMaterialFlags_Transparent;
   }
 
   // first try tangent space normal map
-  if (aiGetMaterialTexture(M, aiTextureType_NORMALS, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) ==
+  if (aiGetMaterialTexture(M, aiTextureType_NORMALS, 0, &path, &mapping, &uvIndex, &blend, &textureOp, textureMapMode, &textureFlags) ==
       AI_SUCCESS) {
-    D.normalTexture = addUnique(files, Path.C_Str());
+    D.normalTexture = addUnique(files, path.C_Str());
   }
   // then height map
   if (D.normalTexture == -1)
-    if (aiGetMaterialTexture(M, aiTextureType_HEIGHT, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) ==
+    if (aiGetMaterialTexture(M, aiTextureType_HEIGHT, 0, &path, &mapping, &uvIndex, &blend, &textureOp, textureMapMode, &textureFlags) ==
         AI_SUCCESS)
-      D.normalTexture = addUnique(files, Path.C_Str());
+      D.normalTexture = addUnique(files, path.C_Str());
 
-  if (aiGetMaterialTexture(M, aiTextureType_OPACITY, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) ==
+  if (aiGetMaterialTexture(M, aiTextureType_OPACITY, 0, &path, &mapping, &uvIndex, &blend, &textureOp, textureMapMode, &textureFlags) ==
       AI_SUCCESS) {
-    D.opacityTexture = addUnique(opacityMaps, Path.C_Str());
+    D.opacityTexture = addUnique(opacityMaps, path.C_Str());
     D.alphaTest      = 0.5f;
   }
 
@@ -346,8 +346,8 @@ public:
     bufferTransforms_ = ctx->createBuffer(
         { .usage     = lvk::BufferUsageBits_Storage,
           .storage   = lvk::StorageType_Device,
-          .size      = scene.globalTransform_.size() * sizeof(glm::mat4),
-          .data      = scene.globalTransform_.data(),
+          .size      = scene.globalTransform.size() * sizeof(glm::mat4),
+          .data      = scene.globalTransform.data(),
           .debugName = "Buffer: transforms" },
         nullptr);
     bufferMaterials_ = ctx->createBuffer(
@@ -372,12 +372,12 @@ public:
     DrawIndexedIndirectCommand* cmd = std::launder(reinterpret_cast<DrawIndexedIndirectCommand*>(drawCommands.data() + sizeof(uint32_t)));
     DrawData* dd                    = drawData.data();
 
-    LVK_ASSERT(scene.meshes_.size() == numCommands);
+    LVK_ASSERT(scene.meshForNode.size() == numCommands);
 
     uint32_t ddIndex = 0;
 
     // prepare indirect commands buffer
-    for (auto& i : scene.meshes_) {
+    for (auto& i : scene.meshForNode) {
       const Mesh& mesh = meshData.meshes[i.second];
 
       const uint32_t lod = std::min(0u, mesh.lodCount - 1); // TODO: implement dynamic lod

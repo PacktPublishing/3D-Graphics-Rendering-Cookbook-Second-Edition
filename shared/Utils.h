@@ -12,12 +12,13 @@
 #include <glslang/Include/glslang_c_interface.h>
 #include <ldrutils/lutils/ScopeExit.h>
 #include <lvk/LVK.h>
+#include <lvk/vulkan/VulkanUtils.h>
 
 bool endsWith(const char* s, const char* part);
 
 std::string readShaderFile(const char* fileName);
 
-glslang_stage_t glslangShaderStageFromFileName(const char* fileName);
+VkShaderStageFlagBits vkShaderStageFromFileName(const char* fileName);
 
 lvk::Holder<lvk::ShaderModuleHandle> loadShaderModule(const std::unique_ptr<lvk::IContext>& ctx, const char* fileName);
 lvk::Holder<lvk::TextureHandle> loadTexture(

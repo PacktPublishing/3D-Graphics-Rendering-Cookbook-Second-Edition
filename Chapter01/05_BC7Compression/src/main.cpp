@@ -25,7 +25,7 @@ int main()
 
   const uint32_t numMipLevels = lvk::calcNumMipLevels(origW, origH);
 
-  // create a GLI texture with the BC7 format
+  // create a KTX texture with the BC7 format
   ktxTextureCreateInfo createInfo = {
     .glInternalformat = GL_COMPRESSED_RGBA_BPTC_UNORM,
     .vkFormat         = VK_FORMAT_BC7_UNORM_BLOCK,
@@ -38,9 +38,6 @@ int main()
     .numFaces         = 1u,
     .generateMipmaps  = KTX_FALSE,
   };
-
-  // Create KTX texture
-  // hard coded and support only BC7 format
   ktxTexture1* texture = nullptr;
   (void)LVK_VERIFY(ktxTexture1_Create(&createInfo, KTX_TEXTURE_CREATE_ALLOC_STORAGE, &texture) == KTX_SUCCESS);
 

@@ -55,10 +55,10 @@ std::string convertTexture(
     std::filesystem::create_directories(".cache/out_textures/");
   }
 
-  const auto srcFile = replaceAll(basePath + file, "\\", "/");
-  const auto newFile = std::string(".cache/out_textures/") +
-                       lowercaseString(replaceAll(replaceAll(srcFile, "..", "__"), "/", "__") + std::string("__rescaled")) +
-                       std::string(".ktx");
+  const std::string srcFile = replaceAll(basePath + file, "\\", "/");
+  const std::string newFile = std::string(".cache/out_textures/") +
+                              lowercaseString(replaceAll(replaceAll(srcFile, "..", "__"), "/", "__") + std::string("__rescaled")) +
+                              std::string(".ktx");
 
   // load this image
   int origWidth, origHeight, texChannels;
@@ -79,7 +79,7 @@ std::string convertTexture(
   }
 
   if (opacityMapIndices.count(file) > 0) {
-    const auto opacityMapFile = replaceAll(basePath + opacityMaps[opacityMapIndices[file]], "\\", "/");
+    const std::string opacityMapFile = replaceAll(basePath + opacityMaps[opacityMapIndices[file]], "\\", "/");
     int opacityWidth, opacityHeight;
     stbi_uc* opacityPixels = stbi_load(fixTextureFile(opacityMapFile).c_str(), &opacityWidth, &opacityHeight, nullptr, 1);
 
@@ -107,7 +107,7 @@ std::string convertTexture(
 
   const uint32_t numMipLevels = lvk::calcNumMipLevels(newW, newH);
 
-  // create a GLI texture with the BC7 format
+  // create a KTX texture to store the BC7 format
   ktxTextureCreateInfo createInfo = {
     .glInternalformat = GL_COMPRESSED_RGBA_BPTC_UNORM,
     .vkFormat         = VK_FORMAT_BC7_UNORM_BLOCK,
@@ -176,33 +176,33 @@ void traverse(const aiScene* sourceScene, Scene& scene, aiNode* N, int parent, i
     printPrefix(depth);
     printf("Node[%d].name = %s\n", newNode, N->mName.C_Str());
 
-    uint32_t stringID = (uint32_t)scene.names_.size();
-    scene.names_.push_back(std::string(N->mName.C_Str()));
-    scene.nameForNode_[newNode] = stringID;
+    const uint32_t stringID = (uint32_t)scene.names.size();
+    scene.names.push_back(std::string(N->mName.C_Str()));
+    scene.nameForNode[newNode] = stringID;
   }
 
   for (size_t i = 0; i < N->mNumMeshes; i++) {
-    int newSubNode = addNode(scene, newNode, depth + 1);
+    const int newSubNode = addNode(scene, newNode, depth + 1);
 
-    uint32_t stringID = (uint32_t)scene.names_.size();
-    scene.names_.push_back(std::string(N->mName.C_Str()) + "_Mesh_" + std::to_string(i));
-    scene.nameForNode_[newSubNode] = stringID;
+    const uint32_t stringID = (uint32_t)scene.names.size();
+    scene.names.push_back(std::string(N->mName.C_Str()) + "_Mesh_" + std::to_string(i));
+    scene.nameForNode[newSubNode] = stringID;
 
-    int mesh                           = (int)N->mMeshes[i];
-    scene.meshes_[newSubNode]          = mesh;
-    scene.materialForNode_[newSubNode] = sourceScene->mMeshes[mesh]->mMaterialIndex;
+    const int mesh                    = (int)N->mMeshes[i];
+    scene.meshForNode[newSubNode]     = mesh;
+    scene.materialForNode[newSubNode] = sourceScene->mMeshes[mesh]->mMaterialIndex;
 
     printPrefix(depth);
     printf("Node[%d].SubNode[%d].mesh     = %d\n", newNode, newSubNode, (int)mesh);
     printPrefix(depth);
     printf("Node[%d].SubNode[%d].material = %d\n", newNode, newSubNode, sourceScene->mMeshes[mesh]->mMaterialIndex);
 
-    scene.globalTransform_[newSubNode] = glm::mat4(1.0f);
-    scene.localTransform_[newSubNode]  = glm::mat4(1.0f);
+    scene.globalTransform[newSubNode] = glm::mat4(1.0f);
+    scene.localTransform[newSubNode]  = glm::mat4(1.0f);
   }
 
-  scene.globalTransform_[newNode] = glm::mat4(1.0f);
-  scene.localTransform_[newNode]  = aiMatrix4x4ToMat4(N->mTransformation);
+  scene.globalTransform[newNode] = glm::mat4(1.0f);
+  scene.localTransform[newNode]  = aiMatrix4x4ToMat4(N->mTransformation);
 
   if (N->mParent != nullptr) {
     printPrefix(depth);
@@ -255,7 +255,7 @@ void loadMeshFile(const char* fileName, MeshData& meshData, Scene& ourScene, boo
   for (unsigned int i = 0; i != scene->mNumMaterials; i++) {
     printf("\rConverting materials %u/%u...", i + 1, scene->mNumMaterials);
     const aiMaterial* m = scene->mMaterials[i];
-    ourScene.materialNames_.push_back(m->GetName().C_Str());
+    ourScene.materialNames.push_back(m->GetName().C_Str());
     meshData.materials.push_back(convertAIMaterial(m, meshData.textureFiles, opacityMaps));
   }
   printf("\n");

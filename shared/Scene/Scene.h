@@ -13,50 +13,48 @@ using glm::mat4;
 
 constexpr const int MAX_NODE_LEVEL = 16;
 
-struct Hierarchy
-{
-	// parent for this node (or -1 for root)
-	int parent_;
-	// first child for a node (or -1)
-	int firstChild_;
-	// next sibling for a node (or -1)
-	int nextSibling_;
-	// last added node (or -1)
-	int lastSibling_;
-	// cached node level
-	int level_;
+struct Hierarchy {
+  // parent for this node (or -1 for root)
+  int parent;
+  // first child for a node (or -1)
+  int firstChild;
+  // next sibling for a node (or -1)
+  int nextSibling;
+  // last added node (or -1)
+  int lastSibling;
+  // cached node level
+  int level;
 };
 
 /* This scene is converted into a descriptorSet(s) in MultiRenderer class 
    This structure is also used as a storage type in SceneExporter tool
  */
-struct Scene
-{
-	// local transformations for each node and global transforms
-	// + an array of 'dirty/changed' local transforms
-	std::vector<mat4> localTransform_;  // indexed by node
-	std::vector<mat4> globalTransform_; // indexed by node
+struct Scene {
+  // local transformations for each node and global transforms
+  // + an array of 'dirty/changed' local transforms
+  std::vector<mat4> localTransform;  // indexed by node
+  std::vector<mat4> globalTransform; // indexed by node
 
-	// list of nodes that need their global transforms recalculated
-	std::vector<int> changedAtThisFrame_[MAX_NODE_LEVEL];
+  // list of nodes that need their global transforms recalculated
+  std::vector<int> changedAtThisFrame[MAX_NODE_LEVEL];
 
-	// Hierarchy component
-	std::vector<Hierarchy> hierarchy_;
+  // Hierarchy component
+  std::vector<Hierarchy> hierarchy;
 
-	// Mesh component: Which node corresponds to which node
-	std::unordered_map<uint32_t, uint32_t> meshes_;
+  // Mesh component: which Mesh belongs to which node (Node -> Mesh)
+  std::unordered_map<uint32_t, uint32_t> meshForNode;
 
-	// Material component: Which material belongs to which node
-	std::unordered_map<uint32_t, uint32_t> materialForNode_;
+  // Material component: which material belongs to which node (Node -> Material)
+  std::unordered_map<uint32_t, uint32_t> materialForNode;
 
-	// Node name component: Which name is assigned to the node
-	std::unordered_map<uint32_t, uint32_t> nameForNode_;
+  // Node name component: which name is assigned to the node (Node -> Name)
+  std::unordered_map<uint32_t, uint32_t> nameForNode;
 
-	// List of scene node names
-	std::vector<std::string> names_;
+  // List of scene node names
+  std::vector<std::string> names;
 
-	// Debug list of material names
-	std::vector<std::string> materialNames_;
+  // Debug list of material names
+  std::vector<std::string> materialNames;
 };
 
 int addNode(Scene& scene, int parent, int level);
@@ -67,15 +65,15 @@ int findNodeByName(const Scene& scene, const std::string& name);
 
 inline std::string getNodeName(const Scene& scene, int node)
 {
-	int strID = scene.nameForNode_.contains(node) ? scene.nameForNode_.at(node) : -1;
-	return (strID > -1) ? scene.names_[strID] : std::string();
+  int strID = scene.nameForNode.contains(node) ? scene.nameForNode.at(node) : -1;
+  return (strID > -1) ? scene.names[strID] : std::string();
 }
 
 inline void setNodeName(Scene& scene, int node, const std::string& name)
 {
-	uint32_t stringID = (uint32_t)scene.names_.size();
-	scene.names_.push_back(name);
-	scene.nameForNode_[node] = stringID;
+  uint32_t stringID = (uint32_t)scene.names.size();
+  scene.names.push_back(name);
+  scene.nameForNode[node] = stringID;
 }
 
 int getNodeLevel(const Scene& scene, int n);

@@ -17,7 +17,7 @@ int renderSceneTreeUI(const Scene& scene, int node, int selectedNode)
   const std::string name  = getNodeName(scene, node);
   const std::string label = name.empty() ? (std::string("Node") + std::to_string(node)) : name;
 
-  const bool isLeaf        = scene.hierarchy_[node].firstChild_ < 0;
+  const bool isLeaf        = scene.hierarchy[node].firstChild < 0;
   ImGuiTreeNodeFlags flags = isLeaf ? ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet : 0;
   if (node == selectedNode) {
     flags |= ImGuiTreeNodeFlags_Selected;
@@ -32,7 +32,7 @@ int renderSceneTreeUI(const Scene& scene, int node, int selectedNode)
   }
 
   ImGui::PushStyleColor(ImGuiCol_Text, color);
-  const bool isOpened = ImGui::TreeNodeEx(&scene.hierarchy_[node], flags, "%s", label.c_str());
+  const bool isOpened = ImGui::TreeNodeEx(&scene.hierarchy[node], flags, "%s", label.c_str());
   ImGui::PopStyleColor();
 
   ImGui::PushID(node);
@@ -43,7 +43,7 @@ int renderSceneTreeUI(const Scene& scene, int node, int selectedNode)
     }
 
     if (isOpened) {
-      for (int ch = scene.hierarchy_[node].firstChild_; ch != -1; ch = scene.hierarchy_[ch].nextSibling_) {
+      for (int ch = scene.hierarchy[node].firstChild; ch != -1; ch = scene.hierarchy[ch].nextSibling) {
         if (int subNode = renderSceneTreeUI(scene, ch, selectedNode); subNode > -1)
           selectedNode = subNode;
       }
@@ -75,13 +75,13 @@ int main()
     loadMeshFile("deps/src/bistro/Interior/interior.obj", meshData_Interior, ourScene_Interior, false);
 
     // merge some meshes
-    printf("[Unmerged] scene items: %d\n", (int)ourScene_Exterior.hierarchy_.size());
+    printf("[Unmerged] scene items: %u\n", (uint32_t)ourScene_Exterior.hierarchy.size());
     mergeNodesWithMaterial(ourScene_Exterior, meshData_Exterior, "Foliage_Linde_Tree_Large_Orange_Leaves");
-    printf("[Merged orange leaves] scene items: %d\n", (int)ourScene_Exterior.hierarchy_.size());
+    printf("[Merged orange leaves] scene items: %u\n", (uint32_t)ourScene_Exterior.hierarchy.size());
     mergeNodesWithMaterial(ourScene_Exterior, meshData_Exterior, "Foliage_Linde_Tree_Large_Green_Leaves");
-    printf("[Merged green leaves]  scene items: %d\n", (int)ourScene_Exterior.hierarchy_.size());
+    printf("[Merged green leaves]  scene items: %u\n", (uint32_t)ourScene_Exterior.hierarchy.size());
     mergeNodesWithMaterial(ourScene_Exterior, meshData_Exterior, "Foliage_Linde_Tree_Large_Trunk");
-    printf("[Merged trunk]  scene items: %d\n", (int)ourScene_Exterior.hierarchy_.size());
+    printf("[Merged trunk]  scene items: %u\n", (uint32_t)ourScene_Exterior.hierarchy.size());
 
     // merge everything into one big scene
     MeshData meshData;
@@ -124,7 +124,7 @@ int main()
   Scene scene;
   loadScene(fileNameCachedHierarchy, scene);
 
-  scene.localTransform_[0] = glm::scale(vec3(0.01f)); // scale the Bistro
+  scene.localTransform[0] = glm::scale(vec3(0.01f)); // scale the Bistro
   markAsChanged(scene, 0);
 
   VulkanApp app({
@@ -207,9 +207,9 @@ int main()
         canvas3d.setMatrix(proj * view);
         // render all bounding boxes (red)
         if (drawBoundingBoxes) {
-          for (auto& node : scene.meshes_) {
-            const BoundingBox box = meshData.boxes[node.second];
-            canvas3d.box(scene.globalTransform_[node.first], box, vec4(1, 0, 0, 1));
+          for (auto& p : scene.meshForNode) {
+            const BoundingBox box = meshData.boxes[p.second];
+            canvas3d.box(scene.globalTransform[p.first], box, vec4(1, 0, 0, 1));
           }
         }
 
@@ -229,10 +229,10 @@ int main()
           }
           ImGui::End();
           // render one selected bounding box (green)
-          if (selectedNode > -1 && scene.hierarchy_[selectedNode].firstChild_ < 0) {
-            const uint32_t meshId = scene.meshes_[selectedNode];
+          if (selectedNode > -1 && scene.hierarchy[selectedNode].firstChild < 0) {
+            const uint32_t meshId = scene.meshForNode[selectedNode];
             const BoundingBox box = meshData.boxes[meshId];
-            canvas3d.box(scene.globalTransform_[selectedNode], box, vec4(0, 1, 0, 1));
+            canvas3d.box(scene.globalTransform[selectedNode], box, vec4(0, 1, 0, 1));
           }
         }
 
@@ -245,7 +245,7 @@ int main()
       ctx->submit(buf, ctx->getCurrentSwapchainTexture());
 
       if (recalculateGlobalTransforms(scene)) {
-        mesh.updateGlobalTransforms(scene.globalTransform_.data(), scene.globalTransform_.size());
+        mesh.updateGlobalTransforms(scene.globalTransform.data(), scene.globalTransform.size());
       }
       if (updateMaterialIndex > -1) {
         mesh.updateMaterial(meshData.materials.data(), updateMaterialIndex);
