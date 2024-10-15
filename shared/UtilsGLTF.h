@@ -8,6 +8,9 @@
 #include <assimp/scene.h>
 #include <assimp/types.h>
 
+#include "UtilsAnim.h"
+#include "LineCanvas.h"
+
 #include <lvk/LVK.h>
 
 enum MaterialType : uint32_t {
@@ -24,7 +27,7 @@ enum MaterialType : uint32_t {
 
 const uint32_t kMaxMaterials    = 128;
 const uint32_t kMaxEnvironments = 4;
-const uint32_t kMaxLights       = 4;
+const uint32_t kMaxLights       = 8;
 
 using glm::mat4;
 using glm::vec2;
@@ -53,6 +56,16 @@ inline glm::mat4 aiMatrix4x4ToMat4(const aiMatrix4x4& from)
   to[3][3] = (float)from.d4;
 
   return to;
+}
+
+inline glm::vec3 aiVector3DToVec3(const aiVector3D& from)
+{
+  return glm::vec3(from.x, from.y, from.z);
+}
+
+inline glm::quat aiQuaternionToQuat(const aiQuaternion& from)
+{
+  return glm::quat(from.w, from.x, from.y, from.z);
 }
 
 enum LightType : uint32_t {
@@ -88,7 +101,8 @@ struct LightDataGPU {
 
   LightType type = LightType_Directional;
 
-  int padding[2];
+  int nodeId  = ~0;
+  int padding = 0;
 };
 
 struct GLTFGlobalSamplers {
@@ -131,8 +145,6 @@ struct GLTFGlobalSamplers {
 
 struct EnvironmentsPerFrame {
   EnvironmentMapDataGPU environments[kMaxEnvironments];
-  LightDataGPU lights[kMaxLights];
-  uint32_t lightCount;
 };
 
 struct Vertex {
@@ -141,7 +153,15 @@ struct Vertex {
   vec4 color;
   vec2 uv0;
   vec2 uv1;
+  float padding[2];
 };
+
+struct MorphTarget {
+  uint32_t meshId = ~0;
+  std::vector<uint32_t> offset;
+};
+
+static_assert(sizeof(Vertex) == sizeof(uint32_t) * 16);
 
 struct GLTFMaterialTextures {
   // Metallic Roughness / SpecluarGlossiness
@@ -354,7 +374,8 @@ struct GLTFMesh {
 
 struct GLTFNode {
   std::string name;
-  glm::mat4 transform;
+  uint32_t modelMtxId;
+  glm::mat4 transform = mat4(1);
   std::vector<GLTFNodeRef> children;
   std::vector<GLTFMeshRef> meshes;
 };
@@ -366,8 +387,28 @@ struct GLTFFrameData {
   vec4 cameraPos;
 };
 
+struct GLTFCamera {
+  std::string name;
+  uint32_t nodeIdx = ~0;
+  glm::vec3 pos;
+  glm::vec3 up;
+  glm::vec3 lookAt;
+  float hFOV;
+  float near;
+  float far;
+  float aspect = 1.0f;
+  float orthoWidth;
+
+  mat4 getProjection(float windowAspect = 1.0f) const
+  {
+    return orthoWidth != 0.0f
+               ? glm::ortho(-windowAspect / orthoWidth, windowAspect / orthoWidth, -1.0f / orthoWidth, 1.0f / orthoWidth, far, near)
+               : glm::perspective(hFOV, windowAspect == 1.0f ? aspect : windowAspect, near, far);
+  }
+};
+
 struct GLTFTransforms {
-  mat4 model;
+  uint32_t modelMtxId;
   uint32_t matId;
   GLTFNodeRef nodeRef; // for CPU only
   GLTFMeshRef meshRef; // for CPU only
@@ -378,17 +419,19 @@ struct GLTFTransforms {
 #define MAX_BONES_PER_VERTEX 8
 
 struct VertexBoneData {
+  vec3 position;
+  vec3 normal;
   uint32_t boneId[MAX_BONES_PER_VERTEX] = { ~0u, ~0u, ~0u, ~0u, ~0u, ~0u, ~0u, ~0u };
   float weight[MAX_BONES_PER_VERTEX]    = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+  uint32_t meshId                       = ~0;
+  uint32_t padding;
 };
+
+static_assert(sizeof(VertexBoneData) == sizeof(uint32_t) * 24);
 
 struct GLTFBone {
-  uint32_t boneId;
-  glm::mat4 transform;
-};
-
-struct GLTFNodeAnimation {
-  glm::mat4 invTransform;
+  uint32_t boneId     = ~0ul;
+  glm::mat4 transform = glm::mat4(1);
 };
 
 GLTFMaterialDataGPU setupglTFMaterialData(
@@ -409,42 +452,76 @@ struct GLTFContext {
   EnvironmentMapTextures envMapTextures;
   GLTFFrameData frameData;
   std::vector<GLTFTransforms> transforms;
+  std::vector<glm::mat4> matrices;
 
   std::vector<GLTFNode> nodesStorage;
   std::vector<GLTFMesh> meshesStorage;
   std::unordered_map<std::string, GLTFBone> bonesStorage;
+
+  std::vector<MorphTarget> morphTargets;
+  std::unordered_map<std::string, uint32_t> meshesRemap;
+
+  std::vector<Animation> animations;
 
   std::vector<uint32_t> opaqueNodes;
   std::vector<uint32_t> transmissionNodes;
   std::vector<uint32_t> transparentNodes;
 
   lvk::Holder<lvk::BufferHandle> envBuffer;
-  lvk::Holder<lvk::BufferHandle> perFrameBuffer;
+  lvk::Holder<lvk::BufferHandle> lightsBuffer;
+  lvk::Holder<lvk::BufferHandle> perFrameBuffer[3];
   lvk::Holder<lvk::BufferHandle> transformBuffer;
+  lvk::Holder<lvk::BufferHandle> matricesBuffer;
+  lvk::Holder<lvk::BufferHandle> morphsBuffer;
+
   lvk::Holder<lvk::RenderPipelineHandle> pipelineSolid;
   lvk::Holder<lvk::RenderPipelineHandle> pipelineTransparent;
+  lvk::Holder<lvk::ComputePipelineHandle> pipelineComputeAnimations;
+
   lvk::Holder<lvk::ShaderModuleHandle> vert;
   lvk::Holder<lvk::ShaderModuleHandle> frag;
+  lvk::Holder<lvk::ShaderModuleHandle> animation;
   lvk::Holder<lvk::BufferHandle> vertexBuffer;
+  lvk::Holder<lvk::BufferHandle> vertexSkinningBuffer;
+  lvk::Holder<lvk::BufferHandle> vertexMorphingBuffer;
   lvk::Holder<lvk::BufferHandle> indexBuffer;
   lvk::Holder<lvk::BufferHandle> matBuffer;
 
   lvk::Holder<lvk::TextureHandle> offscreenTex[3] = {};
 
   uint32_t currentOffscreenTex = 0;
+  uint32_t maxVertices         = 0;
+  uint32_t activeCamera        = ~0;
+
+  std::vector<MorphState> morphStates;
+  std::vector<LightDataGPU> lights;
+  std::vector<GLTFCamera> cameras;
+  std::vector<uint32_t> activeAnimations;
+  float animationBlend = 0.0f;
 
 
   GLTFNodeRef root;
   VulkanApp& app;
+  LineCanvas3D canvas3d;
 
   bool isVolumetricMaterial = false;
+  bool animated             = false;
+  bool skinning             = false;
+  bool morphing             = false;
 
   bool isScreenCopyRequired() const { return isVolumetricMaterial; }
 };
 
 void loadGLTF(GLTFContext& context, const char* gltfName, const char* glTFDataPath);
 void renderGLTF(GLTFContext& context, const mat4& model, const mat4& view, const mat4& proj, bool rebuildRenderList = false);
+void animateGLTF(GLTFContext& gltf, AnimationState& anim, float dt);
+void animateBlendingGLTF(GLTFContext& gltf, AnimationState& anim1, AnimationState& anim2, float weight, float dt);
 MaterialType detectMaterialType(const aiMaterial* mtl);
 
 void printPrefix(int ofs);
 void printMat4(const aiMatrix4x4& m);
+
+std::vector<std::string> camerasGLTF(GLTFContext& context);
+void updateCamera(GLTFContext& gltf, const mat4& model, mat4& view, mat4& proj, float aspectRatio);
+
+std::vector<std::string> animationsGLTF(GLTFContext& gltf);

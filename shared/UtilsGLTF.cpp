@@ -41,6 +41,27 @@ void loadMaterialTexture(
     }
   }
 }
+
+uint32_t getNextMtxId(GLTFContext& gltf, const std::string& name, uint32_t& nextEmptyId, glm::mat4 mtx)
+{
+  uint32_t mtxId = 0;
+  auto boneId    = gltf.bonesStorage.find(name);
+  if (boneId == gltf.bonesStorage.end()) {
+    mtxId = nextEmptyId;
+    nextEmptyId++;
+  } else {
+    mtxId = boneId->second.boneId;
+  }
+
+  if (gltf.matrices.size() <= mtxId) {
+    gltf.matrices.resize(mtxId + 1);
+  }
+
+  gltf.matrices[mtxId] = mtx;
+
+  return mtxId;
+}
+
 } // namespace
 
 GLTFMaterialDataGPU setupglTFMaterialData(
@@ -374,6 +395,38 @@ static uint32_t getNumIndices(const aiScene& scene)
   return num;
 }
 
+static uint32_t getNumMorphVertices(const aiScene& scene)
+{
+  uint32_t num = 0;
+  for (uint32_t i = 0; i != scene.mNumMeshes; i++) {
+    num += scene.mMeshes[i]->mNumVertices * scene.mMeshes[i]->mNumAnimMeshes;
+  }
+  return num;
+}
+
+static uint32_t getNodeId(GLTFContext& gltf, const std::string& name)
+{
+  for (uint32_t i = 0; i != gltf.nodesStorage.size(); i++) {
+    if (gltf.nodesStorage[i].name == name)
+      return i;
+  }
+  return ~0;
+}
+
+void updateLights(GLTFContext& gltf, lvk::IContext* ctx)
+{
+  for (LightDataGPU& light : gltf.lights) {
+    if (light.nodeId == -1)
+      continue;
+    light.position  = glm::vec3(gltf.matrices[light.nodeId][3]);
+    light.direction = gltf.matrices[light.nodeId] * glm::vec4(light.direction, 0.0);
+  }
+
+  LVK_ASSERT(gltf.lights.size() <= kMaxLights);
+
+  ctx->upload(gltf.lightsBuffer, gltf.lights.data(), sizeof(LightDataGPU) * gltf.lights.size());
+}
+
 void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
 {
   const aiScene* scene = aiImportFile(glTFName, aiProcess_Triangulate);
@@ -388,26 +441,30 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
 
   std::vector<Vertex> vertices;
   std::vector<VertexBoneData> skinningData;
-  
   std::vector<uint32_t> indices;
-
   std::vector<uint32_t> startVertex;
   std::vector<uint32_t> startIndex;
 
   startVertex.push_back(0);
   startIndex.push_back(0);
 
-
   vertices.reserve(getNumVertices(*scene));
   indices.reserve(getNumIndices(*scene));
   skinningData.resize(getNumVertices(*scene));
 
-  uint32_t numBones = 0;
+  std::vector<Vertex> morphData;
+  gltf.morphTargets.resize(scene->mNumMeshes);
+  morphData.reserve(getNumMorphVertices(*scene));
+
+  uint32_t numBones           = 0;
+  uint32_t morphTargetsOffset = 0;
+  uint32_t vertOffset         = 0;
 
   for (uint32_t m = 0; m < scene->mNumMeshes; ++m) {
-    const aiMesh* mesh = scene->mMeshes[m];
+    const aiMesh* mesh                    = scene->mMeshes[m];
+    gltf.meshesRemap[mesh->mName.C_Str()] = m;
 
-    for (uint32_t i = 0; i != mesh->mNumVertices; i++) {
+    for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
       const aiVector3D v   = mesh->mVertices[i];
       const aiVector3D n   = mesh->mNormals ? mesh->mNormals[i] : aiVector3D(0.0f, 1.0f, 0.0f);
       const aiColor4D c    = mesh->mColors[0] ? mesh->mColors[0][i] : aiColor4D(1.0f, 1.0f, 1.0f, 1.0f);
@@ -420,17 +477,24 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
           .uv0      = vec2(uv0.x, 1.0f - uv0.y),
           .uv1      = vec2(uv1.x, 1.0f - uv1.y),
       });
+
+      if (mesh->mNumBones == 0) {
+        auto& vertex    = skinningData[vertices.size() - 1];
+        vertex.meshId   = m;
+        vertex.position = vec3(v.x, v.y, v.z);
+		  vertex.normal = vec3(n.x, n.y, n.z);
+      }
     }
 
     startVertex.push_back((uint32_t)vertices.size());
-    for (uint32_t i = 0; i != mesh->mNumFaces; i++) {
+    for (uint32_t i = 0; i < mesh->mNumFaces; i++) {
       for (int j = 0; j != 3; j++) {
         indices.push_back(mesh->mFaces[i].mIndices[j]);
       }
     }
     startIndex.push_back((uint32_t)indices.size());
 
-	 // load bones
+    // load bones
     for (int bone = 0; bone < mesh->mNumBones; ++bone) {
       uint32_t boneId(numBones);
       std::string boneName = mesh->mBones[bone]->mName.C_Str();
@@ -448,15 +512,52 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
         int vertexId = weights[w].mVertexId;
         float weight = weights[w].mWeight;
         assert(vertexId <= vertices.size());
-        auto& vertex = skinningData[vertexId];
+        auto& vertex    = skinningData[vertexId + vertOffset];
+        vertex.position = vertices[vertexId + vertOffset].position;
+		  vertex.normal = vertices[vertexId + vertOffset].normal;
 
+        assert(vertex.meshId == ~0 || vertex.meshId == m);
+        vertex.meshId = m;
         for (int i = 0; i < MAX_BONES_PER_VERTEX; ++i) {
-          if (vertex.boneId[i] != 0ul) {
+          if (vertex.boneId[i] == ~0) {
             vertex.weight[i] = weight;
             vertex.boneId[i] = boneId;
             break;
           }
         }
+      }
+    }
+
+    vertOffset += mesh->mNumVertices;
+  }
+  // load morph targets
+  for (uint32_t c = 0; c < scene->mNumMeshes; ++c) {
+    const aiMesh* m          = scene->mMeshes[c];
+    MorphTarget& morphTarget = gltf.morphTargets[c];
+
+    if (m->mNumAnimMeshes) {
+      morphTarget.meshId = c;
+
+      for (uint32_t a = 0; a < m->mNumAnimMeshes; a++) {
+        const aiAnimMesh* mesh = m->mAnimMeshes[a];
+
+        for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
+          const aiVector3D v   = mesh->mVertices[i];
+          const aiVector3D n   = mesh->mNormals ? mesh->mNormals[i] : aiVector3D(0.0f, 1.0f, 0.0f);
+			 const aiVector3D srcNorm = m->mNormals ? m->mNormals[i] : aiVector3D(0.0f, 1.0f, 0.0f);
+          const aiColor4D c    = mesh->mColors[0] ? mesh->mColors[0][i] : aiColor4D(1.0f, 1.0f, 1.0f, 1.0f);
+          const aiVector3D uv0 = mesh->mTextureCoords[0] ? mesh->mTextureCoords[0][i] : aiVector3D(0.0f, 0.0f, 0.0f);
+          const aiVector3D uv1 = mesh->mTextureCoords[1] ? mesh->mTextureCoords[1][i] : aiVector3D(0.0f, 0.0f, 0.0f);
+          morphData.push_back({
+              .position = vec3(v.x - m->mVertices[i].x, v.y - m->mVertices[i].y, v.z - m->mVertices[i].z),
+              .normal   = vec3(n.x - srcNorm.x, n.y - srcNorm.y, n.z - srcNorm.z),
+              .color    = vec4(c.r, c.g, c.b, c.a),
+              .uv0      = vec2(uv0.x, 1.0f - uv0.y),
+              .uv1      = vec2(uv1.x, 1.0f - uv1.y),
+          });
+        }
+        morphTarget.offset.push_back(morphTargetsOffset);
+        morphTargetsOffset += mesh->mNumVertices;
       }
     }
   }
@@ -474,9 +575,13 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
         setupglTFMaterialData(ctx, gltf.samplers, mtlDescriptor, glTFDataPath, gltf.glTFDataholder, gltf.isVolumetricMaterial);
   }
 
+  uint32_t nonBoneMtxId = numBones;
+
+  std::string rootName = scene->mRootNode->mName.C_Str() ? scene->mRootNode->mName.C_Str() : "root";
   gltf.nodesStorage.push_back({
-      .name      = scene->mRootNode->mName.C_Str() ? scene->mRootNode->mName.C_Str() : "root",
-      .transform = aiMatrix4x4ToMat4(scene->mRootNode->mTransformation),
+      .name       = rootName,
+      .modelMtxId = getNextMtxId(gltf, rootName, nonBoneMtxId, aiMatrix4x4ToMat4(scene->mRootNode->mTransformation)),
+      .transform  = aiMatrix4x4ToMat4(scene->mRootNode->mTransformation),
   });
 
   gltf.root = gltf.nodesStorage.size() - 1;
@@ -501,10 +606,14 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
       gltf.nodesStorage[gltfNode].meshes.push_back(gltf.meshesStorage.size() - 1);
     }
     for (GLTFNodeRef i = 0; i < rootNode->mNumChildren; i++) {
-      const aiNode* node = rootNode->mChildren[i];
+      const aiNode* node    = rootNode->mChildren[i];
+      std::string childName = node->mName.C_Str() ? node->mName.C_Str() : "node";
       const GLTFNode childNode({
-          .name      = node->mName.C_Str() ? node->mName.C_Str() : "node",
-          .transform = gltf.nodesStorage[gltfNode].transform * aiMatrix4x4ToMat4(node->mTransformation),
+          .name       = childName,
+          .modelMtxId = getNextMtxId(
+              gltf, childName, nonBoneMtxId,
+              gltf.matrices[gltf.nodesStorage[gltfNode].modelMtxId] * aiMatrix4x4ToMat4(node->mTransformation)),
+          .transform = aiMatrix4x4ToMat4(node->mTransformation),
       });
       gltf.nodesStorage.push_back(childNode);
       const size_t nodeIdx = gltf.nodesStorage.size() - 1;
@@ -515,19 +624,56 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
 
   traverseTree(scene->mRootNode, gltf.root);
 
+  initAnimations(gltf, scene);
+
+  // add dummy vertices to align buffer to 16 to run compute shader
+  gltf.maxVertices = (1 + (vertices.size() / 16)) * 16;
+  vertices.resize(gltf.maxVertices);
+
   gltf.vertexBuffer = ctx->createBuffer({
-      .usage     = lvk::BufferUsageBits_Vertex,
+      .usage     = lvk::BufferUsageBits_Vertex | lvk::BufferUsageBits_Storage,
       .storage   = lvk::StorageType_Device,
       .size      = sizeof(Vertex) * vertices.size(),
       .data      = vertices.data(),
       .debugName = "Buffer: vertex",
   });
-  gltf.indexBuffer  = ctx->createBuffer({
-       .usage     = lvk::BufferUsageBits_Index,
-       .storage   = lvk::StorageType_Device,
-       .size      = sizeof(uint32_t) * indices.size(),
-       .data      = indices.data(),
-       .debugName = "Buffer: index",
+
+  size_t vssize = (1 + (skinningData.size() / 16)) * 16;
+  skinningData.resize(vssize);
+
+  assert(vssize == gltf.maxVertices);
+
+  gltf.vertexSkinningBuffer = ctx->createBuffer({
+      .usage     = lvk::BufferUsageBits_Vertex | lvk::BufferUsageBits_Storage,
+      .storage   = lvk::StorageType_Device,
+      .size      = sizeof(VertexBoneData) * skinningData.size(),
+      .data      = skinningData.data(),
+      .debugName = "Buffer: skinning vertex data",
+  });
+
+  const bool hasMorphData = !morphData.empty();
+
+  gltf.vertexMorphingBuffer = ctx->createBuffer({
+      .usage     = lvk::BufferUsageBits_Vertex | lvk::BufferUsageBits_Storage,
+      .storage   = lvk::StorageType_Device,
+      .size      = hasMorphData ? sizeof(Vertex) * morphData.size() : sizeof(Vertex), // always have dummy buffer
+      .data      = hasMorphData ? morphData.data() : nullptr,
+      .debugName = "Buffer: morphing vertex data",
+  });
+
+  gltf.morphsBuffer = gltf.app.ctx_->createBuffer({
+      .usage     = lvk::BufferUsageBits_Vertex | lvk::BufferUsageBits_Storage,
+      .storage   = lvk::StorageType_HostVisible,
+      .size      = MAX_MORPHS * sizeof(MorphState),
+      .debugName = "Morphs matrices",
+  });
+
+  gltf.indexBuffer = ctx->createBuffer({
+      .usage     = lvk::BufferUsageBits_Index,
+      .storage   = lvk::StorageType_Device,
+      .size      = sizeof(uint32_t) * indices.size(),
+      .data      = indices.data(),
+      .debugName = "Buffer: index",
   });
 
   const lvk::VertexInput vdesc = {
@@ -539,8 +685,9 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
     .inputBindings = { { .stride = sizeof(Vertex) } },
   };
 
-  gltf.vert = loadShaderModule(ctx, "data/shaders/gltf/main.vert");
-  gltf.frag = loadShaderModule(ctx, "data/shaders/gltf/main.frag");
+  gltf.vert      = loadShaderModule(ctx, "data/shaders/gltf/main.vert");
+  gltf.frag      = loadShaderModule(ctx, "data/shaders/gltf/main.frag");
+  gltf.animation = loadShaderModule(ctx, "data/shaders/gltf/animation.comp");
 
   gltf.pipelineSolid = ctx->createRenderPipeline({
       .vertexInput = vdesc,
@@ -588,42 +735,112 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
         .envMapTextureCharlie           = gltf.envMapTextures.envMapTextureCharlie.index(),
         .envMapTextureCharlieSampler    = gltf.samplers.clamp.index(),
     } },
-    .lights       = { LightDataGPU() },
-    .lightCount   = 1,
   };
 
   gltf.envBuffer = ctx->createBuffer({
-      .usage     = lvk::BufferUsageBits_Uniform,
+      .usage     = lvk::BufferUsageBits_Storage,
       .storage   = lvk::StorageType_HostVisible,
       .size      = sizeof(envPerFrame),
       .data      = &envPerFrame,
       .debugName = "PerFrame environments",
   });
 
-  gltf.perFrameBuffer = ctx->createBuffer({
-      .usage     = lvk::BufferUsageBits_Uniform,
+  gltf.lightsBuffer = ctx->createBuffer({
+      .usage     = lvk::BufferUsageBits_Storage,
       .storage   = lvk::StorageType_HostVisible,
-      .size      = sizeof(GLTFFrameData),
-      .data      = &gltf.frameData,
-      .debugName = "Per Frame data",
+      .size      = sizeof(LightDataGPU) * kMaxLights,
+      .debugName = "Lights",
   });
 
+  // Load lights
+  // Atten = 1/( att0 + att1 * d + att2 * d*d)
+  {
+    for (size_t i = 0; i < scene->mNumLights; ++i) {
+      LightDataGPU ld;
+      const aiLight* light = scene->mLights[i];
+
+      ld.color     = glm::vec3(light->mColorDiffuse[0] / 255.0f, light->mColorDiffuse[1] / 255.0f, light->mColorDiffuse[2] / 255.0f);
+      ld.nodeId    = getNodeId(gltf, light->mName.C_Str());
+      ld.direction = glm::vec3(light->mDirection[0], light->mDirection[1], light->mDirection[2]);
+      ld.range     = 10000.0f;
+
+      if (light->mType == aiLightSource_POINT) {
+        ld.type = LightType_Point;
+      } else if (light->mType == aiLightSource_SPOT) {
+        ld.type         = LightType_Spot;
+        ld.innerConeCos = light->mAngleInnerCone;
+        ld.outerConeCos = light->mAngleOuterCone;
+      } else if (light->mType == aiLightSource_DIRECTIONAL) {
+        ld.type = LightType_Directional;
+      }
+
+      gltf.lights.push_back(ld);
+    }
+
+    if (gltf.lights.empty()) {
+      gltf.lights.push_back(LightDataGPU());
+    }
+  }
+
+  updateLights(gltf, ctx.get());
+
+  for (uint32_t i = 0; i != LVK_ARRAY_NUM_ELEMENTS(gltf.perFrameBuffer); i++) {
+    gltf.perFrameBuffer[i] = ctx->createBuffer({
+        .usage     = lvk::BufferUsageBits_Uniform,
+        .storage   = lvk::StorageType_HostVisible,
+        .size      = sizeof(GLTFFrameData),
+        .data      = &gltf.frameData,
+        .debugName = ("Per Frame data " + std::to_string(i)).c_str(),
+    });
+  }
+
   LVK_ASSERT(gltf.pipelineSolid.valid());
+
+  // Cameras
+
+  gltf.cameras.reserve(scene->mNumCameras);
+  for (uint32_t c = 0; c < scene->mNumCameras; ++c) {
+    aiCamera* camera = scene->mCameras[c];
+    gltf.cameras.push_back({ .name       = camera->mName.C_Str(),
+                             .nodeIdx    = getNodeId(gltf, camera->mName.C_Str()),
+                             .pos        = aiVector3DToVec3(camera->mPosition),
+                             .up         = aiVector3DToVec3(camera->mUp),
+                             .lookAt     = aiVector3DToVec3(camera->mUp),
+                             .hFOV       = camera->mHorizontalFOV,
+                             .near       = camera->mClipPlaneNear,
+                             .far        = camera->mClipPlaneFar,
+                             .aspect     = camera->mAspect,
+                             .orthoWidth = camera->mOrthographicWidth });
+  }
+}
+
+void updateCamera(GLTFContext& gltf, const mat4& model, mat4& view, mat4& proj, float aspectRatio)
+{
+  if (gltf.activeCamera == ~0 || gltf.activeCamera >= gltf.cameras.size())
+    return;
+
+  const GLTFCamera& cam = gltf.cameras[gltf.activeCamera];
+  if (cam.nodeIdx == ~0)
+    return;
+
+  view = glm::inverse(model * gltf.matrices[cam.nodeIdx]);
+  proj = cam.getProjection(aspectRatio);
 }
 
 void buildTransformsList(GLTFContext& gltf)
 {
   gltf.transforms.clear();
+  // gltf.matrices.clear();
   gltf.opaqueNodes.clear();
   gltf.transmissionNodes.clear();
   gltf.transparentNodes.clear();
 
   std::function<void(GLTFNodeRef gltfNode)> traverseTree = [&](GLTFNodeRef nodeRef) {
-    const GLTFNode& node = gltf.nodesStorage[nodeRef];
+    GLTFNode& node = gltf.nodesStorage[nodeRef];
     for (GLTFNodeRef meshId : node.meshes) {
       const GLTFMesh& mesh = gltf.meshesStorage[meshId];
       gltf.transforms.push_back({
-          .model       = node.transform,
+          .modelMtxId  = node.modelMtxId,
           .matId       = mesh.matIdx,
           .nodeRef     = nodeRef,
           .meshRef     = meshId,
@@ -645,11 +862,19 @@ void buildTransformsList(GLTFContext& gltf)
   traverseTree(gltf.root);
 
   gltf.transformBuffer = gltf.app.ctx_->createBuffer({
-      .usage     = lvk::BufferUsageBits_Uniform,
+      .usage     = lvk::BufferUsageBits_Storage,
       .storage   = lvk::StorageType_HostVisible,
       .size      = gltf.transforms.size() * sizeof(GLTFTransforms),
       .data      = &gltf.transforms[0],
       .debugName = "Per Frame data",
+  });
+
+  gltf.matricesBuffer = gltf.app.ctx_->createBuffer({
+      .usage     = lvk::BufferUsageBits_Storage,
+      .storage   = lvk::StorageType_HostVisible,
+      .size      = gltf.matrices.size() * sizeof(glm::mat4),
+      .data      = &gltf.matrices[0],
+      .debugName = "Node matrices",
   });
 }
 
@@ -657,8 +882,8 @@ void sortTransparentNodes(GLTFContext& gltf, const vec3& cameraPos)
 {
   // glTF spec expects to sort based on pivot positions (not sure correct way though)
   std::sort(gltf.transparentNodes.begin(), gltf.transparentNodes.end(), [&](uint32_t a, uint32_t b) {
-    float sqrDistA = glm::length2(cameraPos - vec3(gltf.transforms[a].model[3]));
-    float sqrDistB = glm::length2(cameraPos - vec3(gltf.transforms[b].model[3]));
+    float sqrDistA = glm::length2(cameraPos - vec3(gltf.matrices[gltf.transforms[a].modelMtxId][3]));
+    float sqrDistB = glm::length2(cameraPos - vec3(gltf.matrices[gltf.transforms[b].modelMtxId][3]));
     return sqrDistA < sqrDistB;
   });
 }
@@ -668,6 +893,9 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
   auto& ctx = gltf.app.ctx_;
 
   const vec4 camPos = glm::inverse(view)[3];
+
+  static auto cameras = camerasGLTF(gltf);
+  static auto animations = animationsGLTF(gltf);
 
   if (rebuildRenderList || gltf.transforms.empty()) {
     buildTransformsList(gltf);
@@ -686,21 +914,27 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
     uint64_t draw;
     uint64_t materials;
     uint64_t environments;
+    uint64_t lights;
     uint64_t transforms;
+    uint64_t matrices;
     uint32_t envId;
     uint32_t transmissionFramebuffer;
     uint32_t transmissionFramebufferSampler;
+    uint32_t lightsCount;
   } pushConstants = {
-    .draw                           = ctx->gpuAddress(gltf.perFrameBuffer),
+    .draw                           = ctx->gpuAddress(gltf.perFrameBuffer[gltf.currentOffscreenTex]),
     .materials                      = ctx->gpuAddress(gltf.matBuffer),
     .environments                   = ctx->gpuAddress(gltf.envBuffer),
+    .lights                         = ctx->gpuAddress(gltf.lightsBuffer),
     .transforms                     = ctx->gpuAddress(gltf.transformBuffer),
+    .matrices                       = ctx->gpuAddress(gltf.matricesBuffer),
     .envId                          = 0,
     .transmissionFramebuffer        = 0,
     .transmissionFramebufferSampler = gltf.samplers.clamp.index(),
+    .lightsCount                    = (uint32_t)gltf.lights.size(),
   };
 
-  ctx->upload(gltf.perFrameBuffer, &gltf.frameData, sizeof(GLTFFrameData));
+  ctx->upload(gltf.perFrameBuffer[gltf.currentOffscreenTex], &gltf.frameData, sizeof(GLTFFrameData));
 
   const bool isSizeChanged = ctx->getDimensions(ctx->getCurrentSwapchainTexture()) != ctx->getDimensions(gltf.offscreenTex[0]);
 
@@ -720,15 +954,71 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
   }
 
   auto drawUI = [&](lvk::ICommandBuffer& buf, const lvk::Framebuffer& framebuffer) {
-    gltf.app.drawGrid(buf, proj, vec3(0, -1.0f, 0));
+    if (gltf.activeCamera == ~0)
+      gltf.app.drawGrid(buf, proj, vec3(0, -1.0f, 0));
+    else
+      gltf.app.drawGrid(buf, proj * view, vec3(0, -1.0f, 0), camPos);
+
     gltf.app.imgui_->beginFrame(framebuffer);
     gltf.app.drawFPS();
     gltf.app.drawMemo();
-    gltf.app.drawCameras();
+    gltf.app.drawCameras(cameras, gltf.activeCamera);
+	 gltf.app.drawAnimations(animations, &gltf.activeAnimations, gltf.activeAnimations.size() > 1 ? &gltf.animationBlend  : nullptr);
+
+    if (gltf.activeCamera >= gltf.cameras.size() && !gltf.cameras.empty()) {
+      gltf.canvas3d.clear();
+      gltf.canvas3d.setMatrix(proj * view);
+      const float windowAspect = ctx->getAspectRatio(framebuffer.color[0].texture);
+      for (const auto& c : gltf.cameras) {
+        if (c.nodeIdx == ~0u)
+          continue;
+        const mat4 camView = glm::inverse(model * gltf.matrices[c.nodeIdx]);
+        const mat4 camProj = c.getProjection(windowAspect);
+        gltf.canvas3d.frustum(camView, camProj, vec4(1, 0, 0, 1));
+        gltf.canvas3d.render(*ctx.get(), framebuffer, buf);
+      }
+    }
     gltf.app.imgui_->endFrame(buf);
   };
 
   lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
+
+  if (gltf.animated) {
+    ctx->upload(gltf.matricesBuffer, &gltf.matrices[0], gltf.matrices.size() * sizeof(glm::mat4));
+    updateLights(gltf, ctx.get());
+
+    if (gltf.morphing)
+      ctx->upload(gltf.morphsBuffer, &gltf.morphStates[0], gltf.morphStates.size() * sizeof(MorphState));
+
+    if (gltf.skinning || gltf.morphing) {
+      // Run compute shader to do skinning and morphing
+
+      struct ComputeSetup {
+        uint64_t matrices;
+        uint64_t morphs;
+        uint64_t morphVertexBuffer;
+        uint64_t inBuffer;
+        uint64_t outBuffer;
+        uint32_t numMorphs;
+      } pc = {
+        .matrices          = ctx->gpuAddress(gltf.matricesBuffer),
+        .morphs            = ctx->gpuAddress(gltf.morphsBuffer),
+        .morphVertexBuffer = ctx->gpuAddress(gltf.vertexMorphingBuffer),
+        .inBuffer          = ctx->gpuAddress(gltf.vertexSkinningBuffer),
+        .outBuffer         = ctx->gpuAddress(gltf.vertexBuffer),
+        .numMorphs         = static_cast<uint32_t>(gltf.morphStates.size()),
+      };
+      buf.cmdBindComputePipeline(gltf.pipelineComputeAnimations);
+      buf.cmdPushConstants(pc);
+      buf.cmdDispatchThreadGroups(
+          {
+              .width = gltf.maxVertices / 16,
+      },
+          { .buffers = { { lvk::BufferHandle(gltf.morphsBuffer) },
+                         { lvk::BufferHandle(gltf.matricesBuffer) },
+                         { lvk::BufferHandle(gltf.vertexSkinningBuffer) } } });
+    }
+  }
 
   const bool screenCopy = gltf.isScreenCopyRequired();
 
@@ -747,7 +1037,7 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
     };
 
     {
-      buf.cmdBeginRendering(renderPass, framebuffer);
+      buf.cmdBeginRendering(renderPass, framebuffer, { .buffers = { { lvk::BufferHandle(gltf.vertexBuffer) } } });
       buf.cmdBindVertexBuffer(0, gltf.vertexBuffer, 0);
       buf.cmdBindIndexBuffer(gltf.indexBuffer, lvk::IndexFormat_UI32);
 
@@ -823,7 +1113,7 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
     buf.cmdEndRendering();
   }
 
-  ctx->submit(buf, ctx->getCurrentSwapchainTexture());
+  ctx->wait(ctx->submit(buf, ctx->getCurrentSwapchainTexture()));
 
   gltf.currentOffscreenTex = (gltf.currentOffscreenTex + 1) % LVK_ARRAY_NUM_ELEMENTS(gltf.offscreenTex);
 }
@@ -867,4 +1157,72 @@ void printMat4(const aiMatrix4x4& m)
   } else {
     printf(" Identity");
   }
+}
+
+void animateGLTF(GLTFContext& gltf, AnimationState& anim, float dt)
+{
+  if (gltf.transforms.empty())
+    return;
+
+  if (gltf.pipelineComputeAnimations.empty()) {
+    gltf.pipelineComputeAnimations = gltf.app.ctx_->createComputePipeline({
+        .smComp = gltf.animation,
+    });
+  }
+
+  // we support only one single animation at this time
+  anim.active = anim.animId != ~0;
+  gltf.animated = anim.active;
+  if (anim.active) {
+    updateAnimation(gltf, anim, dt);
+  }
+}
+
+void animateBlendingGLTF(GLTFContext& gltf, AnimationState& anim1, AnimationState& anim2, float weight, float dt)
+{
+  if (gltf.transforms.empty())
+    return;
+
+  if (gltf.pipelineComputeAnimations.empty()) {
+    gltf.pipelineComputeAnimations = gltf.app.ctx_->createComputePipeline({
+        .smComp = gltf.animation,
+    });
+  }
+
+  anim1.active = anim1.animId != ~0;
+  anim2.active = anim2.animId != ~0;
+  gltf.animated = anim1.active || anim2.active;
+  if (anim1.active && anim2.active) {
+    updateAnimationBlending(gltf, anim1, anim2, weight, dt);
+  } else if (anim1.active) {
+	  updateAnimation(gltf, anim1, dt);
+  } else if (anim2.active) {
+	  updateAnimation(gltf, anim2, dt);
+  }
+
+}
+
+std::vector<std::string> camerasGLTF(GLTFContext& gltf)
+{
+  std::vector<std::string> names;
+  names.reserve(gltf.cameras.size() + 1);
+
+  for (auto c : gltf.cameras) {
+    names.push_back(c.name);
+  }
+  names.push_back("Application cam");
+
+  return names;
+}
+
+std::vector<std::string> animationsGLTF(GLTFContext& gltf)
+{
+	std::vector<std::string> names;
+	names.reserve(gltf.animations.size());
+
+	for (auto c : gltf.animations) {
+		names.push_back(c.name);
+	}
+
+	return names;
 }

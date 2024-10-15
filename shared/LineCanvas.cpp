@@ -184,7 +184,7 @@ void LineCanvas3D::frustum(const mat4& camView, const mat4& camProj, const vec4&
   }
 }
 
-void LineCanvas3D::render(lvk::IContext& ctx, const lvk::Framebuffer& desc, lvk::ICommandBuffer& buf, uint32_t width, uint32_t height)
+void LineCanvas3D::render(lvk::IContext& ctx, const lvk::Framebuffer& desc, lvk::ICommandBuffer& buf)
 {
   LVK_PROFILER_FUNCTION();
 

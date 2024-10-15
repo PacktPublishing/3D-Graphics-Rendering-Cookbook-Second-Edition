@@ -38,8 +38,9 @@ void main() {
 
   // IBL diffuse - not trying to be PBR-correct here, just make it simple & shiny
   const vec4 f0 = vec4(0.04);
+  vec3 sky = vec3(-n.x, n.y, -n.z); // rotate skybox
   vec4 diffuse = hasSkybox ?
-    (textureBindlessCube(pc.texSkyboxIrradiance, 0, n) + vec4(NdotL)) * baseColor * (vec4(1.0) - f0) :
+    (textureBindlessCube(pc.texSkyboxIrradiance, 0, sky) + vec4(NdotL)) * baseColor * (vec4(1.0) - f0) :
     NdotL * baseColor;
 
   out_FragColor = emissiveColor + diffuse;

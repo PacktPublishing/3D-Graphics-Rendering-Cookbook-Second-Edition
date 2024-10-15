@@ -5,7 +5,7 @@ layout(push_constant) uniform PerFrameData {
   uint textureId;
   float x;
   float y;
-  float w;
-  float h;
+  float width;
+  float height;
   float alphaScale;
 } pc;

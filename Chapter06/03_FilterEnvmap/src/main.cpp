@@ -132,6 +132,8 @@ void prefilterCubemap(
 
   lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
 
+  auto envDim = ctx->getDimensions(envMapCube);
+
   for (uint32_t mip = 0; mip < cube->numLevels; mip++) {
     for (uint32_t face = 0; face < 6; face++) {
       buf.cmdBeginRendering(
@@ -158,8 +160,8 @@ void prefilterCubemap(
         .face         = face,
         .roughness    = (float)(mip) / (float)(cube->numLevels - 1),
         .sampleCount  = sampleCount,
-        .width        = cube->baseWidth,
-        .height       = cube->baseHeight,
+        .width        = envDim.width,
+        .height       = envDim.height,
         .envMap       = envMapCube.index(),
         .distribution = uint32_t(distribution),
         .sampler      = sampler,
@@ -237,9 +239,9 @@ void process_cubemap(
       .minFilter = lvk::SamplerFilter::SamplerFilter_Linear,
       .magFilter = lvk::SamplerFilter::SamplerFilter_Linear,
       .mipMap    = lvk::SamplerMip::SamplerMip_Linear,
-      .wrapU     = lvk::SamplerWrap::SamplerWrap_Repeat,
-      .wrapV     = lvk::SamplerWrap::SamplerWrap_Repeat,
-      .wrapW     = lvk::SamplerWrap::SamplerWrap_Repeat,
+      .wrapU     = lvk::SamplerWrap::SamplerWrap_Clamp,
+      .wrapV     = lvk::SamplerWrap::SamplerWrap_Clamp,
+      .wrapW     = lvk::SamplerWrap::SamplerWrap_Clamp,
       .debugName = "Clamp Sampler",
   });
 

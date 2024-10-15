@@ -7,19 +7,18 @@ static uint32_t shiftMeshIndices(MeshData& meshData, const std::vector<uint32_t>
 {
   uint32_t minVtxOffset = std::numeric_limits<uint32_t>::max();
 
-  for (auto i : meshesToMerge)
+  for (uint32_t i : meshesToMerge)
     minVtxOffset = std::min(meshData.meshes[i].vertexOffset, minVtxOffset);
 
   uint32_t mergeCount = 0u; // calculated by summing index counts in meshesToMerge
 
   // now shift all the indices in individual index blocks [use minVtxOffset]
-  for (auto i : meshesToMerge) {
-    auto& m = meshData.meshes[i];
+  for (uint32_t i : meshesToMerge) {
+    Mesh& m = meshData.meshes[i];
     // for how much should we shift the indices in mesh [m]
     const uint32_t delta = m.vertexOffset - minVtxOffset;
-
-    const auto idxCount = m.getLODIndicesCount(0);
-    for (auto ii = 0u; ii < idxCount; ii++)
+    const uint32_t idxCount = m.getLODIndicesCount(0);
+    for (uint32_t ii = 0u; ii < idxCount; ii++)
       meshData.indexData[m.indexOffset + ii] += delta;
 
     m.vertexOffset = minVtxOffset;
@@ -40,16 +39,16 @@ static void mergeIndexArray(MeshData& md, const std::vector<uint32_t>& meshesToM
   uint32_t copyOffset = 0;
   uint32_t mergeOffset = shiftMeshIndices(md, meshesToMerge);
 
-  const auto mergedMeshIndex = md.meshes.size() - meshesToMerge.size();
-  auto newIndex              = 0u;
-  for (auto midx = 0u; midx < md.meshes.size(); midx++) {
+  const size_t mergedMeshIndex = md.meshes.size() - meshesToMerge.size();
+  uint32_t newIndex            = 0u;
+  for (size_t midx = 0u; midx < md.meshes.size(); midx++) {
     const bool shouldMerge = std::binary_search(meshesToMerge.begin(), meshesToMerge.end(), midx);
 
     oldToNew[midx] = shouldMerge ? mergedMeshIndex : newIndex;
     newIndex += shouldMerge ? 0 : 1;
 
-    auto& mesh    = md.meshes[midx];
-    auto idxCount = mesh.getLODIndicesCount(0);
+    Mesh& mesh    = md.meshes[midx];
+    const uint32_t idxCount = mesh.getLODIndicesCount(0);
     // move all indices to the new array at mergeOffset
     const auto start          = md.indexData.begin() + mesh.indexOffset;
     mesh.indexOffset          = copyOffset;
@@ -77,7 +76,7 @@ void mergeNodesWithMaterial(Scene& scene, MeshData& meshData, const std::string&
 
   std::vector<uint32_t> toDelete;
 
-  for (auto i = 0u; i < scene.hierarchy.size(); i++)
+  for (size_t i = 0u; i < scene.hierarchy.size(); i++)
     if (scene.meshForNode.contains(i) && scene.materialForNode.contains(i) && (scene.materialForNode.at(i) == oldMaterial))
       toDelete.push_back(i);
 

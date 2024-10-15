@@ -12,12 +12,12 @@
 #include <stb/stb_image.h>
 #include <stb/stb_image_write.h>
 
+#include "shared/UtilsFPS.h"
 #include <shared/Bitmap.h>
 #include <shared/Camera.h>
 #include <shared/Graph.h>
 #include <shared/Utils.h>
 #include <shared/UtilsCubemap.h>
-#include "shared/UtilsFPS.h"
 
 #include <functional>
 
@@ -32,6 +32,7 @@ struct VulkanAppConfig {
   vec3 initialCameraPos    = vec3(0.0f, 0.0f, -2.5f);
   vec3 initialCameraTarget = vec3(0.0f, 0.0f, 0.0f);
   bool showCamerasUI       = false;
+  bool showAnimationsUI    = false;
 };
 
 class VulkanApp
@@ -42,11 +43,11 @@ public:
 
   virtual void run(DrawFrameFunc drawFrame);
   virtual void drawGrid(lvk::ICommandBuffer& buf, const mat4& proj, const vec3& origin = vec3(0.0f));
+  virtual void drawGrid(lvk::ICommandBuffer& buf, const mat4& mvp, const vec3& origin, const vec3& camPos);
   virtual void drawFPS();
   virtual void drawMemo();
-  virtual void drawCameras();
-
-  void addCamera();
+  virtual void drawCameras(const std::vector<std::string>& cameras, uint32_t& activeCamera);
+  virtual void drawAnimations(const std::vector<std::string>& animations, std::vector<uint32_t>* anim = nullptr, float* blend = nullptr);
 
   lvk::Format getDepthFormat() const;
   lvk::TextureHandle getDepthTexture() const { return depthTexture_; }
@@ -73,8 +74,8 @@ public:
   } mouseState_;
 
 protected:
-  lvk::Holder<lvk::ShaderModuleHandle> gridVert = {};
-  lvk::Holder<lvk::ShaderModuleHandle> gridFrag = {};
+  lvk::Holder<lvk::ShaderModuleHandle> gridVert       = {};
+  lvk::Holder<lvk::ShaderModuleHandle> gridFrag       = {};
   lvk::Holder<lvk::RenderPipelineHandle> gridPipeline = {};
 
   std::vector<GLFWmousebuttonfun> callbacksMouseButton;

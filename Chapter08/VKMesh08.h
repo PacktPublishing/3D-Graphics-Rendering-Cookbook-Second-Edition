@@ -440,6 +440,10 @@ public:
       lvk::IContext& ctx, lvk::ICommandBuffer& buf, const MeshFileHeader& header, const mat4& view, const mat4& proj,
       lvk::TextureHandle texSkyboxIrradiance = {}, bool wireframe = false) const
   {
+    buf.cmdBindIndexBuffer(bufferIndices_, lvk::IndexFormat_UI32);
+    buf.cmdBindVertexBuffer(0, bufferVertices_);
+    buf.cmdBindRenderPipeline(wireframe ? pipelineWireframe_ : pipeline_);
+    buf.cmdBindDepthState({ .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true });
     const struct {
       mat4 viewProj;
       uint64_t bufferTransforms;
@@ -454,11 +458,7 @@ public:
       .texSkyboxIrradiance = texSkyboxIrradiance.index(),
     };
     static_assert(sizeof(pc) <= 128);
-    buf.cmdBindIndexBuffer(bufferIndices_, lvk::IndexFormat_UI32);
-    buf.cmdBindVertexBuffer(0, bufferVertices_);
-    buf.cmdBindRenderPipeline(wireframe ? pipelineWireframe_ : pipeline_);
     buf.cmdPushConstants(pc);
-    buf.cmdBindDepthState({ .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true });
     buf.cmdDrawIndexedIndirect(bufferIndirect_, sizeof(uint32_t), header.meshCount);
     // buf.cmdDrawIndexedIndirectCount(bufferIndirect_, sizeof(uint32_t), bufferIndirect_, 0, header.meshCount,
     // sizeof(DrawIndexedIndirectCommand));

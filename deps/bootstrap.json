@@ -4,7 +4,7 @@
     "source": {
         "type": "git",
         "url": "https://github.com/corporateshark/lightweightvk.git",
-        "revision": "407cf9b46018a831ac5e5ab3b5d5222d61e04f9b"
+        "revision": "04393c1880705d758030e0be811d0f94adeeeeda"
     }
 },
 {
@@ -48,21 +48,21 @@
     }
 },
 {
-    "name": "explosion0",
+    "name": "explosion/explosion0",
     "source": {
         "type": "archive",
         "url": "https://unity3d.com/files/labs/downloads/vfx/assets01/Explosion00/Explosion00-sequence-tga.zip"
     }
 },
 {
-    "name": "explosion1",
+    "name": "explosion/explosion1",
     "source": {
         "type": "archive",
         "url": "https://unity3d.com/files/labs/downloads/vfx/assets01/Explosion01/Explosion01-sequence-tga.zip"
     }
 },
 {
-    "name": "explosion2",
+    "name": "explosion/explosion2",
     "source": {
         "type": "archive",
         "url": "https://unity3d.com/files/labs/downloads/vfx/assets01/Explosion02/Explosion02-sequence-tga.zip"
@@ -73,7 +73,7 @@
     "source": {
         "type": "git",
          "url": "https://github.com/CedricGuillemet/ImGuizmo",
-         "revision" : "99358b3afc8cdfff5c264f97ab1718b2d8089319"
+         "revision" : "6d588209f99b1324a608783d1f52faa518886c29"
     }
 },
 {

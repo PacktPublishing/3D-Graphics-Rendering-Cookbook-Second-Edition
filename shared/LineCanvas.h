@@ -29,7 +29,7 @@ public:
   void frustum(const mat4& camView, const mat4& camProj, const vec4& color);
 
   void setMatrix(const mat4& mvp) { mvp_ = mvp; }
-  void render(lvk::IContext& ctx, const lvk::Framebuffer& desc, lvk::ICommandBuffer& buf, uint32_t width, uint32_t height);
+  void render(lvk::IContext& ctx, const lvk::Framebuffer& desc, lvk::ICommandBuffer& buf);
 
 private:
   mat4 mvp_ = mat4(1.0f);

@@ -203,83 +203,79 @@ Bitmap convertEquirectangularMapToVerticalCross(const Bitmap& b)
 
 Bitmap convertVerticalCrossToCubeMapFaces(const Bitmap& b)
 {
-	const int faceWidth = b.w_ / 3;
-	const int faceHeight = b.h_ / 4;
+  const int faceWidth  = b.w_ / 3;
+  const int faceHeight = b.h_ / 4;
 
-	Bitmap cubemap(faceWidth, faceHeight, 6, b.comp_, b.fmt_);
-	cubemap.type_ = eBitmapType_Cube;
+  Bitmap cubemap(faceWidth, faceHeight, 6, b.comp_, b.fmt_);
+  cubemap.type_ = eBitmapType_Cube;
 
-	const uint8_t* src = b.data_.data();
-	uint8_t* dst = cubemap.data_.data();
+  const uint8_t* src = b.data_.data();
+  uint8_t* dst       = cubemap.data_.data();
 
-	/*
-			------
-			| +Y |
-	 ----------------
-	 | -X | -Z | +X |
-	 ----------------
-			| -Y |
-			------
-			| +Z |
-			------
-	*/
+  /*
+      ------
+      | +Y |
+   ----------------
+   | -X | -Z | +X |
+   ----------------
+      | -Y |
+      ------
+      | +Z |
+      ------
+  */
 
-	const int pixelSize = cubemap.comp_ * Bitmap::getBytesPerComponent(cubemap.fmt_);
+  const int pixelSize = cubemap.comp_ * Bitmap::getBytesPerComponent(cubemap.fmt_);
 
-	for (int face = 0; face != 6; ++face)
-	{
-		for (int j = 0; j != faceHeight; ++j)
-		{
-			for (int i = 0; i != faceWidth; ++i)
-			{
-				int x = 0;
-				int y = 0;
+  for (int face = 0; face != 6; ++face) {
+    for (int j = 0; j != faceHeight; ++j) {
+      for (int i = 0; i != faceWidth; ++i) {
+        int x = 0;
+        int y = 0;
 
-				switch (face)
-				{
-					// CUBE_MAP_POSITIVE_X
-				case 0:
-					x = i;
-					y = faceHeight + j;
-					break;
+        switch (face) {
+          // CUBE_MAP_POSITIVE_X
+        case 0:
+          x = 2 * faceWidth + i;
+          y = 1 * faceHeight + j;
+          break;
 
-					// CUBE_MAP_NEGATIVE_X
-				case 1:
-					x = 2 * faceWidth + i;
-					y = 1 * faceHeight + j;
-					break;
+          // CUBE_MAP_NEGATIVE_X
+        case 1:
+          x = i;
+          y = faceHeight + j;
+          break;
 
-					// CUBE_MAP_POSITIVE_Y
-				case 2:
-					x = 2 * faceWidth - (i + 1);
-					y = 1 * faceHeight - (j + 1);
-					break;
+          // CUBE_MAP_POSITIVE_Y
+        case 2:
+          x = 1 * faceWidth + i;
+          y = j;
+          break;
 
-					// CUBE_MAP_NEGATIVE_Y
-				case 3:
-					x = 2 * faceWidth - (i + 1);
-					y = 3 * faceHeight - (j + 1);
-					break;
+          // CUBE_MAP_NEGATIVE_Y
+        case 3:
+          x = 1 * faceWidth + i;
+          y = 2 * faceHeight + j;
+          break;
 
-					// CUBE_MAP_POSITIVE_Z
-				case 4:
-					x = 2 * faceWidth - (i + 1);
-					y = b.h_ - (j + 1);
-					break;
+          // CUBE_MAP_POSITIVE_Z
+        case 4:
+          x = faceWidth + i;
+          y = faceHeight + j;
+          break;
 
-					// CUBE_MAP_NEGATIVE_Z
-				case 5:
-					x = faceWidth + i;
-					y = faceHeight + j;
-					break;
-				}
+          // CUBE_MAP_NEGATIVE_Z
+        case 5:
+          x = 2 * faceWidth - (i + 1);
+          y = b.h_ - (j + 1);
+          break;
+        }
 
-				memcpy(dst, src + (y * b.w_ + x) * pixelSize, pixelSize);
+        memcpy(dst, src + (y * b.w_ + x) * pixelSize, pixelSize);
 
-				dst += pixelSize;
-			}
-		}
-	}
+        dst += pixelSize;
+      }
+    }
+  }
 
-	return cubemap;
+  return cubemap;
 }

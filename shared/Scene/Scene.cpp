@@ -434,7 +434,7 @@ void deleteSceneNodes(Scene& scene, const std::vector<uint32_t>& nodesToDelete)
 {
   // 0) Add all the nodes down below in the hierarchy
   auto indicesToDelete = nodesToDelete;
-  for (auto i : indicesToDelete)
+  for (uint32_t i : indicesToDelete)
     collectNodesToDelete(scene, i, indicesToDelete);
 
   // aux array with node indices to keep track of the moved ones [moved = [](node) { return (node != nodes[node]); ]
@@ -442,7 +442,7 @@ void deleteSceneNodes(Scene& scene, const std::vector<uint32_t>& nodesToDelete)
   std::iota(nodes.begin(), nodes.end(), 0);
 
   // 1.a) Move all the indicesToDelete to the end of 'nodes' array (and cut them off, a variation of swap'n'pop for multiple elements)
-  auto oldSize = nodes.size();
+  const size_t oldSize = nodes.size();
   eraseSelected(nodes, indicesToDelete);
 
   // 1.b) Make a newIndices[oldIndex] mapping table

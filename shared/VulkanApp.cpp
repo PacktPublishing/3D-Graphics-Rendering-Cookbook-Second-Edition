@@ -21,7 +21,7 @@ VulkanApp::VulkanApp(const VulkanAppConfig& cfg)
   int width  = -95;
   int height = -90;
 
-  window_       = lvk::initWindow("Simple example", width, height);
+  window_ = lvk::initWindow("Simple example", width, height);
   ctx_    = lvk::createVulkanContextWithSwapchain(
       window_, width, height,
       {
@@ -163,34 +163,73 @@ void VulkanApp::drawMemo()
   ImGui::End();
 }
 
-void VulkanApp::drawCameras()
+void VulkanApp::drawCameras(const std::vector<std::string>& cameras, uint32_t& activeCamera)
 {
   if (!cfg_.showCamerasUI) {
     return;
-   }
+  }
 
   ImGui::SetNextWindowPos(ImVec2(10, 200));
-  ImGui::Begin(
-      "Cameras:", nullptr,
-      ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse);
-  const char* items[]             = { "AAAA", "BBBB", "CCCC",    "DDDD", "EEEE",    "FFFF", "GGGG",       "HHHH", "IIII",
-                                      "JJJJ", "KKKK", "LLLLLLL", "MMMM", "OOOOOOO", "PPPP", "QQQQQQQQQQ", "RRR",  "SSSS" };
-  static const char* current_item = NULL;
-  //static int current_item         = 0;
-  if (ImGui::BeginCombo("##combo", current_item)) // The second parameter is the label previewed before opening the combo.
-  {
-    for (int n = 0; n < IM_ARRAYSIZE(items); n++) {
-      bool is_selected = (current_item == items[n]); // You can store your selection however you want, outside or inside your objects
-        if (ImGui::Selectable(items[n], is_selected))
-            current_item = items[n];
-        if (is_selected)
-            ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+
+  ImGui::Begin("Cameras:", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse);
+  std::string current_item = activeCamera != ~0 ? cameras[activeCamera] : "";
+  if (ImGui::BeginCombo("##combo", current_item.c_str())) {
+    for (uint32_t n = 0; n < cameras.size(); n++) {
+      bool is_selected = (current_item == cameras[n]);
+      if (ImGui::Selectable(cameras[n].c_str(), is_selected)) {
+        activeCamera = n;
+        current_item = cameras[n];
+      }
+      if (is_selected)
+        ImGui::SetItemDefaultFocus();
     }
     ImGui::EndCombo();
   }
   ImGui::End();
 }
 
+void VulkanApp::drawAnimations(const std::vector<std::string>& animations, std::vector<uint32_t>* anim, float* blend)
+{
+  if (!cfg_.showAnimationsUI) {
+    return;
+  }
+
+  ImGui::SetNextWindowPos(ImVec2(10, 300));
+  static std::vector<uint32_t> dummy;
+
+  anim = anim ? anim : &dummy;
+
+  if (ImGui::Begin(
+          "Animations", nullptr,
+          ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
+              ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoCollapse)) {
+    for (uint32_t a = 0; a < animations.size(); ++a) {
+      auto it     = std::find(anim->begin(), anim->end(), a);
+      bool oState = it != anim->end();// && selected < anim->size();
+      bool state  = oState;
+      ImGui::Checkbox(animations[a].c_str(), &state);
+
+      if (state) {
+        if (!oState) {
+          uint32_t freeSlot = anim->size() - 1;
+          if (auto nf = std::find(anim->begin(), anim->end(), ~0); nf != anim->end()) {
+            freeSlot = std::distance(anim->begin(), nf);
+          }
+          (*anim)[freeSlot] = a;
+        }
+      } else {
+        if (it != anim->end()) {
+          *it = ~0;
+        }
+      }
+    }
+
+    if (blend) {
+      ImGui::SliderFloat("Blend", blend, 0, 1.0f);
+    }
+  }
+  ImGui::End();
+}
 
 void VulkanApp::drawFPS()
 {
@@ -210,6 +249,11 @@ void VulkanApp::drawFPS()
 }
 
 void VulkanApp::drawGrid(lvk::ICommandBuffer& buf, const mat4& proj, const vec3& origin)
+{
+  drawGrid(buf, proj * camera_.getViewMatrix(), origin, camera_.getPosition());
+}
+
+void VulkanApp::drawGrid(lvk::ICommandBuffer& buf, const mat4& mvp, const vec3& origin, const vec3& camPos)
 {
   if (gridPipeline.empty()) {
     gridVert = loadShaderModule(ctx_, "data/shaders/Grid.vert");
@@ -233,8 +277,8 @@ void VulkanApp::drawGrid(lvk::ICommandBuffer& buf, const mat4& proj, const vec3&
     vec4 camPos;
     vec4 origin;
   } pc = {
-    .mvp    = proj * camera_.getViewMatrix(),
-    .camPos = vec4(camera_.getPosition(), 1.0f),
+    .mvp    = mvp,
+    .camPos = vec4(camPos, 1.0f),
     .origin = vec4(origin, 1.0f),
   };
 

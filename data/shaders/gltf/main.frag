@@ -104,17 +104,11 @@ void main()
 
   float albedoSheenScaling = 1.0;
 
-  for (int i = 0; i < getLightsCount(); ++i)
+  for (uint i = 0; i < getLightsCount(); ++i)
   {
     Light light = getLight(i);
 
-    vec3 pointToLight;
-    if (light.type != LightType_Directional)
-    {
-      pointToLight = light.position - worldPos;
-    } else {
-      pointToLight = -light.direction;
-    }
+    vec3 pointToLight = (light.type == LightType_Directional) ? -light.direction : light.position - worldPos;
 
     // BSTF
     vec3 l = normalize(pointToLight);
@@ -124,7 +118,8 @@ void main()
     float NdotH = clampedDot(n, h);
     float LdotH = clampedDot(l, h);
     float VdotH = clampedDot(v, h);
-    if (NdotL > 0.0 || NdotV > 0.0) {
+    if (NdotL > 0.0 || NdotV > 0.0) 
+    {
       // Calculation of analytical light
       // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#acknowledgments AppendixB
       vec3 intensity = getLightIntensity(light, pointToLight);

@@ -281,7 +281,7 @@ int main()
           }
         }
 
-        canvas3d.render(*ctx.get(), framebuffer, buf, width, height);
+        canvas3d.render(*ctx.get(), framebuffer, buf);
 
         app.imgui_->endFrame(buf);
 

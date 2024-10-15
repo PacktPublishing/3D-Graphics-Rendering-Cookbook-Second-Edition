@@ -15,7 +15,7 @@ const vec2 pos[4] = vec2[4](
 void main() {
   uv = pos[gl_VertexIndex] + vec2(0.5);
 
-  vec2 p = pos[gl_VertexIndex] * vec2(pc.w, pc.h) + vec2(pc.x, pc.y);
+  vec2 p = pos[gl_VertexIndex] * vec2(pc.width, pc.height) + vec2(pc.x, pc.y);
 
   gl_Position = pc.proj * vec4(p, 0.0, 1.0);
 }

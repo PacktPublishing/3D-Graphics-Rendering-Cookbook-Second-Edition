@@ -42,9 +42,11 @@ layout(std430, buffer_reference) readonly buffer Materials {
 };
 
 layout(std430, buffer_reference) readonly buffer Environments {
-  EnvironmentMapDataGPU environment[4];
-  Light lights[4];
-  int lightsCount;
+  EnvironmentMapDataGPU environment[];
+};
+
+layout(std430, buffer_reference) readonly buffer Lights {
+  Light lights[];
 };
 
 MetallicRoughnessDataGPU getMaterial(uint idx) {
@@ -172,7 +174,6 @@ vec4 sampleCharlieEnvMapLod(vec3 tc, float lod, EnvironmentMapDataGPU map) {
   return textureBindlessCubeLod(map.envMapTextureCharlie, map.envMapTextureCharlieSampler, tc, lod);
 }
 
-
 vec4 sampleEnvMapIrradiance(vec3 tc, EnvironmentMapDataGPU map) {
   return textureBindlessCube(map.envMapTextureIrradiance, map.envMapTextureIrradianceSampler, tc);
 }
@@ -206,15 +207,16 @@ bool isMaterialTypeVolume(MetallicRoughnessDataGPU mat) {
 }
 
 uint getLightsCount() {
-  return perFrame.environments.lightsCount; 
+  return perFrame.lightsCount;
 }
 
 Light getLight(uint i) {
-  return perFrame.environments.lights[i]; 
+  return perFrame.lights.lights[i];
 }
 
 mat4 getModel() {
-  return perFrame.drawable.model * perFrame.transforms.transforms[oBaseInstance].model;
+  uint mtxId = perFrame.transforms.transforms[oBaseInstance].mtxId;
+  return perFrame.drawable.model * perFrame.matrices.matrix[mtxId];
 }
 
 uint getMaterialId() {

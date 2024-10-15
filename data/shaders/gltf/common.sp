@@ -4,6 +4,7 @@
 
 layout(std430, buffer_reference) buffer Materials;
 layout(std430, buffer_reference) buffer Environments;
+layout(std430, buffer_reference) buffer Lights;
 
 layout(std430, buffer_reference) buffer PerDrawData {
   mat4 model;
@@ -13,7 +14,7 @@ layout(std430, buffer_reference) buffer PerDrawData {
 };
 
 struct TransformsBuffer {
-  mat4 model;
+  uint mtxId;
   uint matId;
   uint nodeRef; // for CPU only
   uint meshRef; // for CPU only
@@ -24,14 +25,21 @@ layout(std430, buffer_reference) readonly buffer Transforms {
   TransformsBuffer transforms[];
 };
 
+layout(std430, buffer_reference) readonly buffer Matrices {
+  mat4 matrix[];
+};
+
 layout(push_constant) uniform PerFrameData {
   PerDrawData drawable;
   Materials materials;
   Environments environments;
+  Lights lights;
   Transforms transforms;
+  Matrices matrices;
   uint envId;
   uint transmissionFramebuffer;
   uint transmissionFramebufferSampler;
+  uint lightsCount;
 } perFrame;
 
 uint getEnvironmentId() {

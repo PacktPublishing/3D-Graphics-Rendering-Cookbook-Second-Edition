@@ -300,7 +300,7 @@ int main()
           canvas3d.frustum(
               glm::lookAt(vec3(cos(glfwGetTime()), kInitialCameraPos.y, sin(glfwGetTime())), kInitialCameraTarget, vec3(0.0f, 1.0f, 0.0f)),
               glm::perspective(glm::radians(60.0f), aspectRatio, 0.1f, 30.0f), vec4(1, 1, 1, 1));
-          canvas3d.render(*ctx.get(), framebuffer, buf, width, height);
+          canvas3d.render(*ctx.get(), framebuffer, buf);
 
           app.imgui_->endFrame(buf);
 

@@ -110,6 +110,9 @@ int main()
         },
         meshData.materials, meshData.textureFiles);
 
+    ourScene.localTransform[0] = glm::scale(vec3(0.01f)); // scale the Bistro
+    markAsChanged(ourScene, 0);
+
     recalculateBoundingBoxes(meshData);
 
     saveMeshData(fileNameCachedMeshes, meshData);
@@ -123,9 +126,6 @@ int main()
 
   Scene scene;
   loadScene(fileNameCachedHierarchy, scene);
-
-  scene.localTransform[0] = glm::scale(vec3(0.01f)); // scale the Bistro
-  markAsChanged(scene, 0);
 
   VulkanApp app({
       .initialCameraPos    = vec3(-19.261f, 8.465f, -7.317f),
@@ -157,6 +157,7 @@ int main()
     const VKMesh mesh(ctx, header, meshData, scene, app.getDepthFormat());
 
     app.run([&](uint32_t width, uint32_t height, float aspectRatio, float deltaSeconds) {
+      const mat4 view = app.camera_.getViewMatrix();
       const mat4 proj = glm::perspective(45.0f, aspectRatio, 0.01f, 1000.0f);
 
       const lvk::RenderPass renderPass = {
@@ -168,10 +169,6 @@ int main()
         .color        = { { .texture = ctx->getCurrentSwapchainTexture() } },
         .depthStencil = { .texture = app.getDepthTexture() },
       };
-
-      const mat4 view = app.camera_.getViewMatrix();
-
-      int updateMaterialIndex = -1;
 
       lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
       {
@@ -236,20 +233,13 @@ int main()
           }
         }
 
-        canvas3d.render(*ctx.get(), framebuffer, buf, width, height);
+        canvas3d.render(*ctx.get(), framebuffer, buf);
 
         app.imgui_->endFrame(buf);
 
         buf.cmdEndRendering();
       }
       ctx->submit(buf, ctx->getCurrentSwapchainTexture());
-
-      if (recalculateGlobalTransforms(scene)) {
-        mesh.updateGlobalTransforms(scene.globalTransform.data(), scene.globalTransform.size());
-      }
-      if (updateMaterialIndex > -1) {
-        mesh.updateMaterial(meshData.materials.data(), updateMaterialIndex);
-      }
     });
   }
 

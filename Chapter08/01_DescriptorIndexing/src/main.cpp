@@ -9,18 +9,18 @@ const uint32_t kNumFlipbooks      = 3;
 const uint32_t kNumFlipbookFrames = 100;
 
 struct AnimationState {
-  vec2 position           = vec2(0);
-  double startTime        = 0;
-  float time              = 0;
-  uint32_t textureIndex   = 0;
-  uint32_t firstFrame = 0;
+  vec2 position         = vec2(0);
+  double startTime      = 0;
+  float time            = 0;
+  uint32_t textureIndex = 0;
+  uint32_t firstFrame   = 0;
 };
 
 std::vector<AnimationState> g_Animations;
 std::vector<AnimationState> g_AnimationsKeyframe;
 
 float timelineOffset = 0.0f;
-bool showTimeline = false;
+bool showTimeline    = false;
 
 void updateAnimations(float deltaSeconds)
 {
@@ -57,7 +57,7 @@ int main()
     for (uint32_t book = 0; book != kNumFlipbooks; book++) {
       for (uint32_t frame = 0; frame != kNumFlipbookFrames; frame++) {
         char fname[1024];
-        snprintf(fname, sizeof(fname), "deps/src/explosion%01u/explosion%02u-frame%03u.tga", book, book, frame + 1);
+        snprintf(fname, sizeof(fname), "deps/src/explosion/explosion%01u/explosion%02u-frame%03u.tga", book, book, frame + 1);
         textures.emplace_back(loadTexture(ctx, fname));
       }
     }
@@ -87,7 +87,7 @@ int main()
             .position     = app->mouseState_.pos,
             .startTime    = glfwGetTime(),
             .textureIndex = 0,
-            .firstFrame   = kNumFlipbookFrames * (uint32_t)(rand() % 3),
+            .firstFrame   = kNumFlipbookFrames * (uint32_t)(rand() % kNumFlipbooks),
         });
       }
     });
@@ -118,6 +118,16 @@ int main()
         updateAnimations(deltaSeconds);
       }
 
+      auto easing = [](float t) -> float {
+        const float p1 = 0.1f;
+        const float p2 = 0.8f;
+        if (t <= p1)
+          return glm::smoothstep(0.0f, 1.0f, t / p1);
+        if (t >= p2)
+          return glm::smoothstep(1.0f, 0.0f, (t - p2) / (1.0f - p2));
+        return 1.0f;
+      };
+
       const lvk::RenderPass renderPass = {
         .color = { { .loadOp = lvk::LoadOp_Clear, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } } },
       };
@@ -128,16 +138,8 @@ int main()
 
       lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
       {
-        auto easing = [](float t) -> float {
-          const float p1 = 0.1f;
-          const float p2 = 0.8f;
-          if (t <= p1)
-            return glm::smoothstep(0.0f, 1.0f, t / p1);
-          if (t >= p2)
-            return glm::smoothstep(1.0f, 0.0f, (t - p2) / (1.0f - p2));
-          return 1.0f;
-        };
         buf.cmdBeginRendering(renderPass, framebuffer);
+        buf.cmdBindRenderPipeline(pipelineQuad);
         for (const AnimationState& s : g_Animations) {
           const float t = s.time / (kNumFlipbookFrames / kAnimationFPS);
           const struct {
@@ -153,7 +155,6 @@ int main()
             .size       = vec2(height * 0.5f),
             .alphaScale = easing(t),
           };
-          buf.cmdBindRenderPipeline(pipelineQuad);
           buf.cmdPushConstants(pc);
           buf.cmdDraw(4);
         }
@@ -180,9 +181,9 @@ int main()
           ImGui::SetNextWindowContentSize({ v->Size.x - 520, 0 });
           ImGui::SetNextWindowPos(ImVec2(350, 10), ImGuiCond_Always);
           ImGui::Begin("Timeline:", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
-			 if (ImGui::SliderFloat("Time offset", &timelineOffset, -2.0f, +2.0f)) {
+          if (ImGui::SliderFloat("Time offset", &timelineOffset, -2.0f, +2.0f)) {
             setAnimationsOffset(timelineOffset);
-			 }
+          }
           ImGui::End();
         }
         app.imgui_->endFrame(buf);

@@ -20,13 +20,14 @@ const int cLambertian = 0;
 const int cGGX = 1;
 const int cCharlie = 2;
 
-vec3 uvToXYZ(uint face, vec2 uv) {
-  if (face == 0) return vec3(   1., uv.y,  uv.x);
-  if (face == 1) return vec3(  -1., uv.y, -uv.x);
-  if (face == 2) return vec3(+uv.x,   1.,  uv.y);  
-  if (face == 3) return vec3(+uv.x,  -1., -uv.y);
-  if (face == 4) return vec3(+uv.x, uv.y,   -1.);
-  if (face == 5) return vec3(-uv.x, uv.y,    1.);
+vec3 uvToXYZ(uint face, vec2 uv)
+{
+  if (face == 0) return vec3(   1.,   uv.y,  -uv.x);
+  if (face == 1) return vec3(  -1.,   uv.y,   uv.x);
+  if (face == 2) return vec3(+uv.x,     1.,  -uv.y);
+  if (face == 3) return vec3(+uv.x,    -1.,  +uv.y);
+  if (face == 4) return vec3(+uv.x,   uv.y,     1.);
+  if (face == 5) return vec3(-uv.x,  +uv.y,    -1.);
 }
 
 // hammersley2d describes a sequence of points in the 2d unit square [0,1)^2 that can be used for quasi Monte Carlo integration
