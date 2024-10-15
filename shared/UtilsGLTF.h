@@ -423,14 +423,14 @@ struct VertexBoneData {
   vec3 normal;
   uint32_t boneId[MAX_BONES_PER_VERTEX] = { ~0u, ~0u, ~0u, ~0u, ~0u, ~0u, ~0u, ~0u };
   float weight[MAX_BONES_PER_VERTEX]    = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
-  uint32_t meshId                       = ~0;
+  uint32_t meshId                       = ~0u;
   uint32_t padding;
 };
 
 static_assert(sizeof(VertexBoneData) == sizeof(uint32_t) * 24);
 
 struct GLTFBone {
-  uint32_t boneId     = ~0ul;
+  uint32_t boneId     = ~0u;
   glm::mat4 transform = glm::mat4(1);
 };
 

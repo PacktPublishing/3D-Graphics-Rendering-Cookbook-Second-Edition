@@ -142,7 +142,7 @@ void initAnimations(GLTFContext& glTF, const aiScene* scene)
       std::string boneName = channel->mNodeName.data;
 
       uint32_t boneId = glTF.bonesStorage[boneName].boneId;
-      if (boneId == ~0ul) {
+      if (boneId == ~0u) {
         for (auto node : glTF.nodesStorage) {
           if (node.name == boneName) {
             boneId                      = node.modelMtxId;
@@ -151,7 +151,7 @@ void initAnimations(GLTFContext& glTF, const aiScene* scene)
           }
         }
       }
-      assert(boneId != ~0ul);
+      assert(boneId != ~0u);
       anim.channels[boneId] = initChannel(channel);
     }
 
@@ -199,7 +199,7 @@ void updateAnimation(GLTFContext& glTF, AnimationState& anim, float dt)
     anim.currentTime = activeAnim.duration;
     anim.active      = false;
   } else
-    anim.currentTime = std::fmodf(anim.currentTime, activeAnim.duration);
+    anim.currentTime = fmodf(anim.currentTime, activeAnim.duration);
 
   // Apply animations
   std::function<void(GLTFNodeRef gltfNode, const glm::mat4& parentTransform)> traverseTree = [&](GLTFNodeRef gltfNode,
@@ -261,7 +261,7 @@ void updateAnimationBlending(GLTFContext& glTF, AnimationState& anim1, Animation
       anim1.currentTime = activeAnim1.duration;
       anim1.active      = false;
     } else
-      anim1.currentTime = std::fmodf(anim1.currentTime, activeAnim1.duration);
+      anim1.currentTime = fmodf(anim1.currentTime, activeAnim1.duration);
 
 	 auto activeAnim2 = glTF.animations[anim2.animId];
 	 anim2.currentTime += activeAnim2.ticksPerSecond * dt;
@@ -270,7 +270,7 @@ void updateAnimationBlending(GLTFContext& glTF, AnimationState& anim1, Animation
       anim2.currentTime = activeAnim2.duration;
       anim2.active      = false;
     } else
-      anim2.currentTime = std::fmodf(anim2.currentTime, activeAnim2.duration);
+      anim2.currentTime = fmodf(anim2.currentTime, activeAnim2.duration);
 
     // Update skinning
     std::function<void(GLTFNodeRef gltfNode, const glm::mat4& parentTransform)> traverseTree = [&](GLTFNodeRef gltfNode,

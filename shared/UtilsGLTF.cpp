@@ -17,6 +17,8 @@ bool assignUVandSampler(
   case aiTextureMapMode_Mirror:
     textureSampler = samplers.mirror.index();
     break;
+  default:
+    break;
   }
   return res;
 }
