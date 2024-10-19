@@ -43,7 +43,7 @@ jobs:
           run: |
             sudo sed -i 's/azure\.//' /etc/apt/sources.list
             sudo apt-get update
-            sudo apt-get install -y gcc-12 clang-15 xorg-dev libxinerama-dev libxcursor-dev libgles2-mesa-dev libegl1-mesa-dev libglfw3-dev libglew-dev libstdc++-12-dev extra-cmake-modules libxkbcommon-x11-dev wayland-protocols
+            sudo apt-get install -y gcc-12 clang-15 xorg-dev libxinerama-dev libxcursor-dev libgles2-mesa-dev libegl1-mesa-dev libglfw3-dev libglew-dev libstdc++-12-dev extra-cmake-modules libxkbcommon-x11-dev wayland-protocols libtbb-dev
 
         - name: Install Vulkan SDK
           uses: humbletim/install-vulkan-sdk@v1.1.1
