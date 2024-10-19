@@ -248,27 +248,30 @@ void VulkanApp::drawFPS()
   ImGui::End();
 }
 
-void VulkanApp::drawGrid(lvk::ICommandBuffer& buf, const mat4& proj, const vec3& origin)
+void VulkanApp::drawGrid(lvk::ICommandBuffer& buf, const mat4& proj, const vec3& origin, uint32_t numSamples)
 {
-  drawGrid(buf, proj * camera_.getViewMatrix(), origin, camera_.getPosition());
+  drawGrid(buf, proj * camera_.getViewMatrix(), origin, camera_.getPosition(), numSamples);
 }
 
-void VulkanApp::drawGrid(lvk::ICommandBuffer& buf, const mat4& mvp, const vec3& origin, const vec3& camPos)
+void VulkanApp::drawGrid(lvk::ICommandBuffer& buf, const mat4& mvp, const vec3& origin, const vec3& camPos, uint32_t numSamples)
 {
-  if (gridPipeline.empty()) {
+  if (gridPipeline.empty() || pipelineSamples != numSamples) {
     gridVert = loadShaderModule(ctx_, "data/shaders/Grid.vert");
     gridFrag = loadShaderModule(ctx_, "data/shaders/Grid.frag");
 
+	 pipelineSamples = numSamples;
+
     gridPipeline = ctx_->createRenderPipeline({
-        .smVert      = gridVert,
-        .smFrag      = gridFrag,
-        .color       = { {
-                  .format            = ctx_->getSwapchainFormat(),
-                  .blendEnabled      = true,
-                  .srcRGBBlendFactor = lvk::BlendFactor_SrcAlpha,
-                  .dstRGBBlendFactor = lvk::BlendFactor_OneMinusSrcAlpha,
+        .smVert       = gridVert,
+        .smFrag       = gridFrag,
+        .color        = { {
+                   .format            = ctx_->getSwapchainFormat(),
+                   .blendEnabled      = true,
+                   .srcRGBBlendFactor = lvk::BlendFactor_SrcAlpha,
+                   .dstRGBBlendFactor = lvk::BlendFactor_OneMinusSrcAlpha,
         } },
-        .depthFormat = this->getDepthFormat(),
+        .depthFormat  = this->getDepthFormat(),
+        .samplesCount = numSamples,
     });
   }
 

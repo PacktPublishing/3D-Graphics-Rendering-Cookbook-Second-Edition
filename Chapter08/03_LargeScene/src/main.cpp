@@ -154,7 +154,7 @@ int main()
   int selectedNode       = -1;
 
   {
-    const VKMesh mesh(ctx, header, meshData, scene, app.getDepthFormat());
+    const VKMesh mesh(ctx, meshData, scene, app.getDepthFormat());
 
     app.run([&](uint32_t width, uint32_t height, float aspectRatio, float deltaSeconds) {
       const mat4 view = app.camera_.getViewMatrix();
@@ -191,7 +191,7 @@ int main()
         }
         {
           buf.cmdPushDebugGroupLabel("Mesh", 0xff0000ff);
-          mesh.draw(*ctx.get(), buf, header, view, proj, texSkyboxIrradiance, drawWireframe);
+          mesh.draw(*ctx.get(), buf, view, proj, texSkyboxIrradiance, drawWireframe);
           buf.cmdPopDebugGroupLabel();
         }
 

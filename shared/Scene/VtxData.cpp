@@ -191,7 +191,6 @@ void saveMeshData(const char* fileName, const MeshData& m)
   }
 
   const MeshFileHeader header = {
-    .magicValue     = 0x12345678,
     .meshCount      = (uint32_t)m.meshes.size(),
     .indexDataSize  = (uint32_t)(m.indexData.size() * sizeof(uint32_t)),
     .vertexDataSize = (uint32_t)(m.vertexData.size()),

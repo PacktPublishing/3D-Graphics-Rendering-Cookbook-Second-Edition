@@ -34,16 +34,16 @@ struct Mesh final {
 
 struct MeshFileHeader {
   // Unique 64-bit value to check integrity of the file
-  uint32_t magicValue;
+  uint32_t magicValue = 0x12345678;
 
   // Number of mesh descriptors following this header
-  uint32_t meshCount;
+  uint32_t meshCount = 0;
 
   // How much space index data takes in bytes
-  uint32_t indexDataSize;
+  uint32_t indexDataSize = 0;
 
   // How much space vertex data takes in bytes
-  uint32_t vertexDataSize;
+  uint32_t vertexDataSize = 0;
 
   // According to your needs, you may add additional metadata fields...
 };
@@ -77,6 +77,14 @@ struct MeshData {
   std::vector<BoundingBox> boxes;
   std::vector<Material> materials;
   std::vector<std::string> textureFiles;
+  MeshFileHeader getMeshFileHeader() const
+  {
+    return {
+      .meshCount      = (uint32_t)meshes.size(),
+      .indexDataSize  = (uint32_t)(indexData.size() * sizeof(uint32_t)),
+      .vertexDataSize = (uint32_t)vertexData.size(),
+    };
+  }
 };
 
 static_assert(sizeof(BoundingBox) == sizeof(float) * 6);

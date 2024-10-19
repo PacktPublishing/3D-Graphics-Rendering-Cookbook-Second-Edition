@@ -15,15 +15,15 @@ constexpr const int MAX_NODE_LEVEL = 16;
 
 struct Hierarchy {
   // parent for this node (or -1 for root)
-  int parent;
+  int parent = -1;
   // first child for a node (or -1)
-  int firstChild;
+  int firstChild = -1;
   // next sibling for a node (or -1)
-  int nextSibling;
+  int nextSibling = -1;
   // last added node (or -1)
-  int lastSibling;
+  int lastSibling = -1;
   // cached node level
-  int level;
+  int level = 0;
 };
 
 /* This scene is converted into a descriptorSet(s) in MultiRenderer class 

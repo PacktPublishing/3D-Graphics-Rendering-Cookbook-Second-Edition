@@ -29,7 +29,7 @@ public:
   void frustum(const mat4& camView, const mat4& camProj, const vec4& color);
 
   void setMatrix(const mat4& mvp) { mvp_ = mvp; }
-  void render(lvk::IContext& ctx, const lvk::Framebuffer& desc, lvk::ICommandBuffer& buf);
+  void render(lvk::IContext& ctx, const lvk::Framebuffer& desc, lvk::ICommandBuffer& buf, uint32_t numSamples = 1);
 
 private:
   mat4 mvp_ = mat4(1.0f);
@@ -44,6 +44,8 @@ private:
   lvk::Holder<lvk::ShaderModuleHandle> frag_;
   lvk::Holder<lvk::RenderPipelineHandle> pipeline_;
   lvk::Holder<lvk::BufferHandle> linesBuffer_[3] = {};
+
+  uint32_t pipelineSamples = 1;
 
   uint32_t currentBufferSize_[3] = {};
   uint32_t currentFrame_         = 0;

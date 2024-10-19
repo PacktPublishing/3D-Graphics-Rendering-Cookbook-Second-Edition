@@ -312,12 +312,16 @@ class VKMesh final
 {
 public:
   VKMesh(
-      const std::unique_ptr<lvk::IContext>& ctx, const MeshFileHeader& header, const MeshData& meshData, const Scene& scene,
-      lvk::Format depthFormat)
+      const std::unique_ptr<lvk::IContext>& ctx, const MeshData& meshData, const Scene& scene,
+      lvk::Format depthFormat, uint32_t numSamples = 1,lvk ::Holder<lvk::ShaderModuleHandle>&& vert = {},
+      lvk::Holder<lvk::ShaderModuleHandle>&& frag = {})
   : ctx(ctx)
-  , numIndices_(header.indexDataSize / sizeof(uint32_t))
+  , numIndices_((uint32_t)meshData.indexData.size())
+  , numMeshes_((uint32_t)meshData.meshes.size())
   , textureFiles_(meshData.textureFiles)
   {
+    const MeshFileHeader header = meshData.getMeshFileHeader();
+
     const uint32_t* indices   = meshData.indexData.data();
     const uint8_t* vertexData = meshData.vertexData.data();
 
@@ -385,7 +389,7 @@ public:
       *cmd++ = {
         .count         = mesh.getLODIndicesCount(lod),
         .instanceCount = 1,
-        .firstIndex    = mesh.indexOffset,// + mesh.lodOffset[lod],
+        .firstIndex    = mesh.indexOffset, // + mesh.lodOffset[lod],
         .baseVertex    = mesh.vertexOffset,
         .baseInstance  = ddIndex++,
       };
@@ -411,8 +415,8 @@ public:
           .debugName = "Buffer: drawData" },
         nullptr);
 
-    vert_ = loadShaderModule(ctx, "Chapter08/02_SceneGraph/src/main.vert");
-    frag_ = loadShaderModule(ctx, "Chapter08/02_SceneGraph/src/main.frag");
+    vert_ = vert.valid() ? std::move(vert) : loadShaderModule(ctx, "Chapter08/02_SceneGraph/src/main.vert");
+    frag_ = frag.valid() ? std::move(frag) : loadShaderModule(ctx, "Chapter08/02_SceneGraph/src/main.frag");
 
     pipeline_ = ctx->createRenderPipeline({
         .vertexInput = meshData.streams,
@@ -421,6 +425,7 @@ public:
         .color       = { { .format = ctx->getSwapchainFormat() } },
         .depthFormat = depthFormat,
         .cullMode    = lvk::CullMode_None,
+        .samplesCount = numSamples,
     });
 
     pipelineWireframe_ = ctx->createRenderPipeline({
@@ -431,13 +436,14 @@ public:
         .depthFormat = depthFormat,
         .cullMode    = lvk::CullMode_None,
         .polygonMode = lvk::PolygonMode_Line,
+        .samplesCount = numSamples,
     });
 
     LVK_ASSERT(pipeline_.valid());
   }
 
   void draw(
-      lvk::IContext& ctx, lvk::ICommandBuffer& buf, const MeshFileHeader& header, const mat4& view, const mat4& proj,
+      lvk::IContext& ctx, lvk::ICommandBuffer& buf, const mat4& view, const mat4& proj,
       lvk::TextureHandle texSkyboxIrradiance = {}, bool wireframe = false) const
   {
     buf.cmdBindIndexBuffer(bufferIndices_, lvk::IndexFormat_UI32);
@@ -459,8 +465,8 @@ public:
     };
     static_assert(sizeof(pc) <= 128);
     buf.cmdPushConstants(pc);
-    buf.cmdDrawIndexedIndirect(bufferIndirect_, sizeof(uint32_t), header.meshCount);
-    // buf.cmdDrawIndexedIndirectCount(bufferIndirect_, sizeof(uint32_t), bufferIndirect_, 0, header.meshCount,
+    buf.cmdDrawIndexedIndirect(bufferIndirect_, sizeof(uint32_t), numMeshes_);
+    // buf.cmdDrawIndexedIndirectCount(bufferIndirect_, sizeof(uint32_t), bufferIndirect_, 0, numMeshes_,
     // sizeof(DrawIndexedIndirectCommand));
   }
   void updateGlobalTransforms(const mat4* data, size_t numMatrices) const
@@ -480,6 +486,7 @@ public:
   const std::unique_ptr<lvk::IContext>& ctx;
 
   uint32_t numIndices_ = 0;
+  uint32_t numMeshes_  = 0;
 
   lvk::Holder<lvk::BufferHandle> bufferIndices_;
   lvk::Holder<lvk::BufferHandle> bufferVertices_;

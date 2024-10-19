@@ -218,7 +218,7 @@ int main()
   int selectedNode = -1;
 
   {
-    const VKMesh mesh(ctx, header, meshData, scene, app.getDepthFormat());
+    const VKMesh mesh(ctx, meshData, scene, app.getDepthFormat());
 
     app.run([&](uint32_t width, uint32_t height, float aspectRatio, float deltaSeconds) {
       const mat4 proj = glm::perspective(45.0f, aspectRatio, 0.01f, 100.0f);
@@ -241,7 +241,7 @@ int main()
       {
         buf.cmdBeginRendering(renderPass, framebuffer);
         buf.cmdPushDebugGroupLabel("Mesh", 0xff0000ff);
-        mesh.draw(*ctx.get(), buf, header, view, proj, {}, drawWireframe);
+        mesh.draw(*ctx.get(), buf, view, proj, {}, drawWireframe);
         buf.cmdPopDebugGroupLabel();
         app.drawGrid(buf, proj, vec3(0, -1.0f, 0));
         app.imgui_->beginFrame(framebuffer);

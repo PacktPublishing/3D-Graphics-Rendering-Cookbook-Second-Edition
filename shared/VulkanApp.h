@@ -42,8 +42,8 @@ public:
   virtual ~VulkanApp();
 
   virtual void run(DrawFrameFunc drawFrame);
-  virtual void drawGrid(lvk::ICommandBuffer& buf, const mat4& proj, const vec3& origin = vec3(0.0f));
-  virtual void drawGrid(lvk::ICommandBuffer& buf, const mat4& mvp, const vec3& origin, const vec3& camPos);
+  virtual void drawGrid(lvk::ICommandBuffer& buf, const mat4& proj, const vec3& origin = vec3(0.0f), uint32_t numSamples = 1);
+  virtual void drawGrid(lvk::ICommandBuffer& buf, const mat4& mvp, const vec3& origin, const vec3& camPos, uint32_t numSamples = 1);
   virtual void drawFPS();
   virtual void drawMemo();
   virtual void drawCameras(const std::vector<std::string>& cameras, uint32_t& activeCamera);
@@ -77,6 +77,8 @@ protected:
   lvk::Holder<lvk::ShaderModuleHandle> gridVert       = {};
   lvk::Holder<lvk::ShaderModuleHandle> gridFrag       = {};
   lvk::Holder<lvk::RenderPipelineHandle> gridPipeline = {};
+
+  uint32_t pipelineSamples = 1;
 
   std::vector<GLFWmousebuttonfun> callbacksMouseButton;
   std::vector<GLFWkeyfun> callbacksKey;

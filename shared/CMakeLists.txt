@@ -25,5 +25,9 @@ if(WIN32)
   target_compile_definitions(SharedUtils PUBLIC "NOMINMAX")
 endif()
 
+if(UNIX)
+  target_link_libraries(SharedUtils PUBLIC tbb)
+endif()
+
 target_sources(SharedUtils PRIVATE "${COOKBOOK_ROOT_DIR}/deps/src/lightweightvk/third-party/deps/src/imgui/imgui_demo.cpp")
 target_sources(SharedUtils PRIVATE "${COOKBOOK_ROOT_DIR}/deps/src/lightweightvk/third-party/deps/src/implot/implot_demo.cpp")

@@ -184,7 +184,7 @@ void LineCanvas3D::frustum(const mat4& camView, const mat4& camProj, const vec4&
   }
 }
 
-void LineCanvas3D::render(lvk::IContext& ctx, const lvk::Framebuffer& desc, lvk::ICommandBuffer& buf)
+void LineCanvas3D::render(lvk::IContext& ctx, const lvk::Framebuffer& desc, lvk::ICommandBuffer& buf, uint32_t numSamples)
 {
   LVK_PROFILER_FUNCTION();
 
@@ -202,22 +202,25 @@ void LineCanvas3D::render(lvk::IContext& ctx, const lvk::Framebuffer& desc, lvk:
     ctx.upload(linesBuffer_[currentFrame_], lines_.data(), requiredSize);
   }
 
-  if (pipeline_.empty()) {
+  if (pipeline_.empty() || pipelineSamples != numSamples) {
+    pipelineSamples = numSamples;
+
     vert_     = ctx.createShaderModule({ codeVS, lvk::Stage_Vert, "Shader Module: imgui (vert)" });
     frag_     = ctx.createShaderModule({ codeFS, lvk::Stage_Frag, "Shader Module: imgui (frag)" });
     pipeline_ = ctx.createRenderPipeline(
         {
-            .topology    = lvk::Topology_Line,
-            .smVert      = vert_,
-            .smFrag      = frag_,
-            .color       = { {
-                      .format            = ctx.getFormat(desc.color[0].texture),
-                      .blendEnabled      = true,
-                      .srcRGBBlendFactor = lvk::BlendFactor_SrcAlpha,
-                      .dstRGBBlendFactor = lvk::BlendFactor_OneMinusSrcAlpha,
+            .topology     = lvk::Topology_Line,
+            .smVert       = vert_,
+            .smFrag       = frag_,
+            .color        = { {
+                       .format            = ctx.getFormat(desc.color[0].texture),
+                       .blendEnabled      = true,
+                       .srcRGBBlendFactor = lvk::BlendFactor_SrcAlpha,
+                       .dstRGBBlendFactor = lvk::BlendFactor_OneMinusSrcAlpha,
             } },
-            .depthFormat = desc.depthStencil.texture ? ctx.getFormat(desc.depthStencil.texture) : lvk::Format_Invalid,
-            .cullMode    = lvk::CullMode_None,
+            .depthFormat  = desc.depthStencil.texture ? ctx.getFormat(desc.depthStencil.texture) : lvk::Format_Invalid,
+            .cullMode     = lvk::CullMode_None,
+            .samplesCount = numSamples,
         },
         nullptr);
   }
