@@ -153,95 +153,92 @@ int main()
   bool drawBoundingBoxes = false;
   int selectedNode       = -1;
 
-  {
-    const VKMesh mesh(ctx, meshData, scene, app.getDepthFormat());
+  const VKMesh mesh(ctx, meshData, scene, app.getDepthFormat());
 
-    app.run([&](uint32_t width, uint32_t height, float aspectRatio, float deltaSeconds) {
-      const mat4 view = app.camera_.getViewMatrix();
-      const mat4 proj = glm::perspective(45.0f, aspectRatio, 0.01f, 1000.0f);
+  app.run([&](uint32_t width, uint32_t height, float aspectRatio, float deltaSeconds) {
+    const mat4 view = app.camera_.getViewMatrix();
+    const mat4 proj = glm::perspective(45.0f, aspectRatio, 0.01f, 1000.0f);
 
-      const lvk::RenderPass renderPass = {
-        .color = { { .loadOp = lvk::LoadOp_Clear, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } } },
-        .depth = { .loadOp = lvk::LoadOp_Clear, .clearDepth = 1.0f }
-      };
+    const lvk::RenderPass renderPass = {
+      .color = { { .loadOp = lvk::LoadOp_Clear, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } } },
+      .depth = { .loadOp = lvk::LoadOp_Clear, .clearDepth = 1.0f }
+    };
 
-      const lvk::Framebuffer framebuffer = {
-        .color        = { { .texture = ctx->getCurrentSwapchainTexture() } },
-        .depthStencil = { .texture = app.getDepthTexture() },
-      };
+    const lvk::Framebuffer framebuffer = {
+      .color        = { { .texture = ctx->getCurrentSwapchainTexture() } },
+      .depthStencil = { .texture = app.getDepthTexture() },
+    };
 
-      lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
+    lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
+    {
+      buf.cmdBeginRendering(renderPass, framebuffer);
       {
-        buf.cmdBeginRendering(renderPass, framebuffer);
-        {
-          buf.cmdPushDebugGroupLabel("Skybox", 0xff0000ff);
-          buf.cmdBindRenderPipeline(pipelineSkybox);
-          const struct {
-            mat4 view;
-            mat4 proj;
-            uint32_t texSkybox;
-          } pc = {
-            .view      = view,
-            .proj      = proj,
-            .texSkybox = texSkybox.index(),
-          };
-          buf.cmdPushConstants(pc);
-          buf.cmdDraw(36);
-          buf.cmdPopDebugGroupLabel();
-        }
-        {
-          buf.cmdPushDebugGroupLabel("Mesh", 0xff0000ff);
-          mesh.draw(*ctx.get(), buf, view, proj, texSkyboxIrradiance, drawWireframe);
-          buf.cmdPopDebugGroupLabel();
-        }
-
-        app.drawGrid(buf, proj, vec3(0, -1.0f, 0));
-        app.imgui_->beginFrame(framebuffer);
-        app.drawFPS();
-        app.drawMemo();
-
-        canvas3d.clear();
-        canvas3d.setMatrix(proj * view);
-        // render all bounding boxes (red)
-        if (drawBoundingBoxes) {
-          for (auto& p : scene.meshForNode) {
-            const BoundingBox box = meshData.boxes[p.second];
-            canvas3d.box(scene.globalTransform[p.first], box, vec4(1, 0, 0, 1));
-          }
-        }
-
-        // render UI
-        {
-          const ImGuiViewport* v = ImGui::GetMainViewport();
-          ImGui::SetNextWindowPos(ImVec2(10, 200));
-          ImGui::SetNextWindowSize(ImVec2(v->WorkSize.x / 6, v->WorkSize.y - 210));
-          ImGui::Begin(
-              "Scene graph", nullptr, ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
-          ImGui::Checkbox("Draw wireframe", &drawWireframe);
-          ImGui::Checkbox("Draw bounding boxes", &drawBoundingBoxes);
-          ImGui::Separator();
-          const int node = renderSceneTreeUI(scene, 0, selectedNode);
-          if (node > -1) {
-            selectedNode = node;
-          }
-          ImGui::End();
-          // render one selected bounding box (green)
-          if (selectedNode > -1 && scene.hierarchy[selectedNode].firstChild < 0) {
-            const uint32_t meshId = scene.meshForNode[selectedNode];
-            const BoundingBox box = meshData.boxes[meshId];
-            canvas3d.box(scene.globalTransform[selectedNode], box, vec4(0, 1, 0, 1));
-          }
-        }
-
-        canvas3d.render(*ctx.get(), framebuffer, buf);
-
-        app.imgui_->endFrame(buf);
-
-        buf.cmdEndRendering();
+        buf.cmdPushDebugGroupLabel("Skybox", 0xff0000ff);
+        buf.cmdBindRenderPipeline(pipelineSkybox);
+        const struct {
+          mat4 view;
+          mat4 proj;
+          uint32_t texSkybox;
+        } pc = {
+          .view      = view,
+          .proj      = proj,
+          .texSkybox = texSkybox.index(),
+        };
+        buf.cmdPushConstants(pc);
+        buf.cmdDraw(36);
+        buf.cmdPopDebugGroupLabel();
       }
-      ctx->submit(buf, ctx->getCurrentSwapchainTexture());
-    });
-  }
+      {
+        buf.cmdPushDebugGroupLabel("Mesh", 0xff0000ff);
+        mesh.draw(*ctx.get(), buf, view, proj, texSkyboxIrradiance, drawWireframe);
+        buf.cmdPopDebugGroupLabel();
+      }
+
+      app.drawGrid(buf, proj, vec3(0, -1.0f, 0));
+      app.imgui_->beginFrame(framebuffer);
+      app.drawFPS();
+      app.drawMemo();
+
+      canvas3d.clear();
+      canvas3d.setMatrix(proj * view);
+      // render all bounding boxes (red)
+      if (drawBoundingBoxes) {
+        for (auto& p : scene.meshForNode) {
+          const BoundingBox box = meshData.boxes[p.second];
+          canvas3d.box(scene.globalTransform[p.first], box, vec4(1, 0, 0, 1));
+        }
+      }
+
+      // render UI
+      {
+        const ImGuiViewport* v = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(ImVec2(10, 200));
+        ImGui::SetNextWindowSize(ImVec2(v->WorkSize.x / 6, v->WorkSize.y - 210));
+        ImGui::Begin("Scene graph", nullptr, ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
+        ImGui::Checkbox("Draw wireframe", &drawWireframe);
+        ImGui::Checkbox("Draw bounding boxes", &drawBoundingBoxes);
+        ImGui::Separator();
+        const int node = renderSceneTreeUI(scene, 0, selectedNode);
+        if (node > -1) {
+          selectedNode = node;
+        }
+        ImGui::End();
+        // render one selected bounding box (green)
+        if (selectedNode > -1 && scene.hierarchy[selectedNode].firstChild < 0) {
+          const uint32_t meshId = scene.meshForNode[selectedNode];
+          const BoundingBox box = meshData.boxes[meshId];
+          canvas3d.box(scene.globalTransform[selectedNode], box, vec4(0, 1, 0, 1));
+        }
+      }
+
+      canvas3d.render(*ctx.get(), framebuffer, buf);
+
+      app.imgui_->endFrame(buf);
+
+      buf.cmdEndRendering();
+    }
+    ctx->submit(buf, ctx->getCurrentSwapchainTexture());
+  });
 
   ctx.release();
 

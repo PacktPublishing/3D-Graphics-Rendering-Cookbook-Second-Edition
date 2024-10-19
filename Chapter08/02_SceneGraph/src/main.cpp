@@ -8,8 +8,8 @@
 #include "shared/Scene/Scene.h"
 #include "shared/Scene/VtxData.h"
 
-#include "Chapter08/VKMesh08.h"
 #include "Chapter08/SceneUtils.h"
+#include "Chapter08/VKMesh08.h"
 
 #include <ImGuizmo/ImGuizmo.h>
 
@@ -96,13 +96,17 @@ bool editMaterialUI(Scene& scene, MeshData& meshData, int node, int& outUpdateMa
   auto drawTextureUI = [&textureCache, ImagesGalleryName](const char* name, int& texture) {
     if (texture == -1)
       return;
-    ImGui::Text(name);
+    ImGui::Text("%s", name);
     ImGui::Image(textureCache[texture].indexAsVoid(), ImVec2(512, 512), ImVec2(0, 1), ImVec2(1, 0));
     if (ImGui::IsItemClicked()) {
       textureToEdit = &texture;
       ImGui::OpenPopup(ImagesGalleryName);
     }
   };
+
+  ImGui::Separator();
+  ImGui::Text("Click on a texture to change it!");
+  ImGui::Separator();
 
   drawTextureUI("Base texture:", material.baseColorTexture);
   drawTextureUI("Emissive texture:", material.emissiveTexture);
@@ -156,7 +160,7 @@ void editNodeUI(
 
   if (node >= 0) {
     ImGui::Separator();
-    ImGuizmo::SetID(1);
+    ImGuizmo::PushID(1);
 
     glm::mat4 globalTransform = scene.globalTransform[node]; // fetch global transform
     glm::mat4 srcTransform    = globalTransform;
@@ -172,11 +176,13 @@ void editNodeUI(
     ImGui::Text("%s", "Material");
 
     editMaterialUI(scene, meshData, node, outUpdateMaterialIndex, textureCache);
+
+    ImGuizmo::PopID();
   }
   ImGui::End();
 }
 
-const char* fileNameCachedMeshes = ".cache/ch08_orrery.meshes";
+const char* fileNameCachedMeshes    = ".cache/ch08_orrery.meshes";
 const char* fileNameCachedMaterials = ".cache/ch08_orrery.materials";
 const char* fileNameCachedHierarchy = ".cache/ch08_orrery.scene";
 
@@ -215,88 +221,85 @@ int main()
   std::unique_ptr<lvk::IContext> ctx(app.ctx_.get());
 
   bool drawWireframe = false;
-  int selectedNode = -1;
+  int selectedNode   = -1;
 
-  {
-    const VKMesh mesh(ctx, meshData, scene, app.getDepthFormat());
+  const VKMesh mesh(ctx, meshData, scene, app.getDepthFormat());
 
-    app.run([&](uint32_t width, uint32_t height, float aspectRatio, float deltaSeconds) {
-      const mat4 proj = glm::perspective(45.0f, aspectRatio, 0.01f, 100.0f);
+  app.run([&](uint32_t width, uint32_t height, float aspectRatio, float deltaSeconds) {
+    const mat4 proj = glm::perspective(45.0f, aspectRatio, 0.01f, 100.0f);
 
-      const lvk::RenderPass renderPass = {
-        .color = { { .loadOp = lvk::LoadOp_Clear, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } } },
-        .depth = { .loadOp = lvk::LoadOp_Clear, .clearDepth = 1.0f }
-      };
+    const lvk::RenderPass renderPass = {
+      .color = { { .loadOp = lvk::LoadOp_Clear, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } } },
+      .depth = { .loadOp = lvk::LoadOp_Clear, .clearDepth = 1.0f }
+    };
 
-      const lvk::Framebuffer framebuffer = {
-        .color        = { { .texture = ctx->getCurrentSwapchainTexture() } },
-        .depthStencil = { .texture = app.getDepthTexture() },
-      };
+    const lvk::Framebuffer framebuffer = {
+      .color        = { { .texture = ctx->getCurrentSwapchainTexture() } },
+      .depthStencil = { .texture = app.getDepthTexture() },
+    };
 
-      const mat4 view = app.camera_.getViewMatrix();
+    const mat4 view = app.camera_.getViewMatrix();
 
-      int updateMaterialIndex = -1;
+    int updateMaterialIndex = -1;
 
-      lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
+    lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
+    {
+      buf.cmdBeginRendering(renderPass, framebuffer);
+      buf.cmdPushDebugGroupLabel("Mesh", 0xff0000ff);
+      mesh.draw(*ctx.get(), buf, view, proj, {}, drawWireframe);
+      buf.cmdPopDebugGroupLabel();
+      app.drawGrid(buf, proj, vec3(0, -1.0f, 0));
+      app.imgui_->beginFrame(framebuffer);
+      app.drawFPS();
+      app.drawMemo();
+
+      canvas3d.clear();
+      canvas3d.setMatrix(proj * view);
+      // render all bounding boxes (red)
+      for (auto& p : scene.meshForNode) {
+        const BoundingBox box = meshData.boxes[p.second];
+        canvas3d.box(scene.globalTransform[p.first], box, vec4(1, 0, 0, 1));
+      }
+
+      // render UI
       {
-        buf.cmdBeginRendering(renderPass, framebuffer);
-        buf.cmdPushDebugGroupLabel("Mesh", 0xff0000ff);
-        mesh.draw(*ctx.get(), buf, view, proj, {}, drawWireframe);
-        buf.cmdPopDebugGroupLabel();
-        app.drawGrid(buf, proj, vec3(0, -1.0f, 0));
-        app.imgui_->beginFrame(framebuffer);
-        app.drawFPS();
-        app.drawMemo();
-
-        canvas3d.clear();
-        canvas3d.setMatrix(proj * view);
-        // render all bounding boxes (red)
-        for (auto& p : scene.meshForNode) {
-          const BoundingBox box = meshData.boxes[p.second];
-          canvas3d.box(scene.globalTransform[p.first], box, vec4(1, 0, 0, 1));
+        const ImGuiViewport* v = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(ImVec2(10, 200));
+        ImGui::SetNextWindowSize(ImVec2(v->WorkSize.x / 6, v->WorkSize.y - 210));
+        ImGui::Begin("Scene graph", nullptr, ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
+        ImGui::Checkbox("Draw wireframe", &drawWireframe);
+        ImGui::Separator();
+        const int node = renderSceneTreeUI(scene, 0, selectedNode);
+        if (node > -1) {
+          selectedNode = node;
         }
+        ImGui::End();
 
-        // render UI
-        {
-          const ImGuiViewport* v = ImGui::GetMainViewport();
-          ImGui::SetNextWindowPos(ImVec2(10, 200));
-          ImGui::SetNextWindowSize(ImVec2(v->WorkSize.x / 6, v->WorkSize.y - 210));
-          ImGui::Begin(
-              "Scene graph", nullptr, ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
-          ImGui::Checkbox("Draw wireframe", &drawWireframe);
-          ImGui::Separator();
-          const int node = renderSceneTreeUI(scene, 0, selectedNode);
-          if (node > -1) {
-            selectedNode = node;
-          }
-          ImGui::End();
+        editNodeUI(scene, meshData, view, proj, selectedNode, updateMaterialIndex, mesh.textureCache_);
 
-          editNodeUI(scene, meshData, view, proj, selectedNode, updateMaterialIndex, mesh.textureCache_);
-
-          // render one selected bounding box (green)
-          if (selectedNode > -1 && scene.hierarchy[selectedNode].firstChild < 0) {
-            const uint32_t meshId = scene.meshForNode[selectedNode];
-            const BoundingBox box = meshData.boxes[meshId];
-            canvas3d.box(scene.globalTransform[selectedNode], box, vec4(0, 1, 0, 1));
-          }
+        // render one selected bounding box (green)
+        if (selectedNode > -1 && scene.hierarchy[selectedNode].firstChild < 0) {
+          const uint32_t meshId = scene.meshForNode[selectedNode];
+          const BoundingBox box = meshData.boxes[meshId];
+          canvas3d.box(scene.globalTransform[selectedNode], box, vec4(0, 1, 0, 1));
         }
-
-        canvas3d.render(*ctx.get(), framebuffer, buf);
-
-        app.imgui_->endFrame(buf);
-
-        buf.cmdEndRendering();
       }
-      ctx->submit(buf, ctx->getCurrentSwapchainTexture());
 
-      if (recalculateGlobalTransforms(scene)) {
-        mesh.updateGlobalTransforms(scene.globalTransform.data(), scene.globalTransform.size());
-      }
-      if (updateMaterialIndex > -1) {
-        mesh.updateMaterial(meshData.materials.data(), updateMaterialIndex);
-      }
-    });
-  }
+      canvas3d.render(*ctx.get(), framebuffer, buf);
+
+      app.imgui_->endFrame(buf);
+
+      buf.cmdEndRendering();
+    }
+    ctx->submit(buf, ctx->getCurrentSwapchainTexture());
+
+    if (recalculateGlobalTransforms(scene)) {
+      mesh.updateGlobalTransforms(scene.globalTransform.data(), scene.globalTransform.size());
+    }
+    if (updateMaterialIndex > -1) {
+      mesh.updateMaterial(meshData.materials.data(), updateMaterialIndex);
+    }
+  });
 
   ctx.release();
 
