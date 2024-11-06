@@ -4,7 +4,7 @@
     "source": {
         "type": "git",
         "url": "https://github.com/corporateshark/lightweightvk.git",
-        "revision": "88c34b42ab36302447e74a9613f4775af6c86f59"
+        "revision": "85f753c7b7ff92b3f45704446632436db7a6191b"
     }
 },
 {
@@ -20,7 +20,7 @@
     "source": {
         "type": "git",
         "url": "https://github.com/KhronosGroup/glTF-Sample-Assets.git",
-        "revision": "9f68cddff1304a4e6d47917551a573b44ef1cc47"
+        "revision": "517a5db6aa558f5c57faed8301ba40cd246a9d76"
     }
 },
 {
