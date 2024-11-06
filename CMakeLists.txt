@@ -163,3 +163,8 @@ add_subdirectory(Chapter07/08_AnalyticalLight)
 add_subdirectory(Chapter08/01_DescriptorIndexing)
 add_subdirectory(Chapter08/02_SceneGraph)
 add_subdirectory(Chapter08/03_LargeScene)
+
+add_subdirectory(Chapter09/01_AnimationPlayer)
+add_subdirectory(Chapter09/02_Skinning)
+add_subdirectory(Chapter09/03_Morphing)
+add_subdirectory(Chapter09/04_AnimationBlending)

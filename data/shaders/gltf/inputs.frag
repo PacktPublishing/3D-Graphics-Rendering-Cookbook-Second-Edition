@@ -206,6 +206,11 @@ bool isMaterialTypeVolume(MetallicRoughnessDataGPU mat) {
   return (getMaterialType(mat) & 0x40) != 0;
 }
 
+bool isMaterialTypeUnlit(MetallicRoughnessDataGPU mat) {
+  return (getMaterialType(mat) & 0x80) != 0;
+}
+
+
 uint getLightsCount() {
   return perFrame.lightsCount;
 }

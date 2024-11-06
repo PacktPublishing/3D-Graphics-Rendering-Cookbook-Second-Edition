@@ -8,14 +8,14 @@
 #include <assimp/scene.h>
 #include <assimp/types.h>
 
-#include "UtilsAnim.h"
 #include "LineCanvas.h"
+#include "UtilsAnim.h"
 
 #include <lvk/LVK.h>
 
 enum MaterialType : uint32_t {
   MaterialType_Invalid            = 0,
-  MaterialType_Unlit              = 0xF,
+  MaterialType_Unlit              = 0x80,
   MaterialType_MetallicRoughness  = 0x1,
   MaterialType_SpecularGlossiness = 0x2,
   MaterialType_Sheen              = 0x4,
@@ -30,13 +30,14 @@ const uint32_t kMaxEnvironments = 4;
 const uint32_t kMaxLights       = 8;
 
 using glm::mat4;
+using glm::quat;
 using glm::vec2;
 using glm::vec3;
 using glm::vec4;
 
-inline glm::mat4 aiMatrix4x4ToMat4(const aiMatrix4x4& from)
+inline mat4 aiMatrix4x4ToMat4(const aiMatrix4x4& from)
 {
-  glm::mat4 to;
+  mat4 to;
 
   to[0][0] = (float)from.a1;
   to[0][1] = (float)from.b1;
@@ -58,9 +59,9 @@ inline glm::mat4 aiMatrix4x4ToMat4(const aiMatrix4x4& from)
   return to;
 }
 
-inline glm::vec3 aiVector3DToVec3(const aiVector3D& from)
+inline vec3 aiVector3DToVec3(const aiVector3D& from)
 {
-  return glm::vec3(from.x, from.y, from.z);
+  return vec3(from.x, from.y, from.z);
 }
 
 inline glm::quat aiQuaternionToQuat(const aiQuaternion& from)
@@ -375,7 +376,7 @@ struct GLTFMesh {
 struct GLTFNode {
   std::string name;
   uint32_t modelMtxId;
-  glm::mat4 transform = mat4(1);
+  mat4 transform = mat4(1);
   std::vector<GLTFNodeRef> children;
   std::vector<GLTFMeshRef> meshes;
 };
@@ -390,9 +391,9 @@ struct GLTFFrameData {
 struct GLTFCamera {
   std::string name;
   uint32_t nodeIdx = ~0;
-  glm::vec3 pos;
-  glm::vec3 up;
-  glm::vec3 lookAt;
+  vec3 pos;
+  vec3 up;
+  vec3 lookAt;
   float hFOV;
   float near;
   float far;
@@ -419,19 +420,18 @@ struct GLTFTransforms {
 #define MAX_BONES_PER_VERTEX 8
 
 struct VertexBoneData {
-  vec3 position;
-  vec3 normal;
+  vec4 position;
+  vec4 normal;
   uint32_t boneId[MAX_BONES_PER_VERTEX] = { ~0u, ~0u, ~0u, ~0u, ~0u, ~0u, ~0u, ~0u };
-  float weight[MAX_BONES_PER_VERTEX]    = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+  float weight[MAX_BONES_PER_VERTEX]    = {};
   uint32_t meshId                       = ~0u;
-  uint32_t padding;
 };
 
-static_assert(sizeof(VertexBoneData) == sizeof(uint32_t) * 24);
+static_assert(sizeof(VertexBoneData) == sizeof(uint32_t) * 25);
 
 struct GLTFBone {
-  uint32_t boneId     = ~0u;
-  glm::mat4 transform = glm::mat4(1);
+  uint32_t boneId = ~0u;
+  mat4 transform  = mat4(1);
 };
 
 GLTFMaterialDataGPU setupglTFMaterialData(
@@ -452,7 +452,7 @@ struct GLTFContext {
   EnvironmentMapTextures envMapTextures;
   GLTFFrameData frameData;
   std::vector<GLTFTransforms> transforms;
-  std::vector<glm::mat4> matrices;
+  std::vector<mat4> matrices;
 
   std::vector<GLTFNode> nodesStorage;
   std::vector<GLTFMesh> meshesStorage;
@@ -469,10 +469,10 @@ struct GLTFContext {
 
   lvk::Holder<lvk::BufferHandle> envBuffer;
   lvk::Holder<lvk::BufferHandle> lightsBuffer;
-  lvk::Holder<lvk::BufferHandle> perFrameBuffer[3];
+  lvk::Holder<lvk::BufferHandle> perFrameBuffer;
   lvk::Holder<lvk::BufferHandle> transformBuffer;
   lvk::Holder<lvk::BufferHandle> matricesBuffer;
-  lvk::Holder<lvk::BufferHandle> morphsBuffer;
+  lvk::Holder<lvk::BufferHandle> morphStatesBuffer;
 
   lvk::Holder<lvk::RenderPipelineHandle> pipelineSolid;
   lvk::Holder<lvk::RenderPipelineHandle> pipelineTransparent;
@@ -491,23 +491,24 @@ struct GLTFContext {
 
   uint32_t currentOffscreenTex = 0;
   uint32_t maxVertices         = 0;
-  uint32_t activeCamera        = ~0;
 
   std::vector<MorphState> morphStates;
   std::vector<LightDataGPU> lights;
   std::vector<GLTFCamera> cameras;
-  std::vector<uint32_t> activeAnimations;
-  float animationBlend = 0.0f;
 
+  GLTFIntrospective inspector;
 
   GLTFNodeRef root;
   VulkanApp& app;
   LineCanvas3D canvas3d;
 
+  bool hasBones             = false;
   bool isVolumetricMaterial = false;
   bool animated             = false;
   bool skinning             = false;
   bool morphing             = false;
+  bool doublesided          = false;
+  bool enableMorphing       = true;
 
   bool isScreenCopyRequired() const { return isVolumetricMaterial; }
 };

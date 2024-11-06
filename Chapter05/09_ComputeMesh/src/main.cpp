@@ -92,7 +92,7 @@ void renderGUI(lvk::TextureHandle texture)
     ImGui::SetNextWindowPos(ImVec2(size.x - sizeImg.x - 25, 0), ImGuiCond_Appearing);
     ImGui::Begin("Texture", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {
-      ImGui::Image(texture.indexAsVoid(), sizeImg);
+      ImGui::Image(texture.index(), sizeImg);
     }
     ImGui::End();
   }

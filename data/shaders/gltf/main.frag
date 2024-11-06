@@ -20,9 +20,20 @@ void main()
   MetallicRoughnessDataGPU mat = getMaterial(getMaterialId());
   EnvironmentMapDataGPU envMap = getEnvironmentMap(getEnvironmentId());
 
+  vec4 Kd  = sampleAlbedo(tc, mat) * color;
+
+  if ((mat.alphaMode == 1) && (mat.emissiveFactorAlphaCutoff.w > Kd.a)) {
+    discard;
+  }
+
+  if (isMaterialTypeUnlit(mat)) {
+    out_FragColor = Kd;
+    return;
+  }
+
+
   vec4 Kao = sampleAO(tc, mat);
   vec4 Ke  = sampleEmissive(tc, mat);
-  vec4 Kd  = sampleAlbedo(tc, mat) * color;
   vec4 mrSample = sampleMetallicRoughness(tc, mat);
 
 
@@ -35,10 +46,14 @@ void main()
   vec3 n = normalize(normal);
 
   PBRInfo pbrInputs = calculatePBRInputsMetallicRoughness(tc, Kd, mrSample, mat);
-  vec3 normalSample = sampleNormal(tc, mat).xyz;
-  perturbNormal(n, worldPos, normalSample, getNormalUV(tc, mat), pbrInputs);
-  n = pbrInputs.n;
+  pbrInputs.n = n;
+  pbrInputs.ng = n;
 
+  if (mat.normalTexture != ~0) {
+    vec3 normalSample = sampleNormal(tc, mat).xyz;
+    perturbNormal(n, worldPos, normalSample, getNormalUV(tc, mat), pbrInputs);
+    n = pbrInputs.n;
+  }
   vec3 v = normalize(perFrame.drawable.cameraPos.xyz - worldPos);  // Vector from surface point to camera
 
   pbrInputs.v = v;
@@ -178,9 +193,6 @@ void main()
   vec3 color =  specularColor + diffuseColor + emissiveColor + sheenColor;
   color = color * (1.0 - pbrInputs.clearcoatFactor * clearcoatFresnel) + clearCoatContrib;
 
-  if ((mat.alphaMode == 1) && (mat.emissiveFactorAlphaCutoff.w > Kd.a)) {
-    discard;
-  }
 
   color = pow(color, vec3(1.0/2.2));
   out_FragColor = vec4(color, 1.0);
@@ -188,6 +200,7 @@ void main()
 //  DEBUG 
 //  out_FragColor = vec4((n + vec3(1.0))*0.5, 1.0);
 //  out_FragColor = vec4((pbrInputs.n + vec3(1.0))*0.5, 1.0);
+//  out_FragColor = vec4((normal + vec3(1.0))*0.5, 1.0);
 //  out_FragColor = Kao;
 //  out_FragColor = Ke;
 //  out_FragColor = Kd;

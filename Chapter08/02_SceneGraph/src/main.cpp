@@ -97,7 +97,7 @@ bool editMaterialUI(Scene& scene, MeshData& meshData, int node, int& outUpdateMa
     if (texture == -1)
       return;
     ImGui::Text("%s", name);
-    ImGui::Image(textureCache[texture].indexAsVoid(), ImVec2(512, 512), ImVec2(0, 1), ImVec2(1, 0));
+    ImGui::Image(textureCache[texture].index(), ImVec2(512, 512), ImVec2(0, 1), ImVec2(1, 0));
     if (ImGui::IsItemClicked()) {
       textureToEdit = &texture;
       ImGui::OpenPopup(ImagesGalleryName);
@@ -120,7 +120,7 @@ bool editMaterialUI(Scene& scene, MeshData& meshData, int node, int& outUpdateMa
     for (int i = 0; i != textureCache.size(); i++) {
       if (i && i % 4 != 0)
         ImGui::SameLine();
-      ImGui::Image(textureCache[i].indexAsVoid(), ImVec2(256, 256), ImVec2(0, 1), ImVec2(1, 0));
+      ImGui::Image(textureCache[i].index(), ImVec2(256, 256), ImVec2(0, 1), ImVec2(1, 0));
       if (ImGui::IsItemHovered()) {
         ImGui::GetWindowDrawList()->AddRectFilled(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), 0x66ffffff);
       }
@@ -223,7 +223,7 @@ int main()
   bool drawWireframe = false;
   int selectedNode   = -1;
 
-  const VKMesh mesh(ctx, meshData, scene, app.getDepthFormat());
+  const VKMesh mesh(ctx, meshData, scene, ctx->getSwapchainFormat(), app.getDepthFormat());
 
   app.run([&](uint32_t width, uint32_t height, float aspectRatio, float deltaSeconds) {
     const mat4 proj = glm::perspective(45.0f, aspectRatio, 0.01f, 100.0f);

@@ -1,24 +1,29 @@
 #pragma once
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include <vector>
-#include <unordered_map>
+#include <glm/gtc/type_ptr.hpp>
 #include <string>
+#include <unordered_map>
+#include <vector>
+
+using glm::quat;
+using glm::vec3;
+using glm::vec4;
 
 struct AnimationKeyPosition {
-  glm::vec3 pos;
+  vec3 pos;
   float time;
 };
 
 struct AnimationKeyRotation {
-  glm::quat rot;
+  quat rot;
   float time;
 };
 
 struct AnimationKeyScale {
-  glm::vec3 scale;
+  vec3 scale;
   float time;
 };
 
@@ -29,17 +34,17 @@ struct AnimationChannel {
 };
 
 #define MAX_MORPH_WEIGHTS 8
-#define MAX_MORPHS  100
+#define MAX_MORPHS 100
 
 struct MorphingChannelKey {
-	float time;
-	uint32_t mesh[MAX_MORPH_WEIGHTS] = { 0,0,0,0,0,0,0,0 };
-	float weight[MAX_MORPH_WEIGHTS] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+  float time                       = 0.0f;
+  uint32_t mesh[MAX_MORPH_WEIGHTS] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+  float weight[MAX_MORPH_WEIGHTS]  = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
 };
 
 struct MorphingChannel {
-	std::string name;
-	std::vector<MorphingChannelKey> key;
+  std::string name;
+  std::vector<MorphingChannelKey> key;
 };
 
 struct Animation {
@@ -51,18 +56,17 @@ struct Animation {
 };
 
 struct MorphState {
-	uint32_t meshId = ~0;
-	uint32_t morphTarget[MAX_MORPH_WEIGHTS] = {0,0,0,0,0,0,0,0};
-	float weights[MAX_MORPH_WEIGHTS] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+  uint32_t meshId                         = ~0u;
+  uint32_t morphTarget[MAX_MORPH_WEIGHTS] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+  float weights[MAX_MORPH_WEIGHTS]        = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
 };
 
 struct AnimationState {
-  uint32_t animId = ~0;
+  uint32_t animId   = ~0u;
   float currentTime = 0.0f;
-  bool playOnce = false;
-  bool active = false;
+  bool playOnce     = false;
+  bool active       = false;
 };
-
 
 struct GLTFContext;
 struct aiScene;

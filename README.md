@@ -88,7 +88,7 @@ cd ..
 Sergey Kosarevsky is a former rendering lead at Ubisoft RedLynx. He currently leads Vulkan development at Meta.
 He worked in the mobile industry at SPB Software, Yandex, Layar and Blippar, TWNKLS, and DAQRI,
 where he designed and implemented real-time rendering technology.
-He has more than 18 years of software development experience and more than 10 years of mobile
+He has more than 20 years of software development experience and more than 12 years of mobile
 and embedded 3D graphics experience. In his Ph.D. thesis, Sergey employed computer vision to
 solve mechanical engineering problems. He has co-authored several books on mobile software development in C++.
 

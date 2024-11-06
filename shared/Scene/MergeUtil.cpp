@@ -16,7 +16,7 @@ static uint32_t shiftMeshIndices(MeshData& meshData, const std::vector<uint32_t>
   for (uint32_t i : meshesToMerge) {
     Mesh& m = meshData.meshes[i];
     // for how much should we shift the indices in mesh [m]
-    const uint32_t delta = m.vertexOffset - minVtxOffset;
+    const uint32_t delta    = m.vertexOffset - minVtxOffset;
     const uint32_t idxCount = m.getLODIndicesCount(0);
     for (uint32_t ii = 0u; ii < idxCount; ii++)
       meshData.indexData[m.indexOffset + ii] += delta;
@@ -36,7 +36,7 @@ static void mergeIndexArray(MeshData& md, const std::vector<uint32_t>& meshesToM
 {
   std::vector<uint32_t> newIndices(md.indexData.size());
   // Two offsets in the new indices array (one begins at the start, the second one after all the copied indices)
-  uint32_t copyOffset = 0;
+  uint32_t copyOffset  = 0;
   uint32_t mergeOffset = shiftMeshIndices(md, meshesToMerge);
 
   const size_t mergedMeshIndex = md.meshes.size() - meshesToMerge.size();
@@ -47,7 +47,7 @@ static void mergeIndexArray(MeshData& md, const std::vector<uint32_t>& meshesToM
     oldToNew[midx] = shouldMerge ? mergedMeshIndex : newIndex;
     newIndex += shouldMerge ? 0 : 1;
 
-    Mesh& mesh    = md.meshes[midx];
+    Mesh& mesh              = md.meshes[midx];
     const uint32_t idxCount = mesh.getLODIndicesCount(0);
     // move all indices to the new array at mergeOffset
     const auto start          = md.indexData.begin() + mesh.indexOffset;

@@ -44,16 +44,11 @@ void loadMaterialTexture(
   }
 }
 
-uint32_t getNextMtxId(GLTFContext& gltf, const std::string& name, uint32_t& nextEmptyId, glm::mat4 mtx)
+uint32_t getNextMtxId(GLTFContext& gltf, const char* name, uint32_t& nextEmptyId, const mat4& mtx)
 {
-  uint32_t mtxId = 0;
-  auto boneId    = gltf.bonesStorage.find(name);
-  if (boneId == gltf.bonesStorage.end()) {
-    mtxId = nextEmptyId;
-    nextEmptyId++;
-  } else {
-    mtxId = boneId->second.boneId;
-  }
+  const auto it = gltf.bonesStorage.find(name);
+
+  const uint32_t mtxId = (it == gltf.bonesStorage.end()) ? nextEmptyId++ : it->second.boneId;
 
   if (gltf.matrices.size() <= mtxId) {
     gltf.matrices.resize(mtxId + 1);
@@ -68,7 +63,7 @@ uint32_t getNextMtxId(GLTFContext& gltf, const std::string& name, uint32_t& next
 
 GLTFMaterialDataGPU setupglTFMaterialData(
     const std::unique_ptr<lvk::IContext>& ctx, const GLTFGlobalSamplers& samplers, const aiMaterial* mtlDescriptor, const char* assetFolder,
-    GLTFDataHolder& glTFDataholder, bool& useVolumetric)
+    GLTFDataHolder& glTFDataholder, bool& useVolumetric, bool& usedoublesided)
 {
   GLTFMaterialTextures mat;
 
@@ -137,9 +132,9 @@ GLTFMaterialDataGPU setupglTFMaterialData(
     .emissiveTexture                  = mat.emissiveTexture.valid() ? mat.emissiveTexture.index() : mat.white.index(),
     .baseColorTexture                 = mat.baseColorTexture.valid() ? mat.baseColorTexture.index() : mat.white.index(),
     .surfacePropertiesTexture         = mat.surfacePropertiesTexture.valid() ? mat.surfacePropertiesTexture.index() : mat.white.index(),
-    .normalTexture                    = mat.normalTexture.valid() ? mat.normalTexture.index() : mat.white.index(),
-    .sheenColorTexture                = mat.sheenColorTexture.index(),
-    .sheenRoughnessTexture            = mat.sheenRoughnessTexture.index(),
+    .normalTexture                    = mat.normalTexture.valid() ? mat.normalTexture.index() : ~0,
+    .sheenColorTexture                = mat.sheenColorTexture.valid() ? mat.sheenColorTexture.index() : mat.white.index(),
+    .sheenRoughnessTexture            = mat.sheenRoughnessTexture.valid() ? mat.sheenRoughnessTexture.index() : mat.white.index(),
     .clearCoatTexture                 = mat.clearCoatTexture.valid() ? mat.clearCoatTexture.index() : mat.white.index(),
     .clearCoatRoughnessTexture        = mat.clearCoatRoughnessTexture.valid() ? mat.clearCoatRoughnessTexture.index() : mat.white.index(),
     .clearCoatNormalTexture           = mat.clearCoatNormalTexture.valid() ? mat.clearCoatNormalTexture.index() : mat.white.index(),
@@ -369,6 +364,12 @@ GLTFMaterialDataGPU setupglTFMaterialData(
     res.ior = ior;
   }
 
+  // Doublesided
+  bool ds = false;
+  if (mtlDescriptor->Get(AI_MATKEY_TWOSIDED, ds) == AI_SUCCESS) {
+    usedoublesided |= ds;
+  }
+
   mat.wasLoaded = true;
 
   glTFDataholder.textures.push_back(std::move(mat));
@@ -406,7 +407,7 @@ static uint32_t getNumMorphVertices(const aiScene& scene)
   return num;
 }
 
-static uint32_t getNodeId(GLTFContext& gltf, const std::string& name)
+static uint32_t getNodeId(GLTFContext& gltf, const char* name)
 {
   for (uint32_t i = 0; i != gltf.nodesStorage.size(); i++) {
     if (gltf.nodesStorage[i].name == name)
@@ -415,18 +416,18 @@ static uint32_t getNodeId(GLTFContext& gltf, const std::string& name)
   return ~0;
 }
 
-void updateLights(GLTFContext& gltf, lvk::IContext* ctx)
+void updateLights(GLTFContext& gltf, lvk::ICommandBuffer& buf)
 {
   for (LightDataGPU& light : gltf.lights) {
     if (light.nodeId == -1)
       continue;
-    light.position  = glm::vec3(gltf.matrices[light.nodeId][3]);
-    light.direction = gltf.matrices[light.nodeId] * glm::vec4(light.direction, 0.0);
+    light.position  = vec3(gltf.matrices[light.nodeId][3]);
+    light.direction = gltf.matrices[light.nodeId] * vec4(light.direction, 0.0);
   }
 
   LVK_ASSERT(gltf.lights.size() <= kMaxLights);
 
-  ctx->upload(gltf.lightsBuffer, gltf.lights.data(), sizeof(LightDataGPU) * gltf.lights.size());
+  buf.cmdUpdateBuffer(gltf.lightsBuffer, 0, gltf.lights.size() * sizeof(LightDataGPU), gltf.lights.data());
 }
 
 void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
@@ -483,8 +484,8 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
       if (mesh->mNumBones == 0) {
         auto& vertex    = skinningData[vertices.size() - 1];
         vertex.meshId   = m;
-        vertex.position = vec3(v.x, v.y, v.z);
-		  vertex.normal = vec3(n.x, n.y, n.z);
+        vertex.position = vec4(v.x, v.y, v.z, 0.0f);
+        vertex.normal   = vec4(n.x, n.y, n.z, 0.0f);
       }
     }
 
@@ -496,34 +497,37 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
     }
     startIndex.push_back((uint32_t)indices.size());
 
+    gltf.hasBones = mesh->mNumBones > 0;
     // load bones
-    for (int bone = 0; bone < mesh->mNumBones; ++bone) {
-      uint32_t boneId(numBones);
-      std::string boneName = mesh->mBones[bone]->mName.C_Str();
-      if (!gltf.bonesStorage.contains(boneName)) {
-        gltf.bonesStorage[boneName] = { boneId, aiMatrix4x4ToMat4(mesh->mBones[bone]->mOffsetMatrix) };
-        numBones++;
-      } else {
-        boneId = gltf.bonesStorage[boneName].boneId;
+    for (uint32_t id = 0; id < mesh->mNumBones; id++) {
+      const aiBone& bone   = *mesh->mBones[id];
+      const char* boneName = bone.mName.C_Str();
+
+      const bool hasBone = gltf.bonesStorage.contains(boneName);
+
+      const uint32_t boneId = hasBone ? gltf.bonesStorage[boneName].boneId : numBones++;
+
+      if (!hasBone) {
+        gltf.bonesStorage[boneName] = {
+          .boneId    = boneId,
+          .transform = aiMatrix4x4ToMat4(bone.mOffsetMatrix),
+        };
       }
 
-      auto weights   = mesh->mBones[bone]->mWeights;
-      int numWeights = mesh->mBones[bone]->mNumWeights;
-
-      for (int w = 0; w < numWeights; ++w) {
-        int vertexId = weights[w].mVertexId;
-        float weight = weights[w].mWeight;
+      for (uint32_t w = 0; w < bone.mNumWeights; w++) {
+        const uint32_t vertexId = bone.mWeights[w].mVertexId;
         assert(vertexId <= vertices.size());
-        auto& vertex    = skinningData[vertexId + vertOffset];
-        vertex.position = vertices[vertexId + vertOffset].position;
-		  vertex.normal = vertices[vertexId + vertOffset].normal;
 
-        assert(vertex.meshId == ~0 || vertex.meshId == m);
-        vertex.meshId = m;
-        for (int i = 0; i < MAX_BONES_PER_VERTEX; ++i) {
-          if (vertex.boneId[i] == ~0) {
-            vertex.weight[i] = weight;
-            vertex.boneId[i] = boneId;
+        VertexBoneData& vtx = skinningData[vertexId + vertOffset];
+        assert(vtx.meshId == ~0u || vtx.meshId == m);
+
+        vtx.position = vec4(vertices[vertexId + vertOffset].position, 1.0f);
+        vtx.normal   = vec4(vertices[vertexId + vertOffset].normal, 0.0f);
+        vtx.meshId   = m;
+        for (uint32_t i = 0; i < MAX_BONES_PER_VERTEX; i++) {
+          if (vtx.boneId[i] == ~0u) {
+            vtx.weight[i] = bone.mWeights[w].mWeight;
+            vtx.boneId[i] = boneId;
             break;
           }
         }
@@ -533,34 +537,35 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
     vertOffset += mesh->mNumVertices;
   }
   // load morph targets
-  for (uint32_t c = 0; c < scene->mNumMeshes; ++c) {
-    const aiMesh* m          = scene->mMeshes[c];
-    MorphTarget& morphTarget = gltf.morphTargets[c];
+  for (uint32_t meshId = 0; meshId != scene->mNumMeshes; meshId++) {
+    const aiMesh* m = scene->mMeshes[meshId];
 
-    if (m->mNumAnimMeshes) {
-      morphTarget.meshId = c;
+    if (!m->mNumAnimMeshes)
+      continue;
 
-      for (uint32_t a = 0; a < m->mNumAnimMeshes; a++) {
-        const aiAnimMesh* mesh = m->mAnimMeshes[a];
+    MorphTarget& morphTarget = gltf.morphTargets[meshId];
+    morphTarget.meshId       = meshId;
 
-        for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
-          const aiVector3D v   = mesh->mVertices[i];
-          const aiVector3D n   = mesh->mNormals ? mesh->mNormals[i] : aiVector3D(0.0f, 1.0f, 0.0f);
-			 const aiVector3D srcNorm = m->mNormals ? m->mNormals[i] : aiVector3D(0.0f, 1.0f, 0.0f);
-          const aiColor4D c    = mesh->mColors[0] ? mesh->mColors[0][i] : aiColor4D(1.0f, 1.0f, 1.0f, 1.0f);
-          const aiVector3D uv0 = mesh->mTextureCoords[0] ? mesh->mTextureCoords[0][i] : aiVector3D(0.0f, 0.0f, 0.0f);
-          const aiVector3D uv1 = mesh->mTextureCoords[1] ? mesh->mTextureCoords[1][i] : aiVector3D(0.0f, 0.0f, 0.0f);
-          morphData.push_back({
-              .position = vec3(v.x - m->mVertices[i].x, v.y - m->mVertices[i].y, v.z - m->mVertices[i].z),
-              .normal   = vec3(n.x - srcNorm.x, n.y - srcNorm.y, n.z - srcNorm.z),
-              .color    = vec4(c.r, c.g, c.b, c.a),
-              .uv0      = vec2(uv0.x, 1.0f - uv0.y),
-              .uv1      = vec2(uv1.x, 1.0f - uv1.y),
-          });
-        }
-        morphTarget.offset.push_back(morphTargetsOffset);
-        morphTargetsOffset += mesh->mNumVertices;
+    for (uint32_t a = 0; a < m->mNumAnimMeshes; a++) {
+      const aiAnimMesh* mesh = m->mAnimMeshes[a];
+
+      for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
+        const aiVector3D v       = mesh->mVertices[i];
+        const aiVector3D n       = mesh->mNormals ? mesh->mNormals[i] : aiVector3D(0.0f, 1.0f, 0.0f);
+        const aiVector3D srcNorm = m->mNormals ? m->mNormals[i] : aiVector3D(0.0f, 1.0f, 0.0f);
+        const aiColor4D c        = mesh->mColors[0] ? mesh->mColors[0][i] : aiColor4D(1.0f, 1.0f, 1.0f, 1.0f);
+        const aiVector3D uv0     = mesh->mTextureCoords[0] ? mesh->mTextureCoords[0][i] : aiVector3D(0.0f, 0.0f, 0.0f);
+        const aiVector3D uv1     = mesh->mTextureCoords[1] ? mesh->mTextureCoords[1][i] : aiVector3D(0.0f, 0.0f, 0.0f);
+        morphData.push_back({
+            .position = vec3(v.x - m->mVertices[i].x, v.y - m->mVertices[i].y, v.z - m->mVertices[i].z),
+            .normal   = vec3(n.x - srcNorm.x, n.y - srcNorm.y, n.z - srcNorm.z),
+            .color    = vec4(c.r, c.g, c.b, c.a),
+            .uv0      = vec2(uv0.x, 1.0f - uv0.y),
+            .uv1      = vec2(uv1.x, 1.0f - uv1.y),
+        });
       }
+      morphTarget.offset.push_back(morphTargetsOffset);
+      morphTargetsOffset += mesh->mNumVertices;
     }
   }
 
@@ -573,13 +578,19 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
 
   for (unsigned int mtl = 0; mtl < scene->mNumMaterials; ++mtl) {
     const aiMaterial* mtlDescriptor = scene->mMaterials[mtl];
-    gltf.matPerFrame.materials[mtl] =
-        setupglTFMaterialData(ctx, gltf.samplers, mtlDescriptor, glTFDataPath, gltf.glTFDataholder, gltf.isVolumetricMaterial);
+    gltf.matPerFrame.materials[mtl] = setupglTFMaterialData(
+        ctx, gltf.samplers, mtlDescriptor, glTFDataPath, gltf.glTFDataholder, gltf.isVolumetricMaterial, gltf.doublesided);
+    gltf.inspector.materials.push_back({
+        .name                = mtlDescriptor->GetName().C_Str() ? mtlDescriptor->GetName().C_Str() : "Material",
+        .materialMask        = gltf.matPerFrame.materials[mtl].materialTypeFlags,
+        .currentMaterialMask = gltf.matPerFrame.materials[mtl].materialTypeFlags,
+    });
   }
 
   uint32_t nonBoneMtxId = numBones;
 
-  std::string rootName = scene->mRootNode->mName.C_Str() ? scene->mRootNode->mName.C_Str() : "root";
+  const char* rootName = scene->mRootNode->mName.C_Str() ? scene->mRootNode->mName.C_Str() : "root";
+
   gltf.nodesStorage.push_back({
       .name       = rootName,
       .modelMtxId = getNextMtxId(gltf, rootName, nonBoneMtxId, aiMatrix4x4ToMat4(scene->mRootNode->mTransformation)),
@@ -609,14 +620,14 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
     }
     for (GLTFNodeRef i = 0; i < rootNode->mNumChildren; i++) {
       const aiNode* node    = rootNode->mChildren[i];
-      std::string childName = node->mName.C_Str() ? node->mName.C_Str() : "node";
-      const GLTFNode childNode({
-          .name       = childName,
-          .modelMtxId = getNextMtxId(
-              gltf, childName, nonBoneMtxId,
-              gltf.matrices[gltf.nodesStorage[gltfNode].modelMtxId] * aiMatrix4x4ToMat4(node->mTransformation)),
-          .transform = aiMatrix4x4ToMat4(node->mTransformation),
-      });
+      const char* childName = node->mName.C_Str() ? node->mName.C_Str() : "node";
+      const GLTFNode childNode{
+        .name       = childName,
+        .modelMtxId = getNextMtxId(
+            gltf, childName, nonBoneMtxId,
+            gltf.matrices[gltf.nodesStorage[gltfNode].modelMtxId] * aiMatrix4x4ToMat4(node->mTransformation)),
+        .transform = aiMatrix4x4ToMat4(node->mTransformation),
+      };
       gltf.nodesStorage.push_back(childNode);
       const size_t nodeIdx = gltf.nodesStorage.size() - 1;
       gltf.nodesStorage[gltfNode].children.push_back(nodeIdx);
@@ -663,7 +674,7 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
       .debugName = "Buffer: morphing vertex data",
   });
 
-  gltf.morphsBuffer = gltf.app.ctx_->createBuffer({
+  gltf.morphStatesBuffer = gltf.app.ctx_->createBuffer({
       .usage     = lvk::BufferUsageBits_Vertex | lvk::BufferUsageBits_Storage,
       .storage   = lvk::StorageType_HostVisible,
       .size      = MAX_MORPHS * sizeof(MorphState),
@@ -697,7 +708,7 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
       .smFrag      = gltf.frag,
       .color       = { { .format = ctx->getSwapchainFormat() } },
       .depthFormat = gltf.app.getDepthFormat(),
-      .cullMode    = lvk::CullMode_Back,
+      .cullMode    = gltf.doublesided ? lvk::CullMode_None : lvk::CullMode_Back,
   });
 
   gltf.pipelineTransparent = ctx->createRenderPipeline({
@@ -719,7 +730,7 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
   });
 
   gltf.matBuffer = ctx->createBuffer({
-      .usage     = lvk::BufferUsageBits_Uniform,
+      .usage     = lvk::BufferUsageBits_Storage,
       .storage   = lvk::StorageType_HostVisible,
       .size      = sizeof(gltf.matPerFrame),
       .data      = &gltf.matPerFrame,
@@ -761,10 +772,10 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
       LightDataGPU ld;
       const aiLight* light = scene->mLights[i];
 
-      ld.color     = glm::vec3(light->mColorDiffuse[0] / 255.0f, light->mColorDiffuse[1] / 255.0f, light->mColorDiffuse[2] / 255.0f);
+      ld.color     = vec3(light->mColorDiffuse[0], light->mColorDiffuse[1], light->mColorDiffuse[2]);
       ld.nodeId    = getNodeId(gltf, light->mName.C_Str());
-      ld.direction = glm::vec3(light->mDirection[0], light->mDirection[1], light->mDirection[2]);
-      ld.range     = 10000.0f;
+      ld.direction = vec3(light->mDirection[0], light->mDirection[1], light->mDirection[2]);
+      ld.range     = 1000.0f;
 
       if (light->mType == aiLightSource_POINT) {
         ld.type = LightType_Point;
@@ -784,17 +795,19 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
     }
   }
 
-  updateLights(gltf, ctx.get());
-
-  for (uint32_t i = 0; i != LVK_ARRAY_NUM_ELEMENTS(gltf.perFrameBuffer); i++) {
-    gltf.perFrameBuffer[i] = ctx->createBuffer({
-        .usage     = lvk::BufferUsageBits_Uniform,
-        .storage   = lvk::StorageType_HostVisible,
-        .size      = sizeof(GLTFFrameData),
-        .data      = &gltf.frameData,
-        .debugName = ("Per Frame data " + std::to_string(i)).c_str(),
-    });
+  {
+    lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
+    updateLights(gltf, buf);
+    ctx->submit(buf);
   }
+
+  gltf.perFrameBuffer = ctx->createBuffer({
+      .usage     = lvk::BufferUsageBits_Uniform,
+      .storage   = lvk::StorageType_Device,
+      .size      = sizeof(GLTFFrameData),
+      .data      = &gltf.frameData,
+      .debugName = "GLTFContext::perFrameBuffer",
+  });
 
   LVK_ASSERT(gltf.pipelineSolid.valid());
 
@@ -818,11 +831,11 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
 
 void updateCamera(GLTFContext& gltf, const mat4& model, mat4& view, mat4& proj, float aspectRatio)
 {
-  if (gltf.activeCamera == ~0 || gltf.activeCamera >= gltf.cameras.size())
+  if (gltf.inspector.activeCamera == ~0u || gltf.inspector.activeCamera >= gltf.cameras.size())
     return;
 
-  const GLTFCamera& cam = gltf.cameras[gltf.activeCamera];
-  if (cam.nodeIdx == ~0)
+  const GLTFCamera& cam = gltf.cameras[gltf.inspector.activeCamera];
+  if (cam.nodeIdx == ~0u)
     return;
 
   view = glm::inverse(model * gltf.matrices[cam.nodeIdx]);
@@ -867,15 +880,15 @@ void buildTransformsList(GLTFContext& gltf)
       .usage     = lvk::BufferUsageBits_Storage,
       .storage   = lvk::StorageType_HostVisible,
       .size      = gltf.transforms.size() * sizeof(GLTFTransforms),
-      .data      = &gltf.transforms[0],
+      .data      = gltf.transforms.data(),
       .debugName = "Per Frame data",
   });
 
   gltf.matricesBuffer = gltf.app.ctx_->createBuffer({
       .usage     = lvk::BufferUsageBits_Storage,
       .storage   = lvk::StorageType_HostVisible,
-      .size      = gltf.matrices.size() * sizeof(glm::mat4),
-      .data      = &gltf.matrices[0],
+      .size      = gltf.matrices.size() * sizeof(mat4),
+      .data      = gltf.matrices.data(),
       .debugName = "Node matrices",
   });
 }
@@ -896,8 +909,8 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
 
   const vec4 camPos = glm::inverse(view)[3];
 
-  static auto cameras = camerasGLTF(gltf);
-  static auto animations = animationsGLTF(gltf);
+  gltf.inspector.animations = animationsGLTF(gltf);
+  gltf.inspector.cameras    = camerasGLTF(gltf);
 
   if (rebuildRenderList || gltf.transforms.empty()) {
     buildTransformsList(gltf);
@@ -924,7 +937,7 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
     uint32_t transmissionFramebufferSampler;
     uint32_t lightsCount;
   } pushConstants = {
-    .draw                           = ctx->gpuAddress(gltf.perFrameBuffer[gltf.currentOffscreenTex]),
+    .draw                           = ctx->gpuAddress(gltf.perFrameBuffer),
     .materials                      = ctx->gpuAddress(gltf.matBuffer),
     .environments                   = ctx->gpuAddress(gltf.envBuffer),
     .lights                         = ctx->gpuAddress(gltf.lightsBuffer),
@@ -936,7 +949,9 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
     .lightsCount                    = (uint32_t)gltf.lights.size(),
   };
 
-  ctx->upload(gltf.perFrameBuffer[gltf.currentOffscreenTex], &gltf.frameData, sizeof(GLTFFrameData));
+  lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
+
+  buf.cmdUpdateBuffer(gltf.perFrameBuffer, gltf.frameData);
 
   const bool isSizeChanged = ctx->getDimensions(ctx->getCurrentSwapchainTexture()) != ctx->getDimensions(gltf.offscreenTex[0]);
 
@@ -956,7 +971,7 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
   }
 
   auto drawUI = [&](lvk::ICommandBuffer& buf, const lvk::Framebuffer& framebuffer) {
-    if (gltf.activeCamera == ~0)
+    if (gltf.inspector.activeCamera == ~0u)
       gltf.app.drawGrid(buf, proj, vec3(0, -1.0f, 0));
     else
       gltf.app.drawGrid(buf, proj * view, vec3(0, -1.0f, 0), camPos);
@@ -964,10 +979,23 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
     gltf.app.imgui_->beginFrame(framebuffer);
     gltf.app.drawFPS();
     gltf.app.drawMemo();
-    gltf.app.drawCameras(cameras, gltf.activeCamera);
-	 gltf.app.drawAnimations(animations, &gltf.activeAnimations, gltf.activeAnimations.size() > 1 ? &gltf.animationBlend  : nullptr);
 
-    if (gltf.activeCamera >= gltf.cameras.size() && !gltf.cameras.empty()) {
+    gltf.app.drawGTFInspector(gltf.inspector);
+
+    bool uploadMat = false;
+    for (uint32_t m = 0; m != gltf.inspector.materials.size(); m++) {
+      if (gltf.inspector.materials[m].modified) {
+        gltf.inspector.materials[m].modified            = false;
+        uploadMat                                       = true;
+        gltf.matPerFrame.materials[m].materialTypeFlags = gltf.inspector.materials[m].currentMaterialMask;
+      }
+    }
+
+    if (uploadMat) {
+      ctx->upload(gltf.matBuffer, &gltf.matPerFrame, sizeof(gltf.matPerFrame));
+    }
+
+    if (gltf.inspector.activeCamera >= gltf.cameras.size() && !gltf.cameras.empty()) {
       gltf.canvas3d.clear();
       gltf.canvas3d.setMatrix(proj * view);
       const float windowAspect = ctx->getAspectRatio(framebuffer.color[0].texture);
@@ -983,32 +1011,30 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
     gltf.app.imgui_->endFrame(buf);
   };
 
-  lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
-
   if (gltf.animated) {
-    ctx->upload(gltf.matricesBuffer, &gltf.matrices[0], gltf.matrices.size() * sizeof(glm::mat4));
-    updateLights(gltf, ctx.get());
+    buf.cmdUpdateBuffer(gltf.matricesBuffer, 0, gltf.matrices.size() * sizeof(mat4), gltf.matrices.data());
+    if (gltf.morphing) {
+      buf.cmdUpdateBuffer(gltf.morphStatesBuffer, 0, gltf.morphStates.size() * sizeof(MorphState), gltf.morphStates.data());
+    }
+    updateLights(gltf, buf);
 
-    if (gltf.morphing)
-      ctx->upload(gltf.morphsBuffer, &gltf.morphStates[0], gltf.morphStates.size() * sizeof(MorphState));
-
-    if (gltf.skinning || gltf.morphing) {
+    if ((gltf.skinning && gltf.hasBones) || gltf.morphing) {
       // Run compute shader to do skinning and morphing
 
       struct ComputeSetup {
         uint64_t matrices;
-        uint64_t morphs;
+        uint64_t morphStates;
         uint64_t morphVertexBuffer;
         uint64_t inBuffer;
         uint64_t outBuffer;
-        uint32_t numMorphs;
+        uint32_t numMorphStates;
       } pc = {
         .matrices          = ctx->gpuAddress(gltf.matricesBuffer),
-        .morphs            = ctx->gpuAddress(gltf.morphsBuffer),
+        .morphStates       = ctx->gpuAddress(gltf.morphStatesBuffer),
         .morphVertexBuffer = ctx->gpuAddress(gltf.vertexMorphingBuffer),
         .inBuffer          = ctx->gpuAddress(gltf.vertexSkinningBuffer),
         .outBuffer         = ctx->gpuAddress(gltf.vertexBuffer),
-        .numMorphs         = static_cast<uint32_t>(gltf.morphStates.size()),
+        .numMorphStates    = static_cast<uint32_t>(gltf.morphStates.size()),
       };
       buf.cmdBindComputePipeline(gltf.pipelineComputeAnimations);
       buf.cmdPushConstants(pc);
@@ -1016,7 +1042,8 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
           {
               .width = gltf.maxVertices / 16,
       },
-          { .buffers = { { lvk::BufferHandle(gltf.morphsBuffer) },
+          { .buffers = { { lvk::BufferHandle(gltf.vertexBuffer) },
+                         { lvk::BufferHandle(gltf.morphStatesBuffer) },
                          { lvk::BufferHandle(gltf.matricesBuffer) },
                          { lvk::BufferHandle(gltf.vertexSkinningBuffer) } } });
     }
@@ -1092,6 +1119,7 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
 
     // Volumetric opaque
     buf.cmdBindRenderPipeline(gltf.pipelineSolid);
+    buf.cmdPushConstants(pushConstants);
     for (uint32_t transformId : gltf.transmissionNodes) {
       const GLTFTransforms transform = gltf.transforms[transformId];
       buf.cmdPushDebugGroupLabel(gltf.nodesStorage[transform.nodeRef].name.c_str(), 0x00FF00ff);
@@ -1102,6 +1130,7 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
 
     //
     buf.cmdBindRenderPipeline(gltf.pipelineTransparent);
+    buf.cmdPushConstants(pushConstants);
     for (uint32_t transformId : gltf.transparentNodes) {
       const GLTFTransforms transform = gltf.transforms[transformId];
       buf.cmdPushDebugGroupLabel(gltf.nodesStorage[transform.nodeRef].name.c_str(), 0x00FF00ff);
@@ -1173,7 +1202,7 @@ void animateGLTF(GLTFContext& gltf, AnimationState& anim, float dt)
   }
 
   // we support only one single animation at this time
-  anim.active = anim.animId != ~0;
+  anim.active   = anim.animId != ~0;
   gltf.animated = anim.active;
   if (anim.active) {
     updateAnimation(gltf, anim, dt);
@@ -1191,17 +1220,16 @@ void animateBlendingGLTF(GLTFContext& gltf, AnimationState& anim1, AnimationStat
     });
   }
 
-  anim1.active = anim1.animId != ~0;
-  anim2.active = anim2.animId != ~0;
+  anim1.active  = anim1.animId != ~0;
+  anim2.active  = anim2.animId != ~0;
   gltf.animated = anim1.active || anim2.active;
   if (anim1.active && anim2.active) {
     updateAnimationBlending(gltf, anim1, anim2, weight, dt);
   } else if (anim1.active) {
-	  updateAnimation(gltf, anim1, dt);
+    updateAnimation(gltf, anim1, dt);
   } else if (anim2.active) {
-	  updateAnimation(gltf, anim2, dt);
+    updateAnimation(gltf, anim2, dt);
   }
-
 }
 
 std::vector<std::string> camerasGLTF(GLTFContext& gltf)
@@ -1219,12 +1247,12 @@ std::vector<std::string> camerasGLTF(GLTFContext& gltf)
 
 std::vector<std::string> animationsGLTF(GLTFContext& gltf)
 {
-	std::vector<std::string> names;
-	names.reserve(gltf.animations.size());
+  std::vector<std::string> names;
+  names.reserve(gltf.animations.size());
 
-	for (auto c : gltf.animations) {
-		names.push_back(c.name);
-	}
+  for (auto c : gltf.animations) {
+    names.push_back(c.name);
+  }
 
-	return names;
+  return names;
 }

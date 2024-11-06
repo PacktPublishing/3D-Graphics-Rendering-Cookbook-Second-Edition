@@ -6,6 +6,7 @@ int main()
 {
   VulkanApp app({
       .initialCameraPos = vec3(0.0f, 1.0f, -4.0f),
+		.showGLTFInspector = true,
   });
 
   GLTFContext gltf(app);

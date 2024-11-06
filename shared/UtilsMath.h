@@ -7,6 +7,7 @@
 
 #include <vector>
 
+using glm::mat4;
 using glm::vec2;
 using glm::vec3;
 using glm::vec4;
@@ -92,20 +93,18 @@ inline float randomFloat(float min, float max)
 	return min + (max- min) * random01();
 }
 
-inline glm::vec3 randomVec(const glm::vec3& min, const glm::vec3& max)
+inline vec3 randomVec(const vec3& min, const vec3& max)
 {
-	return glm::vec3(randomFloat(min.x, max.x), randomFloat(min.y, max.y), randomFloat(min.z, max.z));
+	return vec3(randomFloat(min.x, max.x), randomFloat(min.y, max.y), randomFloat(min.z, max.z));
 }
 
-inline glm::vec3 randVec()
+inline vec3 randVec()
 {
-	return randomVec(glm::vec3(-5, -5, -5), glm::vec3(5, 5, 5));
+	return randomVec(vec3(-5, -5, -5), vec3(5, 5, 5));
 }
 
-inline void getFrustumPlanes(glm::mat4 mvp, glm::vec4* planes)
+inline void getFrustumPlanes(mat4 mvp, vec4* planes)
 {
-	using glm::vec4;
-
 	mvp = glm::transpose(mvp);
 	planes[0] = vec4(mvp[3] + mvp[0]); // left
 	planes[1] = vec4(mvp[3] - mvp[0]); // right
@@ -115,10 +114,8 @@ inline void getFrustumPlanes(glm::mat4 mvp, glm::vec4* planes)
 	planes[5] = vec4(mvp[3] - mvp[2]); // far
 }
 
-inline void getFrustumCorners(glm::mat4 mvp, glm::vec4* points)
+inline void getFrustumCorners(mat4 mvp, vec4* points)
 {
-	using glm::vec4;
-
 	const vec4 corners[] = {
 		vec4(-1, -1, -1, 1), vec4(1, -1, -1, 1),
 		vec4(1,  1, -1, 1),  vec4(-1,  1, -1, 1),
@@ -137,7 +134,6 @@ inline void getFrustumCorners(glm::mat4 mvp, glm::vec4* points)
 inline bool isBoxInFrustum(glm::vec4* frustumPlanes, glm::vec4* frustumCorners, const BoundingBox& box)
 {
 	using glm::dot;
-	using glm::vec4;
 
 	for ( int i = 0; i < 6; i++ ) {
 		int r = 0;

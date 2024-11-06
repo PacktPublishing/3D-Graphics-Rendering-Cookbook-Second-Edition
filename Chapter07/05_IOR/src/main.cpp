@@ -7,6 +7,7 @@ int main()
   VulkanApp app({
       .initialCameraPos    = vec3(0.0f, -0.4f, 0.2f),
       .initialCameraTarget = vec3(0.0f, -0.5f, 0.0f),
+		.showGLTFInspector = true,
   });
 
   app.positioner_.maxSpeed_ = 0.3f;

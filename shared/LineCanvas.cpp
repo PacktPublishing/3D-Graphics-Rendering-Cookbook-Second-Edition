@@ -80,7 +80,7 @@ void LineCanvas3D::plane(
   }
 }
 
-void LineCanvas3D::box(const glm::mat4& m, const glm::vec3& size, const glm::vec4& c)
+void LineCanvas3D::box(const mat4& m, const vec3& size, const vec4& c)
 {
   vec3 pts[8] = {
     vec3(+size.x, +size.y, +size.z), vec3(+size.x, +size.y, -size.z), vec3(+size.x, -size.y, +size.z), vec3(+size.x, -size.y, -size.z),
@@ -106,9 +106,9 @@ void LineCanvas3D::box(const glm::mat4& m, const glm::vec3& size, const glm::vec
   line(pts[3], pts[7], c);
 }
 
-void LineCanvas3D::box(const glm::mat4& m, const BoundingBox& box, const glm::vec4& color)
+void LineCanvas3D::box(const mat4& m, const BoundingBox& box, const glm::vec4& color)
 {
-  this->box(m * glm::translate(glm::mat4(1.f), .5f * (box.min_ + box.max_)), 0.5f * vec3(box.max_ - box.min_), color);
+  this->box(m * glm::translate(mat4(1.f), .5f * (box.min_ + box.max_)), 0.5f * vec3(box.max_ - box.min_), color);
 }
 
 void LineCanvas3D::frustum(const mat4& camView, const mat4& camProj, const vec4& color)
@@ -119,8 +119,8 @@ void LineCanvas3D::frustum(const mat4& camView, const mat4& camProj, const vec4&
   vec3 pp[8];
 
   for (int i = 0; i < 8; i++) {
-    glm::vec4 q = glm::inverse(camView) * glm::inverse(camProj) * glm::vec4(corners[i], 1.0f);
-    pp[i]       = glm::vec3(q.x / q.w, q.y / q.w, q.z / q.w);
+    vec4 q = glm::inverse(camView) * glm::inverse(camProj) * vec4(corners[i], 1.0f);
+    pp[i]  = vec3(q.x / q.w, q.y / q.w, q.z / q.w);
   }
   line(pp[0], pp[4], color);
   line(pp[1], pp[5], color);

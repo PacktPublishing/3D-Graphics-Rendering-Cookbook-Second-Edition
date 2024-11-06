@@ -153,7 +153,7 @@ int main()
   bool drawBoundingBoxes = false;
   int selectedNode       = -1;
 
-  const VKMesh mesh(ctx, meshData, scene, app.getDepthFormat());
+  const VKMesh mesh(ctx, meshData, scene, ctx->getSwapchainFormat(), app.getDepthFormat());
 
   app.run([&](uint32_t width, uint32_t height, float aspectRatio, float deltaSeconds) {
     const mat4 view = app.camera_.getViewMatrix();

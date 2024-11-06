@@ -7,11 +7,14 @@ int main()
   VulkanApp app({
       .initialCameraPos    = vec3(0.0f, -0.2f, -1.5f),
       .initialCameraTarget = vec3(0.0f, -0.5f, 0.0f),
+		.showGLTFInspector = true,
   });
 
   app.positioner_.maxSpeed_ = 2.0f;
 
   GLTFContext gltf(app);
+  gltf.inspector.showMaterials = true;
+
 
   loadGLTF(
       gltf, "deps/src/glTF-Sample-Assets/Models/ClearcoatWicker/glTF/ClearcoatWicker.gltf",

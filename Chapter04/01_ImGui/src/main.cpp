@@ -66,7 +66,7 @@ int main()
       buf.cmdBeginRendering({ .color = { { .loadOp = lvk::LoadOp_Clear, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } } } }, framebuffer);
       imgui->beginFrame(framebuffer);
       ImGui::Begin("Texture Viewer", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-      ImGui::Image(ImTextureID(texture.indexAsVoid()), ImVec2(512, 512));
+      ImGui::Image(texture.index(), ImVec2(512, 512));
       ImGui::ShowDemoWindow();
       ImGui::End();
       imgui->endFrame(buf);

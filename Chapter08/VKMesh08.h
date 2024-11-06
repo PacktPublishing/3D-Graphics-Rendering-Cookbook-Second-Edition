@@ -313,6 +313,7 @@ class VKMesh final
 public:
   VKMesh(
       const std::unique_ptr<lvk::IContext>& ctx, const MeshData& meshData, const Scene& scene,
+	  lvk::Format colorFormat,
       lvk::Format depthFormat, uint32_t numSamples = 1,lvk ::Holder<lvk::ShaderModuleHandle>&& vert = {},
       lvk::Holder<lvk::ShaderModuleHandle>&& frag = {})
   : ctx(ctx)
@@ -422,7 +423,7 @@ public:
         .vertexInput = meshData.streams,
         .smVert      = vert_,
         .smFrag      = frag_,
-        .color       = { { .format = ctx->getSwapchainFormat() } },
+        .color       = { { .format = colorFormat } },
         .depthFormat = depthFormat,
         .cullMode    = lvk::CullMode_None,
         .samplesCount = numSamples,
@@ -432,7 +433,7 @@ public:
         .vertexInput = meshData.streams,
         .smVert      = vert_,
         .smFrag      = frag_,
-        .color       = { { .format = ctx->getSwapchainFormat() } },
+        .color       = { { .format = colorFormat } },
         .depthFormat = depthFormat,
         .cullMode    = lvk::CullMode_None,
         .polygonMode = lvk::PolygonMode_Line,

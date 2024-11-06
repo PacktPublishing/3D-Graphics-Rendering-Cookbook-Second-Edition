@@ -1,0 +1,76 @@
+//
+layout (local_size_x = 16, local_size_y = 16) in;
+
+layout (set = 0, binding = 0) uniform texture2D kTextures2D[];
+layout (set = 0, binding = 1) uniform sampler   kSamplers[];
+
+layout (set = 0, binding = 2, rgba8) uniform writeonly image2D kTextures2DOut[];
+
+ivec2 textureBindlessSize2D(uint textureid) {
+  return textureSize(nonuniformEXT(kTextures2D[textureid]), 0);
+}
+
+vec4 textureBindless2D(uint textureid, vec2 uv) {
+  return textureLod(nonuniformEXT(sampler2D(kTextures2D[textureid], kSamplers[0])), uv, 0);
+}
+
+layout (constant_id = 0) const bool kIsHorizontal = true;
+
+layout(push_constant) uniform PushConstants {
+  uint texDepth;
+  uint texIn;
+  uint texOut;
+  float depthThreshold;
+} pc;
+
+const int kFilterSize = 17;
+
+// https://drdesten.github.io/web/tools/gaussian_kernel/
+const float gaussWeights[kFilterSize] = float[](
+  0.00001525878906,
+  0.0002441406250,
+  0.001831054688,
+  0.008544921875,
+  0.02777099609,
+  0.06665039063,
+  0.1221923828,
+  0.1745605469,
+  0.1963806152,
+  0.1745605469,
+  0.1221923828,
+  0.06665039063,
+  0.02777099609,
+  0.008544921875,
+  0.001831054688,
+  0.0002441406250,
+  0.00001525878906
+);
+
+void main() {
+  const vec2 size = textureBindlessSize2D(pc.texIn).xy;
+  const vec2 xy   = gl_GlobalInvocationID.xy;
+
+  if (xy.x > size.x || xy.y > size.y)
+    return;
+
+  const vec2 texCoord = (gl_GlobalInvocationID.xy + vec2(0.5)) / size;
+
+  const float texScaler = 1.0 / (kIsHorizontal ? size.x : size.y);
+
+  vec3 c = vec3(0.0);
+
+  vec3  fragColor = textureBindless2D(pc.texIn,    texCoord).rgb;
+  float fragDepth = textureBindless2D(pc.texDepth, texCoord).r;
+
+  for ( int i = 0; i != kFilterSize; i++ ) {
+    float offset = float(i - kFilterSize/2);
+    vec2 uv = texCoord + texScaler * (kIsHorizontal ? vec2(offset, 0) : vec2(0, offset));
+    vec3  color = textureBindless2D(pc.texIn, uv).rgb;
+    float depth = textureBindless2D(pc.texDepth, uv).r;
+    // bilateral blur
+    float weight = clamp(abs(depth - fragDepth) * pc.depthThreshold, 0.0, 1.0);
+    c += mix(color, fragColor, weight) * gaussWeights[i];
+  }
+
+  imageStore(kTextures2DOut[pc.texOut], ivec2(xy), vec4(c, 1.0) );
+}

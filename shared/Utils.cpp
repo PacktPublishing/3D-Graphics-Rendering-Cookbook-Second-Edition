@@ -13,7 +13,7 @@
 #include <unordered_map>
 
 // lvk::ShaderModuleHandle -> GLSL source code
-std::unordered_map<void*, std::string> debugGLSLSourceCode;
+std::unordered_map<uint32_t, std::string> debugGLSLSourceCode;
 
 bool endsWith(const char* s, const char* part)
 {
@@ -129,7 +129,7 @@ lvk::Holder<lvk::ShaderModuleHandle> loadShaderModule(const std::unique_ptr<lvk:
     return {};
   }
 
-  debugGLSLSourceCode[handle.indexAsVoid()] = code;
+  debugGLSLSourceCode[handle.index()] = code;
 
   return handle;
 }
