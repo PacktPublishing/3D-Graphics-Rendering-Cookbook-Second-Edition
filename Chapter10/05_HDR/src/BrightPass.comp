@@ -1,0 +1,54 @@
+﻿//
+layout (local_size_x = 16, local_size_y = 16) in;
+
+layout (set = 0, binding = 0) uniform texture2D kTextures2D[];
+layout (set = 0, binding = 1) uniform sampler   kSamplers[];
+
+layout (set = 0, binding = 2, rgba16) uniform writeonly image2D kTextures2DOutRGBA[];
+layout (set = 0, binding = 2, r16) uniform writeonly image2D kTextures2DOutR[];
+
+layout(push_constant) uniform PushConstants {
+  uint texColor;
+  uint texOut;       // rgba16
+  uint texLuminance; // r16
+  uint smpl;
+  float exposure;
+} pc;
+
+ivec2 textureBindlessSize2D(uint textureid) {
+  return textureSize(nonuniformEXT(kTextures2D[textureid]), 0);
+}
+
+vec4 textureBindless2D(uint textureid, vec2 uv) {
+  return textureLod(nonuniformEXT(sampler2D(kTextures2D[textureid], kSamplers[pc.smpl])), uv, 0);
+}
+
+void main() {
+  const vec2 sizeIn  = textureBindlessSize2D(pc.texColor).xy;
+  const vec2 sizeOut = textureBindlessSize2D(pc.texOut).xy;
+
+  const vec2 xy   = gl_GlobalInvocationID.xy;
+  const vec2 uv0   = (gl_GlobalInvocationID.xy + vec2(0)) / sizeOut;
+  const vec2 uv1   = (gl_GlobalInvocationID.xy + vec2(1)) / sizeOut;
+
+  if (xy.x > sizeIn.x || xy.y > sizeIn.y)
+    return;
+
+  vec2 dxdy = (uv1-uv0) / 3;
+
+  vec4 color = vec4(0);
+
+  // 3x3 box filter
+  for (int v = 0; v != 3; v++) {
+    for (int u = 0; u != 3; u++) {
+      color += textureBindless2D(pc.texColor, uv0 + vec2(u, v) * dxdy );
+    }
+  }
+
+  float luminance = pc.exposure * dot(color.rgb / 9, vec3(0.2126, 0.7152, 0.0722));
+
+  vec3 rgb = luminance > 1.0 ? color.rgb : vec3(0);
+
+  imageStore(kTextures2DOutRGBA[pc.texOut],    ivec2(xy), vec4( rgb, 1.0 ) );
+  imageStore(kTextures2DOutR[pc.texLuminance], ivec2(xy), vec4(luminance ) );
+}

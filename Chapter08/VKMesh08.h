@@ -420,13 +420,14 @@ public:
     frag_ = frag.valid() ? std::move(frag) : loadShaderModule(ctx, "Chapter08/02_SceneGraph/src/main.frag");
 
     pipeline_ = ctx->createRenderPipeline({
-        .vertexInput = meshData.streams,
-        .smVert      = vert_,
-        .smFrag      = frag_,
-        .color       = { { .format = colorFormat } },
-        .depthFormat = depthFormat,
-        .cullMode    = lvk::CullMode_None,
-        .samplesCount = numSamples,
+        .vertexInput      = meshData.streams,
+        .smVert           = vert_,
+        .smFrag           = frag_,
+        .color            = { { .format = colorFormat } },
+        .depthFormat      = depthFormat,
+        .cullMode         = lvk::CullMode_None,
+        .samplesCount     = numSamples,
+        .minSampleShading = numSamples > 1 ? 0.25f : 0.0f,
     });
 
     pipelineWireframe_ = ctx->createRenderPipeline({

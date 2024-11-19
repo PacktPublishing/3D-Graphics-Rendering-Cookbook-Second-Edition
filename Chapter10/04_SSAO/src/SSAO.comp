@@ -1,0 +1,70 @@
+﻿//
+layout (local_size_x = 16, local_size_y = 16) in;
+
+layout (set = 0, binding = 0) uniform texture2D kTextures2D[];
+layout (set = 0, binding = 1) uniform sampler   kSamplers[];
+
+layout (set = 0, binding = 2, rgba8) uniform writeonly image2D kTextures2DOut[];
+
+layout(push_constant) uniform PushConstants {
+  uint texDepth;
+  uint texRotation;
+  uint texOut;
+  uint smpl;
+  float zNear;
+  float zFar;
+  float radius;
+  float attScale;
+  float distScale;
+} pc;
+
+ivec2 textureBindlessSize2D(uint textureid) {
+  return textureSize(nonuniformEXT(kTextures2D[textureid]), 0);
+}
+
+vec4 textureBindless2D(uint textureid, vec2 uv) {
+  return textureLod(nonuniformEXT(sampler2D(kTextures2D[textureid], kSamplers[pc.smpl])), uv, 0);
+}
+
+const vec3 offsets[8] = vec3[8](
+  vec3(-0.5, -0.5, -0.5),
+  vec3( 0.5, -0.5, -0.5),
+  vec3(-0.5,  0.5, -0.5),
+  vec3( 0.5,  0.5, -0.5),
+  vec3(-0.5, -0.5,  0.5),
+  vec3( 0.5, -0.5,  0.5),
+  vec3(-0.5,  0.5,  0.5),
+  vec3( 0.5,  0.5,  0.5)
+);
+
+float scaleZ(float smpl) {
+  return (pc.zFar * pc.zNear) / (smpl * (pc.zFar-pc.zNear) - pc.zFar);
+}
+
+void main() {
+  const vec2 size = textureBindlessSize2D(pc.texDepth).xy;
+
+  const vec2 xy   = gl_GlobalInvocationID.xy;
+  const vec2 uv   = (gl_GlobalInvocationID.xy + vec2(0.5)) / size;
+
+  if (xy.x > size.x || xy.y > size.y)
+    return;
+    
+  const float Z     = scaleZ( textureBindless2D(pc.texDepth, uv).x );
+  const vec3  plane = textureBindless2D(pc.texRotation, xy / 4.0).xyz - vec3(1.0);
+
+  float att = 0.0;
+  
+  for ( int i = 0; i < 8; i++ )
+  {
+    vec3  rSample = reflect( offsets[i], plane );
+    float zSample = scaleZ( textureBindless2D( pc.texDepth, uv + pc.radius*rSample.xy / Z ).x );
+    float dist    = max(zSample - Z, 0.0) / pc.distScale;
+    float occl    = 15.0 * max( dist * (2.0 - dist), 0.0 );
+    att += 1.0 / (1.0 + occl*occl);
+  }
+    
+  att = clamp(att * att / 64.0 + 0.45, 0.0, 1.0) * pc.attScale;
+
+  imageStore(kTextures2DOut[pc.texOut], ivec2(xy), vec4( vec3(att), 1.0 ) );
+}

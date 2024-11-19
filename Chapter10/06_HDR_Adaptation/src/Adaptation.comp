@@ -1,0 +1,21 @@
+/**/
+layout (local_size_x = 1, local_size_y = 1) in;
+
+layout (set = 0, binding = 2, r16) uniform readonly  image2D kTextures2DIn[];
+layout (set = 0, binding = 2, r16) uniform writeonly image2D kTextures2DOut[];
+
+layout(push_constant) uniform PushConstants {
+  uint texCurrSceneLuminance;
+  uint texPrevAdaptedLuminance;
+  uint texAdaptedOut;
+  float adaptationSpeed;
+} pc;
+
+void main() {
+  float lumCurr = imageLoad(kTextures2DIn[pc.texCurrSceneLuminance  ], ivec2(0, 0)).x;
+  float lumPrev = imageLoad(kTextures2DIn[pc.texPrevAdaptedLuminance], ivec2(0, 0)).x;
+
+  float newAdaptation = lumPrev + (lumCurr - lumPrev) * (1.0 - pow(0.98, pc.adaptationSpeed));
+
+  imageStore(kTextures2DOut[pc.texAdaptedOut], ivec2(0, 0), vec4(newAdaptation));
+}
