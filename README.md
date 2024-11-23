@@ -1,12 +1,10 @@
-# 3D Graphics Rendering Cookbook - 2nd Edition [![Build Status](https://github.com/PacktPublishing/3D-Graphics-Rendering-Cookbook-Second-Edition/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/PacktPublishing/3D-Graphics-Rendering-Cookbook-Second-Edition/actions)
+# Vulkan 3D Graphics Rendering Cookbook - 2nd Edition [![Build Status](https://github.com/PacktPublishing/3D-Graphics-Rendering-Cookbook-Second-Edition/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/PacktPublishing/3D-Graphics-Rendering-Cookbook-Second-Edition/actions)
 
 **A comprehensive guide to exploring rendering algorithms in modern Vulkan**
 
 by <a href="https://github.com/corporateshark">Sergey Kosarevsky</a> & <a href="https://github.com/LLViktor">Viktor Latypov</a> & <a href="https://github.com/rudybear">Alexey Medvedev</a>
 
-This is the code repository for [3D Graphics Rendering Cookbook - 2nd Edition](https://www.packtpub.com/game-development/3d-graphics-rendering-cookbook), published by Packt.
-
-
+This is the code repository for [Vulkan 3D Graphics Rendering Cookbook - 2nd Edition](https://www.packtpub.com/en-us/product/vulkan-3d-graphics-rendering-cookbook-9781803236612), published by Packt.
 
 ## What is this book about?
 Vulkan is a low-overhead, cross-platform 3D graphics API that targets high-performance applications. 3D Graphics Rendering Cookbook helps you learn about modern graphics rendering algorithms and techniques using C++ programming with the Vulkan API.
