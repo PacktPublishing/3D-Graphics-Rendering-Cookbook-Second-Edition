@@ -4,6 +4,8 @@
 
 by <a href="https://github.com/corporateshark">Sergey Kosarevsky</a> & <a href="https://github.com/LLViktor">Viktor Latypov</a> & <a href="https://github.com/rudybear">Alexey Medvedev</a>
 
+<a href="https://www.packtpub.com/en-us/product/vulkan-3d-graphics-rendering-cookbook-9781803236612"><img src=".github/cover_image.png" alt="Book Name" height="256px" align="right"></a>
+
 This is the code repository for [Vulkan 3D Graphics Rendering Cookbook - 2nd Edition](https://www.packtpub.com/en-us/product/vulkan-3d-graphics-rendering-cookbook-9781803236612), published by Packt.
 
 ## What is this book about?
@@ -20,8 +22,7 @@ This book covers the following exciting features:
 * Implement a physically based glTF2 rendering pipeline from scratch
 * Integrate a physics library with your rendering engine
 
-If you feel this book is for you, get your [copy](https://www.amazon.com/Graphics-Rendering-Cookbook-comprehensive-algorithms/dp/1838986197) today!
-
+If you feel this book is for you, get your [copy](https://www.amazon.com/Vulkan-Graphics-Rendering-Cookbook-High-Performance/dp/1803248114) today!
 
 Software and Hardware List
 --------------------------
