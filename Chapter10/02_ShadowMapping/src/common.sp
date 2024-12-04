@@ -8,7 +8,6 @@ layout(std430, buffer_reference) readonly buffer PerFrameData {
   vec4 lightPos;
   uint shadowTexture;
   uint shadowSampler;
-  float depthBias;
 };
 
 layout(push_constant) uniform PushConstants {

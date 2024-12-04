@@ -99,7 +99,6 @@ int main()
     vec4 lightPos;
     uint32_t shadowTexture;
     uint32_t shadowSampler;
-    float depthBias;
   };
   lvk::Holder<lvk::BufferHandle> bufferPerFrame = ctx->createBuffer({
       .usage     = lvk::BufferUsageBits_Uniform,
@@ -164,7 +163,8 @@ int main()
   float g_LightXAngle = 240.0f;
   float g_LightYAngle = 0.0f;
 
-  float g_LightDepthBias = -0.005f;
+  float g_LightDepthBiasConst = 1.5f;
+  float g_LightDepthBiasSlope = 3.0f;
 
   bool g_RotateModel = true;
   bool g_RotateLight = true;
@@ -230,7 +230,10 @@ int main()
         .perFrameBuffer = ctx->gpuAddress(bufferPerFrame),
     });
     buf.cmdBindDepthState({ .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true });
+    buf.cmdSetDepthBias(g_LightDepthBiasConst, g_LightDepthBiasSlope);
+    buf.cmdSetDepthBiasEnable(true);
     buf.cmdDrawIndexed(duckNumIndices);
+    buf.cmdSetDepthBiasEnable(false);
     buf.cmdEndRendering();
     // 2. Render scene
     const mat4 scaleBias = mat4(0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.5, 0.5, 0.0, 1.0);
@@ -245,7 +248,6 @@ int main()
             .lightPos      = lightPos,
             .shadowTexture = shadowMap.index(),
             .shadowSampler = samplerShadow.index(),
-            .depthBias     = g_LightDepthBias,
         });
 
     buf.cmdBeginRendering(
@@ -292,7 +294,13 @@ int main()
     ImGui::Indent(indentSize);
     ImGui::Checkbox("Rotate light", &g_RotateLight);
     ImGui::Checkbox("Draw light frustum", &g_DrawFrustum);
-    ImGui::SliderFloat("Depth bias", &g_LightDepthBias, -0.01f, 0.0f);
+    ImGui::Separator();
+    ImGui::Text("Depth bias factor", nullptr);
+    ImGui::Indent(indentSize);
+    ImGui::SliderFloat("Constant", &g_LightDepthBiasConst, 0.0f, 5.0f);
+    ImGui::SliderFloat("Slope", &g_LightDepthBiasSlope, 0.0f, 5.0f);
+    ImGui::Unindent(indentSize);
+    ImGui::Separator();
     ImGui::SliderFloat("Proj::Light FOV", &g_LightFOV, 15.0f, 120.0f);
     ImGui::SliderFloat("Proj::Light inner angle", &g_LightInnerAngle, 1.0f, 15.0f);
     ImGui::SliderFloat("Proj::Near", &g_LightNear, 0.1f, 3.0f);

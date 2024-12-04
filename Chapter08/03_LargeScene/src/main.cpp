@@ -190,7 +190,7 @@ int main()
       }
       {
         buf.cmdPushDebugGroupLabel("Mesh", 0xff0000ff);
-        mesh.draw(*ctx.get(), buf, view, proj, texSkyboxIrradiance, drawWireframe);
+        mesh.draw(buf, view, proj, texSkyboxIrradiance, drawWireframe);
         buf.cmdPopDebugGroupLabel();
       }
 

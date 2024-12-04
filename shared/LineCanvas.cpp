@@ -2,7 +2,6 @@
 
 static const char* codeVS = R"(
 layout (location = 0) out vec4 out_color;
-layout (location = 1) out vec2 out_uv;
 
 struct Vertex {
   vec4 pos;
@@ -19,9 +18,9 @@ layout(push_constant) uniform PushConstants {
 };
 
 void main() {
-  Vertex v = vb.vertices[gl_VertexIndex];
-  out_color = v.rgba;
-  gl_Position = mvp * v.pos;
+  // Vertex v = vb.vertices[gl_VertexIndex]; <--- does not work on Snapdragon Adreno
+  out_color = vb.vertices[gl_VertexIndex].rgba;
+  gl_Position = mvp * vb.vertices[gl_VertexIndex].pos;
 })";
 
 static const char* codeFS = R"(

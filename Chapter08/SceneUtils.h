@@ -13,8 +13,6 @@
 #include "stb_image.h"
 #include "stb_image_resize2.h"
 
-#include <bc7enc/Compress.h>
-
 #include "shared/UtilsGLTF.h"
 #include "Chapter08/VKMesh08.h"
 
@@ -66,6 +64,12 @@ std::string convertTexture(
   uint8_t* src    = pixels;
   texChannels     = STBI_rgb_alpha;
 
+  SCOPE_EXIT
+  {
+    if (pixels)
+      stbi_image_free(pixels);
+  };
+
   std::vector<uint8_t> tmpImage(maxNewWidth * maxNewHeight * 4);
 
   if (!src) {
@@ -107,8 +111,43 @@ std::string convertTexture(
 
   const uint32_t numMipLevels = lvk::calcNumMipLevels(newW, newH);
 
-  // create a KTX texture to store the BC7 format
-  ktxTextureCreateInfo createInfo = {
+  // create a KTX2 texture for RGBA data
+  ktxTextureCreateInfo createInfoKTX2 = {
+    .glInternalformat = GL_RGBA8,
+    .vkFormat         = VK_FORMAT_R8G8B8A8_UNORM,
+    .baseWidth        = (uint32_t)newW,
+    .baseHeight       = (uint32_t)newH,
+    .baseDepth        = 1u,
+    .numDimensions    = 2u,
+    .numLevels        = numMipLevels,
+    .numLayers        = 1u,
+    .numFaces         = 1u,
+    .generateMipmaps  = KTX_FALSE,
+  };
+  ktxTexture2* textureKTX2 = nullptr;
+  (void)LVK_VERIFY(ktxTexture2_Create(&createInfoKTX2, KTX_TEXTURE_CREATE_ALLOC_STORAGE, &textureKTX2) == KTX_SUCCESS);
+
+  int w = newW;
+  int h = newH;
+
+  // generate custom mip-pyramid
+  for (uint32_t i = 0; i != numMipLevels; ++i) {
+    size_t offset = 0;
+    ktxTexture_GetImageOffset(ktxTexture(textureKTX2), i, 0, 0, &offset);
+
+    stbir_resize_uint8_linear(
+        (const unsigned char*)src, origWidth, origHeight, 0, ktxTexture_GetData(ktxTexture(textureKTX2)) + offset, w, h, 0, STBIR_RGBA);
+
+    h = h > 1 ? h >> 1 : 1;
+    w = w > 1 ? w >> 1 : 1;
+  }
+
+  // compress to Basis and transcode to BC7
+  (void)LVK_VERIFY(ktxTexture2_CompressBasis(textureKTX2, 255) == KTX_SUCCESS);
+  (void)LVK_VERIFY(ktxTexture2_TranscodeBasis(textureKTX2, KTX_TTF_BC7_RGBA, 0) == KTX_SUCCESS);
+
+  // convert to KTX1
+  ktxTextureCreateInfo createInfoKTX1 = {
     .glInternalformat = GL_COMPRESSED_RGBA_BPTC_UNORM,
     .vkFormat         = VK_FORMAT_BC7_UNORM_BLOCK,
     .baseWidth        = (uint32_t)newW,
@@ -120,33 +159,22 @@ std::string convertTexture(
     .numFaces         = 1u,
     .generateMipmaps  = KTX_FALSE,
   };
-
-  int w = newW;
-  int h = newH;
-
-  // Create KTX texture
-  // hard coded and support only BC7 format
-  ktxTexture1* texture = nullptr;
-  (void)LVK_VERIFY(ktxTexture1_Create(&createInfo, KTX_TEXTURE_CREATE_ALLOC_STORAGE, &texture) == KTX_SUCCESS);
+  ktxTexture1* textureKTX1 = nullptr;
+  (void)LVK_VERIFY(ktxTexture1_Create(&createInfoKTX1, KTX_TEXTURE_CREATE_ALLOC_STORAGE, &textureKTX1) == KTX_SUCCESS);
 
   for (uint32_t i = 0; i != numMipLevels; ++i) {
-    std::vector<uint8_t> destPixels(w * h * texChannels);
-
-    stbir_resize_uint8_linear((const unsigned char*)src, origWidth, origHeight, 0, (unsigned char*)destPixels.data(), w, h, 0, STBIR_RGBA);
-
-    const block16_vec packedImage16 = Compress::getCompressedImage(destPixels.data(), w, h, texChannels, false);
-    ktxTexture_SetImageFromMemory(
-        ktxTexture(texture), i, 0, 0, reinterpret_cast<const uint8_t*>(packedImage16.data()), sizeof(block16) * packedImage16.size());
-
-    h = h > 1 ? h >> 1 : 1;
-    w = w > 1 ? w >> 1 : 1;
+    size_t offset1 = 0;
+    (void)LVK_VERIFY(ktxTexture_GetImageOffset(ktxTexture(textureKTX1), i, 0, 0, &offset1) == KTX_SUCCESS);
+    size_t offset2 = 0;
+    (void)LVK_VERIFY(ktxTexture_GetImageOffset(ktxTexture(textureKTX2), i, 0, 0, &offset2) == KTX_SUCCESS);
+    memcpy(
+        ktxTexture_GetData(ktxTexture(textureKTX1)) + offset1, ktxTexture_GetData(ktxTexture(textureKTX2)) + offset2,
+        ktxTexture_GetImageSize(ktxTexture(textureKTX1), i));
   }
 
-  ktxTexture_WriteToNamedFile(ktxTexture(texture), newFile.c_str());
-  ktxTexture_Destroy(ktxTexture(texture));
-
-  if (pixels)
-    stbi_image_free(pixels);
+  ktxTexture_WriteToNamedFile(ktxTexture(textureKTX1), newFile.c_str());
+  ktxTexture_Destroy(ktxTexture(textureKTX1));
+  ktxTexture_Destroy(ktxTexture(textureKTX2));
 
   return newFile;
 }

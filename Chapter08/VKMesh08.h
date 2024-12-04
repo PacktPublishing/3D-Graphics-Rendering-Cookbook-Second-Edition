@@ -28,6 +28,7 @@ GLTFMaterialDataGPU convertToGPUMaterial(
   GLTFMaterialDataGPU result = {
     .baseColorFactor                  = mat.baseColorFactor,
     .metallicRoughnessNormalOcclusion = vec4(mat.metallicFactor, mat.roughness, 1.0f, 1.0f),
+    .clearcoatTransmissionThickness   = vec4(1.0f, 1.0f, mat.transparencyFactor, 1.0f),
     .emissiveFactorAlphaCutoff        = vec4(vec3(mat.emissiveFactor), mat.alphaTest),
   };
 
@@ -144,20 +145,44 @@ Material convertAIMaterial(const aiMaterial* M, std::vector<std::string>& files,
     materialName = Name.C_Str();
   }
   // apply heuristics
-  if ((materialName.find("MASTER_Glass_Clean") != std::string::npos) || (materialName.find("MenuSign_02_Glass") != std::string::npos) ||
-      (materialName.find("Vespa_Headlight") != std::string::npos)) {
+  auto name = [&materialName](const char* substr) -> bool {
+    return materialName.find(substr) != std::string::npos;
+  };
+  if (name("MASTER_Glass_Clean") || name("MenuSign_02_Glass") || name("Vespa_Headlight")) {
     D.alphaTest          = 0.75f;
-    D.transparencyFactor = 0.1f;
+    D.transparencyFactor = 0.2f;
     D.flags |= sMaterialFlags_Transparent;
-  } else if ((materialName.find("Glass") != std::string::npos)) {
+  } else if (name("MASTER_Glass_Exterior") || name("MASTER_Focus_Glass")) {
+    D.alphaTest          = 0.75f;
+    D.transparencyFactor = 0.3f;
+    D.flags |= sMaterialFlags_Transparent;
+  } else if (name("MASTER_Frosted_Glass") || name("MASTER_Interior_01_Frozen_Glass")) {
+    D.alphaTest          = 0.75f;
+    D.transparencyFactor = 0.2f;
+    D.flags |= sMaterialFlags_Transparent;
+  } else if (name("Streetlight_Glass")) {
+    D.alphaTest          = 0.75f;
+    D.transparencyFactor = 0.15f;
+    D.baseColorTexture   = -1;
+    D.flags |= sMaterialFlags_Transparent;
+  } else if (name("Paris_LiquorBottle_01_Glass_Wine")) {
+    D.alphaTest          = 0.56f;
+    D.transparencyFactor = 0.35f;
+    D.flags |= sMaterialFlags_Transparent;
+  } else if (name("_Caps") || name("_Labels")) {
+    // not transparent
+  } else if (name("Paris_LiquorBottle_02_Glass")) {
+    D.alphaTest          = 0.56f;
+    D.transparencyFactor = 0.1f;
+  } else if (name("Bottle")) {
+    D.alphaTest          = 0.56f;
+    D.transparencyFactor = 0.2f;
+    D.flags |= sMaterialFlags_Transparent;
+  } else if (name("Glass")) {
     D.alphaTest          = 0.56f;
     D.transparencyFactor = 0.1f;
     D.flags |= sMaterialFlags_Transparent;
-  } else if (materialName.find("Bottle") != std::string::npos) {
-    D.alphaTest          = 0.56f;
-    D.transparencyFactor = 0.4f;
-    D.flags |= sMaterialFlags_Transparent;
-  } else if (materialName.find("Metal") != std::string::npos) {
+  } else if (name("Metal")) {
     D.metallicFactor = 1.0f;
     D.roughness      = 0.1f;
   }
@@ -166,7 +191,8 @@ Material convertAIMaterial(const aiMaterial* M, std::vector<std::string>& files,
 }
 
 void processLODs(
-    std::vector<uint32_t>& indices, std::vector<uint8_t>& vertices, size_t vertexStride, std::vector<std::vector<uint32_t>>& outLods, bool generateLods)
+    std::vector<uint32_t>& indices, std::vector<uint8_t>& vertices, size_t vertexStride, std::vector<std::vector<uint32_t>>& outLods,
+    bool generateLods)
 {
   size_t verticesCountIn    = vertices.size() / vertexStride;
   size_t targetIndicesCount = indices.size();
@@ -312,10 +338,8 @@ class VKMesh final
 {
 public:
   VKMesh(
-      const std::unique_ptr<lvk::IContext>& ctx, const MeshData& meshData, const Scene& scene,
-	  lvk::Format colorFormat,
-      lvk::Format depthFormat, uint32_t numSamples = 1,lvk ::Holder<lvk::ShaderModuleHandle>&& vert = {},
-      lvk::Holder<lvk::ShaderModuleHandle>&& frag = {})
+      const std::unique_ptr<lvk::IContext>& ctx, const MeshData& meshData, const Scene& scene, lvk::Format colorFormat,
+      lvk::Format depthFormat, uint32_t numSamples = 1)
   : ctx(ctx)
   , numIndices_((uint32_t)meshData.indexData.size())
   , numMeshes_((uint32_t)meshData.meshes.size())
@@ -363,18 +387,15 @@ public:
           .debugName = "Buffer: materials" },
         nullptr);
 
-    std::vector<uint8_t> drawCommands;
+    std::vector<DrawIndexedIndirectCommand> drawCommands;
     std::vector<DrawData> drawData;
 
     const uint32_t numCommands = header.meshCount;
 
-    drawCommands.resize(sizeof(DrawIndexedIndirectCommand) * numCommands + sizeof(uint32_t));
+    drawCommands.resize(numCommands);
     drawData.resize(numCommands);
 
-    // store the number of draw commands in the very beginning of the buffer
-    memcpy(drawCommands.data(), &numCommands, sizeof(numCommands));
-
-    DrawIndexedIndirectCommand* cmd = std::launder(reinterpret_cast<DrawIndexedIndirectCommand*>(drawCommands.data() + sizeof(uint32_t)));
+    DrawIndexedIndirectCommand* cmd = drawCommands.data();
     DrawData* dd                    = drawData.data();
 
     LVK_ASSERT(scene.meshForNode.size() == numCommands);
@@ -403,7 +424,7 @@ public:
     bufferIndirect_ = ctx->createBuffer(
         { .usage     = lvk::BufferUsageBits_Indirect,
           .storage   = lvk::StorageType_Device,
-          .size      = sizeof(DrawIndexedIndirectCommand) * numCommands + sizeof(uint32_t),
+          .size      = sizeof(DrawIndexedIndirectCommand) * numCommands,
           .data      = drawCommands.data(),
           .debugName = "Buffer: indirect" },
         nullptr);
@@ -416,8 +437,8 @@ public:
           .debugName = "Buffer: drawData" },
         nullptr);
 
-    vert_ = vert.valid() ? std::move(vert) : loadShaderModule(ctx, "Chapter08/02_SceneGraph/src/main.vert");
-    frag_ = frag.valid() ? std::move(frag) : loadShaderModule(ctx, "Chapter08/02_SceneGraph/src/main.frag");
+    vert_ = loadShaderModule(ctx, "Chapter08/02_SceneGraph/src/main.vert");
+    frag_ = loadShaderModule(ctx, "Chapter08/02_SceneGraph/src/main.frag");
 
     pipeline_ = ctx->createRenderPipeline({
         .vertexInput      = meshData.streams,
@@ -431,13 +452,13 @@ public:
     });
 
     pipelineWireframe_ = ctx->createRenderPipeline({
-        .vertexInput = meshData.streams,
-        .smVert      = vert_,
-        .smFrag      = frag_,
-        .color       = { { .format = colorFormat } },
-        .depthFormat = depthFormat,
-        .cullMode    = lvk::CullMode_None,
-        .polygonMode = lvk::PolygonMode_Line,
+        .vertexInput  = meshData.streams,
+        .smVert       = vert_,
+        .smFrag       = frag_,
+        .color        = { { .format = colorFormat } },
+        .depthFormat  = depthFormat,
+        .cullMode     = lvk::CullMode_None,
+        .polygonMode  = lvk::PolygonMode_Line,
         .samplesCount = numSamples,
     });
 
@@ -445,8 +466,8 @@ public:
   }
 
   void draw(
-      lvk::IContext& ctx, lvk::ICommandBuffer& buf, const mat4& view, const mat4& proj,
-      lvk::TextureHandle texSkyboxIrradiance = {}, bool wireframe = false) const
+      lvk::ICommandBuffer& buf, const mat4& view, const mat4& proj, lvk::TextureHandle texSkyboxIrradiance = {},
+      bool wireframe = false) const
   {
     buf.cmdBindIndexBuffer(bufferIndices_, lvk::IndexFormat_UI32);
     buf.cmdBindVertexBuffer(0, bufferVertices_);
@@ -460,16 +481,14 @@ public:
       uint32_t texSkyboxIrradiance;
     } pc = {
       .viewProj            = proj * view,
-      .bufferTransforms    = ctx.gpuAddress(bufferTransforms_),
-      .bufferDrawData      = ctx.gpuAddress(bufferDrawData_),
-      .bufferMaterials     = ctx.gpuAddress(bufferMaterials_),
+      .bufferTransforms    = ctx->gpuAddress(bufferTransforms_),
+      .bufferDrawData      = ctx->gpuAddress(bufferDrawData_),
+      .bufferMaterials     = ctx->gpuAddress(bufferMaterials_),
       .texSkyboxIrradiance = texSkyboxIrradiance.index(),
     };
     static_assert(sizeof(pc) <= 128);
     buf.cmdPushConstants(pc);
-    buf.cmdDrawIndexedIndirect(bufferIndirect_, sizeof(uint32_t), numMeshes_);
-    // buf.cmdDrawIndexedIndirectCount(bufferIndirect_, sizeof(uint32_t), bufferIndirect_, 0, numMeshes_,
-    // sizeof(DrawIndexedIndirectCommand));
+    buf.cmdDrawIndexedIndirect(bufferIndirect_, 0, numMeshes_);
   }
   void updateGlobalTransforms(const mat4* data, size_t numMatrices) const
   {

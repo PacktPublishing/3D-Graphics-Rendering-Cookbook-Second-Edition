@@ -26,7 +26,6 @@ if(NOT EXISTS ${COOKBOOK_DEPS_CACHE_FILE})
 endif()
 
 # cmake-format: off
-add_subdirectory(deps/src/lightweightvk/third-party/deps/src/bc7enc)
 add_subdirectory(deps/src/lightweightvk/third-party/deps/src/ldrutils)
 set(KTX_FEATURE_DOC            OFF CACHE BOOL "")
 set(KTX_FEATURE_GL_UPLOAD      OFF CACHE BOOL "")
@@ -90,7 +89,6 @@ include_directories(deps/src/lightweightvk/third-party/deps/src/imgui)
 add_subdirectory(deps/cmake/ImGuizmo)
 
 set_property(TARGET assimp          PROPERTY FOLDER "third-party")
-set_property(TARGET bc7enc          PROPERTY FOLDER "third-party")
 set_property(TARGET LUtils          PROPERTY FOLDER "third-party")
 set_property(TARGET meshoptimizer   PROPERTY FOLDER "third-party")
 if(WIN32)

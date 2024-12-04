@@ -246,7 +246,7 @@ int main()
     {
       buf.cmdBeginRendering(renderPass, framebuffer);
       buf.cmdPushDebugGroupLabel("Mesh", 0xff0000ff);
-      mesh.draw(*ctx.get(), buf, view, proj, {}, drawWireframe);
+      mesh.draw(buf, view, proj, {}, drawWireframe);
       buf.cmdPopDebugGroupLabel();
       app.drawGrid(buf, proj, vec3(0, -1.0f, 0));
       app.imgui_->beginFrame(framebuffer);

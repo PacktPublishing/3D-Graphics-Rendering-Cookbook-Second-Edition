@@ -6,4 +6,4 @@ include(../../CMake/CommonMacros.txt)
 
 SETUP_APP(Ch08_Sample02_SceneGraph "Chapter 08")
 
-target_link_libraries(Ch08_Sample02_SceneGraph PRIVATE SharedUtils assimp ImGuizmo bc7enc meshoptimizer)
+target_link_libraries(Ch08_Sample02_SceneGraph PRIVATE SharedUtils assimp ImGuizmo meshoptimizer)

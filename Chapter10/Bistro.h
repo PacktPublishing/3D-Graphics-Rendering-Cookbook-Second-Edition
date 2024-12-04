@@ -5,7 +5,6 @@
 #include "shared/Scene/VtxData.h"
 
 #include "Chapter08/SceneUtils.h"
-#include "Chapter08/VKMesh08.h"
 
 const char* fileNameCachedMeshes    = ".cache/ch08_bistro.meshes";
 const char* fileNameCachedMaterials = ".cache/ch08_bistro.materials";

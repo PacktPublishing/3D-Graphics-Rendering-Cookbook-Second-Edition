@@ -117,6 +117,7 @@ int main()
       .dimensions = sizeFb,
       .numSamples = kNumSamples,
       .usage      = lvk::TextureUsageBits_Attachment,
+      .storage    = lvk::StorageType_Memoryless,
       .debugName  = "msaaColor",
   });
   lvk::Holder<lvk::TextureHandle> msaaDepth = ctx->createTexture({
@@ -124,6 +125,7 @@ int main()
       .dimensions = sizeFb,
       .numSamples = kNumSamples,
       .usage      = lvk::TextureUsageBits_Attachment,
+      .storage    = lvk::StorageType_Memoryless,
       .debugName  = "msaaDepth",
   });
 
@@ -244,7 +246,7 @@ int main()
       skyBox.draw(buf, view, proj);
       {
         buf.cmdPushDebugGroupLabel("Mesh", 0xff0000ff);
-        mesh.draw(*ctx.get(), buf, view, proj, skyBox.texSkyboxIrradiance, drawWireframe);
+        mesh.draw(buf, view, proj, skyBox.texSkyboxIrradiance, drawWireframe);
         buf.cmdPopDebugGroupLabel();
       }
       app.drawGrid(buf, proj, vec3(0, -1.0f, 0), kNumSamples, kOffscreenFormat);
@@ -338,8 +340,8 @@ int main()
         const ImGuiViewport* v  = ImGui::GetMainViewport();
         const float windowWidth = v->WorkSize.x / 5;
         ImGui::SetNextWindowPos(ImVec2(10, 200));
-        ImGui::SetNextWindowSize(ImVec2(windowWidth, v->WorkSize.y - 210));
-        ImGui::Begin("HDR", nullptr, ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::SetNextWindowSize(ImVec2(0, v->WorkSize.y - 210));
+        ImGui::Begin("HDR", nullptr, ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse);
         ImGui::Checkbox("Draw wireframe", &drawWireframe);
         ImGui::Checkbox("Draw tone mapping curves", &drawCurves);
         ImGui::Separator();

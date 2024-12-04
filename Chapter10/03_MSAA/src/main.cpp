@@ -28,6 +28,7 @@ int main()
       .dimensions = sizeFb,
       .numSamples = kNumSamples,
       .usage      = lvk::TextureUsageBits_Attachment,
+      .storage    = lvk::StorageType_Memoryless,
       .debugName  = "msaaColor",
   });
   lvk::Holder<lvk::TextureHandle> msaaDepth = ctx->createTexture({
@@ -35,6 +36,7 @@ int main()
       .dimensions = sizeFb,
       .numSamples = kNumSamples,
       .usage      = lvk::TextureUsageBits_Attachment,
+      .storage    = lvk::StorageType_Memoryless,
       .debugName  = "msaaDepth",
   });
 
@@ -68,7 +70,7 @@ int main()
       },
           framebufferOffscreen);
       buf.cmdPushDebugGroupLabel("Mesh", 0xff0000ff);
-      (enableMSAA ? meshMSAA : mesh).draw(*ctx.get(), buf, view, proj, texSkyboxIrradiance, drawWireframe);
+      (enableMSAA ? meshMSAA : mesh).draw(buf, view, proj, texSkyboxIrradiance, drawWireframe);
       buf.cmdPopDebugGroupLabel();
       app.drawGrid(buf, proj, vec3(0, -1.0f, 0), enableMSAA ? kNumSamples : 1);
       canvas3d.render(*ctx.get(), framebufferOffscreen, buf, enableMSAA ? kNumSamples : 1);
