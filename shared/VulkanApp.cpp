@@ -227,7 +227,7 @@ void VulkanApp::drawGTFInspector_Materials(GLTFIntrospective& intro) {
 
       bool state = false;
 
-      ImGui::Text(mat.name.c_str());
+      ImGui::Text("%s", mat.name.c_str());
       ImGui::PushID(m);
       state = isUnlit;
 
@@ -389,6 +389,7 @@ void VulkanApp::drawGrid(
         } },
         .depthFormat  = this->getDepthFormat(),
         .samplesCount = numSamples,
+        .debugName    = "Pipeline: drawGrid()",
     });
   }
 

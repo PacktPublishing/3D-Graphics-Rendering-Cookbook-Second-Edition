@@ -4,7 +4,7 @@
     "source": {
         "type": "git",
         "url": "https://github.com/corporateshark/lightweightvk.git",
-        "revision": "e6e9ae8697d9ab8e730ad4e82643a06cbc5db88d"
+        "revision": "89b13aabc4b4b2c4e074bfee3d8d091c6952d75d"
     }
 },
 {
@@ -12,7 +12,7 @@
     "source": {
         "type": "git",
         "url": "https://github.com/assimp/assimp.git",
-        "revision": "v5.4.3"
+        "revision": "46c26eda5a3e212e086fc96b453ecb68f4b3ae75"
     }
 },
 {
@@ -21,23 +21,6 @@
         "type": "git",
         "url": "https://github.com/KhronosGroup/glTF-Sample-Assets.git",
         "revision": "517a5db6aa558f5c57faed8301ba40cd246a9d76"
-    }
-},
-{
-    "name": "rply",
-    "source": {
-        "type": "archive",
-        "url": "https://w3.impa.br/~diego/software/rply/rply-1.1.4.tar.gz",
-        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.116 Safari/537.36",
-        "sha1": "05e1491cf70dceb6962320a4279f849564ea88c5"
-    }
-},
-{
-    "name": "3d-gaussian-splatting/train",
-    "source": {
-        "type": "archive",
-        "url": "https://github.com/corporateshark/3d-gaussian-splatting/raw/master/train.zip",
-        "sha1": "b486b8e362295ed861a15c996e2da967f8427229"
     }
 },
 {
