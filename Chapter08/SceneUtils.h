@@ -16,6 +16,12 @@
 #include "shared/UtilsGLTF.h"
 #include "Chapter08/VKMesh08.h"
 
+// these macros can be redefined externally
+#if !defined(DEMO_TEXTURE_MAX_SIZE) && !defined(DEMO_TEXTURE_CACHE_FOLDER)
+#define DEMO_TEXTURE_MAX_SIZE 512
+#define DEMO_TEXTURE_CACHE_FOLDER ".cache/out_textures/"
+#endif
+
 // find a file in directory which "almost" coincides with the origFile (their lowercase versions coincide)
 std::string findSubstitute(const std::string& origFile)
 {
@@ -46,15 +52,15 @@ std::string convertTexture(
     const std::string& file, const std::string& basePath, std::unordered_map<std::string, uint32_t>& opacityMapIndices,
     const std::vector<std::string>& opacityMaps)
 {
-  const int maxNewWidth  = 512;
-  const int maxNewHeight = 512;
+  const int maxNewWidth  = DEMO_TEXTURE_MAX_SIZE;
+  const int maxNewHeight = DEMO_TEXTURE_MAX_SIZE;
 
-  if (!std::filesystem::exists(".cache/out_textures/")) {
-    std::filesystem::create_directories(".cache/out_textures/");
+  if (!std::filesystem::exists(DEMO_TEXTURE_CACHE_FOLDER)) {
+    std::filesystem::create_directories(DEMO_TEXTURE_CACHE_FOLDER);
   }
 
   const std::string srcFile = replaceAll(basePath + file, "\\", "/");
-  const std::string newFile = std::string(".cache/out_textures/") +
+  const std::string newFile = std::string(DEMO_TEXTURE_CACHE_FOLDER) +
                               lowercaseString(replaceAll(replaceAll(srcFile, "..", "__"), "/", "__") + std::string("__rescaled")) +
                               std::string(".ktx");
 

@@ -6,9 +6,12 @@
 
 #include "Chapter08/SceneUtils.h"
 
-const char* fileNameCachedMeshes    = ".cache/ch08_bistro.meshes";
-const char* fileNameCachedMaterials = ".cache/ch08_bistro.materials";
-const char* fileNameCachedHierarchy = ".cache/ch08_bistro.scene";
+#if !defined(fileNameCachedMeshes) || !defined(fileNameCachedMaterials) || !defined(fileNameCachedHierarchy)
+// by default, share the precached Bistro with Chapter08/03_LargeScene
+#define fileNameCachedMeshes ".cache/ch08_bistro.meshes"
+#define fileNameCachedMaterials ".cache/ch08_bistro.materials"
+#define fileNameCachedHierarchy ".cache/ch08_bistro.scene"
+#endif
 
 void loadBistro(MeshData& meshData, Scene& scene) {
   if (!isMeshDataValid(fileNameCachedMeshes) || !isMeshHierarchyValid(fileNameCachedHierarchy) ||

@@ -275,7 +275,7 @@ int main()
         const float windowWidth = v->WorkSize.x / 5;
         ImGui::SetNextWindowPos(ImVec2(10, 200));
         ImGui::Begin(
-            "SSAO", nullptr, ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
+            "SSAO", nullptr, ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_AlwaysAutoResize);
         ImGui::Checkbox("Draw wireframe", &drawWireframe);
         ImGui::Checkbox("Enable blur", &enableBlur);
         ImGui::BeginDisabled(!enableBlur);

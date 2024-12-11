@@ -104,7 +104,7 @@ int main()
         const ImGuiViewport* v = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(ImVec2(10, 200));
         ImGui::Begin(
-            "MSAA", nullptr, ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
+            "MSAA", nullptr, ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_AlwaysAutoResize);
         ImGui::Checkbox("Enable MSAA", &enableMSAA);
         ImGui::Checkbox("Draw wireframe", &drawWireframe);
         ImGui::Checkbox("Draw bounding boxes", &drawBoundingBoxes);

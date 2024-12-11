@@ -214,7 +214,7 @@ int main()
         const ImGuiViewport* v = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(ImVec2(10, 200));
         ImGui::SetNextWindowSize(ImVec2(v->WorkSize.x / 6, v->WorkSize.y - 210));
-        ImGui::Begin("Scene graph", nullptr, ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
+        ImGui::Begin("Scene graph", nullptr, ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoResize);
         ImGui::Checkbox("Draw wireframe", &drawWireframe);
         ImGui::Checkbox("Draw bounding boxes", &drawBoundingBoxes);
         ImGui::Separator();
