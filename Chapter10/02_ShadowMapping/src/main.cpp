@@ -289,13 +289,13 @@ int main()
     ImGui::Begin("Control", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     ImGui::Checkbox("Rotate model", &g_RotateModel);
     ImGui::Separator();
-    ImGui::Text("Light parameters", nullptr);
+    ImGui::Text("Light parameters");
     const float indentSize = 16.0f;
     ImGui::Indent(indentSize);
     ImGui::Checkbox("Rotate light", &g_RotateLight);
     ImGui::Checkbox("Draw light frustum", &g_DrawFrustum);
     ImGui::Separator();
-    ImGui::Text("Depth bias factor", nullptr);
+    ImGui::Text("Depth bias factor");
     ImGui::Indent(indentSize);
     ImGui::SliderFloat("Constant", &g_LightDepthBiasConst, 0.0f, 5.0f);
     ImGui::SliderFloat("Slope", &g_LightDepthBiasSlope, 0.0f, 5.0f);
