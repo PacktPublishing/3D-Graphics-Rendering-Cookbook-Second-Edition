@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ "**" ]
 
+# https://github.com/git-lfs/git-lfs/issues/5749
+env:
+  GIT_CLONE_PROTECTION_ACTIVE: false
+
 jobs:
   cmake-build:
       strategy:
@@ -31,7 +35,7 @@ jobs:
       runs-on: ${{ matrix.config.os }}
 
       steps:
-        - uses: actions/checkout@v3
+        - uses: actions/checkout@v4
           with:
             submodules: recursive
 
@@ -44,11 +48,13 @@ jobs:
             sudo sed -i 's/azure\.//' /etc/apt/sources.list
             sudo apt-get update
             sudo apt-get install -y gcc-12 clang-15 xorg-dev libxinerama-dev libxcursor-dev libgles2-mesa-dev libegl1-mesa-dev libglfw3-dev libglew-dev libstdc++-12-dev extra-cmake-modules libxkbcommon-x11-dev wayland-protocols libtbb-dev
+            sudo apt remove cmake -y
+            sudo pip install cmake --upgrade
 
         - name: Install Vulkan SDK
           uses: humbletim/install-vulkan-sdk@v1.1.1
           with:
-            version: 1.3.275.0
+            version: 1.3.296.0
             cache: true
 
         - name: Get the number of CPU cores
