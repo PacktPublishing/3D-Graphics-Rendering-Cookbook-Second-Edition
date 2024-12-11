@@ -176,12 +176,10 @@ int main()
         buf.cmdPushDebugGroupLabel("Skybox", 0xff0000ff);
         buf.cmdBindRenderPipeline(pipelineSkybox);
         const struct {
-          mat4 view;
-          mat4 proj;
+          mat4 mvp;
           uint32_t texSkybox;
         } pc = {
-          .view      = view,
-          .proj      = proj,
+          .mvp       = proj * mat4(mat3(view)), // discard the translation
           .texSkybox = texSkybox.index(),
         };
         buf.cmdPushConstants(pc);
