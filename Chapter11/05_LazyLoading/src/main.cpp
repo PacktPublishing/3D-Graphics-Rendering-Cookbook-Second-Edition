@@ -8,7 +8,7 @@
 
 #include "Chapter10/Bistro.h"
 #include "Chapter10/Skybox.h"
-#include "Chapter11/VkMesh11Lazy.h"
+#include "Chapter11/VKMesh11Lazy.h"
 
 #include "shared/LineCanvas.h"
 

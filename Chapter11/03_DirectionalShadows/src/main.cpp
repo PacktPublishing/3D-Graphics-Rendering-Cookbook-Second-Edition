@@ -2,7 +2,7 @@
 
 #include "Chapter10/Bistro.h"
 #include "Chapter10/Skybox.h"
-#include "Chapter11/VkMesh11.h"
+#include "Chapter11/VKMesh11.h"
 
 #include "shared/LineCanvas.h"
 
