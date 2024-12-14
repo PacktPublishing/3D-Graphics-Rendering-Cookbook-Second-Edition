@@ -80,6 +80,10 @@ cmake ..
 cd ..
 ```
 
+## Screenshots
+
+![image](.github/Ch11_Fig08_Final.jpg)
+
 ## Get to Know the Authors
 
 **Sergey Kosarevsky**
