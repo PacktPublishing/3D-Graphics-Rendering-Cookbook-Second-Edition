@@ -1081,7 +1081,7 @@ int main()
       ctx->download(bufferCullingData[currentBufferId], &numVisibleMeshes, sizeof(uint32_t), offsetof(CullingData, numVisibleMeshes));
     }
 
-    // swap ping-bong textures
+    // swap ping-pong textures
     std::swap(texAdaptedLuminance[0], texAdaptedLuminance[1]);
   });
 
