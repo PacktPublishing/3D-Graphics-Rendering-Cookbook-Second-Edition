@@ -33,7 +33,7 @@ AnimationChannel initChannel(const aiNodeAnim* anim)
   return channel;
 }
 
-template <typename T> int getTimeIndex(const std::vector<T>& t, float time)
+template <typename T> uint32_t getTimeIndex(const std::vector<T>& t, float time)
 {
   return std::max(
       0,
@@ -51,8 +51,8 @@ vec3 interpolatePosition(const AnimationChannel& channel, float time)
   if (channel.pos.size() == 1)
     return channel.pos[0].pos;
 
-  int start = getTimeIndex<>(channel.pos, time);
-  int end   = start + 1;
+  uint32_t start = getTimeIndex<>(channel.pos, time);
+  uint32_t end   = start + 1;
   float mix = interpolationVal(channel.pos[start].time, channel.pos[end].time, time);
   return glm::mix(channel.pos[start].pos, channel.pos[end].pos, mix);
 }
@@ -62,8 +62,8 @@ glm::quat interpolateRotation(const AnimationChannel& channel, float time)
   if (channel.rot.size() == 1)
     return channel.rot[0].rot;
 
-  int start = getTimeIndex<>(channel.rot, time);
-  int end   = start + 1;
+  uint32_t start = getTimeIndex<>(channel.rot, time);
+  uint32_t end   = start + 1;
   float mix = interpolationVal(channel.rot[start].time, channel.rot[end].time, time);
   return glm::slerp(channel.rot[start].rot, channel.rot[end].rot, mix);
 }
@@ -73,8 +73,8 @@ vec3 interpolateScaling(const AnimationChannel& channel, float time)
   if (channel.scale.size() == 1)
     return channel.scale[0].scale;
 
-  int start  = getTimeIndex<>(channel.scale, time);
-  int end    = start + 1;
+  uint32_t start  = getTimeIndex<>(channel.scale, time);
+  uint32_t end    = start + 1;
   float coef = interpolationVal(channel.scale[start].time, channel.scale[end].time, time);
   return glm::mix(channel.scale[start].scale, channel.scale[end].scale, coef);
 }
@@ -115,7 +115,7 @@ MorphState morphTransform(const MorphTarget& target, const MorphingChannel& chan
   int end   = 0;
 
   if (channel.key.size() > 0) {
-    start = getTimeIndex<>(channel.key, time);
+    start = getTimeIndex(channel.key, time);
     end   = start + 1;
     mix   = interpolationVal(channel.key[start].time, channel.key[end].time, time);
   }
@@ -140,13 +140,13 @@ void initAnimations(GLTFContext& glTF, const aiScene* scene)
     for (uint32_t c = 0; c < scene->mAnimations[i]->mNumChannels; c++) {
       const aiNodeAnim* channel = scene->mAnimations[i]->mChannels[c];
       const char* boneName      = channel->mNodeName.data;
-      uint32_t boneId           = glTF.bonesStorage[boneName].boneId;
+      uint32_t boneId           = glTF.bonesByName[boneName].boneId;
       if (boneId == ~0u) {
         for (const GLTFNode& node : glTF.nodesStorage) {
           if (node.name != boneName)
             continue;
           boneId                      = node.modelMtxId;
-          glTF.bonesStorage[boneName] = {
+          glTF.bonesByName[boneName] = {
             .boneId    = boneId,
             .transform = glTF.hasBones ? glm::inverse(node.transform) : mat4(1),
           };
@@ -200,7 +200,7 @@ void updateAnimation(GLTFContext& glTF, AnimationState& anim, float dt)
   // Apply animations
   std::function<void(GLTFNodeRef gltfNode, const mat4& parentTransform)> traverseTree = [&](GLTFNodeRef gltfNode,
                                                                                             const mat4& parentTransform) {
-    const GLTFBone& bone  = glTF.bonesStorage[glTF.nodesStorage[gltfNode].name];
+    const GLTFBone& bone  = glTF.bonesByName[glTF.nodesStorage[gltfNode].name];
     const uint32_t boneId = bone.boneId;
 
     if (boneId != ~0u) {
@@ -226,7 +226,7 @@ void updateAnimation(GLTFContext& glTF, AnimationState& anim, float dt)
 
   traverseTree(glTF.root, mat4(1.0f));
 
-  for (const std::pair<std::string, GLTFBone>& b : glTF.bonesStorage) {
+  for (const std::pair<std::string, GLTFBone>& b : glTF.bonesByName) {
     if (b.second.boneId != ~0u) {
       glTF.matrices[b.second.boneId] = glTF.matrices[b.second.boneId] * b.second.transform;
     }
@@ -275,7 +275,7 @@ void updateAnimationBlending(GLTFContext& glTF, AnimationState& anim1, Animation
     // Update skinning
     std::function<void(GLTFNodeRef gltfNode, const mat4& parentTransform)> traverseTree = [&](GLTFNodeRef gltfNode,
                                                                                               const mat4& parentTransform) {
-      const GLTFBone& bone  = glTF.bonesStorage[glTF.nodesStorage[gltfNode].name];
+      const GLTFBone& bone  = glTF.bonesByName[glTF.nodesStorage[gltfNode].name];
       const uint32_t boneId = bone.boneId;
       if (boneId != ~0u) {
         auto channel1 = activeAnim1.channels.find(boneId);
@@ -304,7 +304,7 @@ void updateAnimationBlending(GLTFContext& glTF, AnimationState& anim1, Animation
 
     traverseTree(glTF.root, mat4(1.0f));
 
-    for (const std::pair<std::string, GLTFBone>& b : glTF.bonesStorage) {
+    for (const std::pair<std::string, GLTFBone>& b : glTF.bonesByName) {
       if (b.second.boneId != ~0u) {
         glTF.matrices[b.second.boneId] = glTF.matrices[b.second.boneId] * b.second.transform;
       }

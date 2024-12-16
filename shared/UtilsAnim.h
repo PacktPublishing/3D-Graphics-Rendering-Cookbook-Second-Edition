@@ -50,7 +50,7 @@ struct MorphingChannel {
 struct Animation {
   std::unordered_map<int, AnimationChannel> channels;
   std::vector<MorphingChannel> morphChannels;
-  float duration;
+  float duration; // In seconds
   float ticksPerSecond;
   std::string name;
 };

@@ -699,15 +699,13 @@ int main()
       if (ssaoEnable) {
         buf.cmdBindComputePipeline(pipelineSSAO);
         buf.cmdPushConstants(pcSSAO);
+        // clang-format off
         buf.cmdDispatchThreadGroups(
-            {
-                .width  = 1 + (uint32_t)sizeFb.width / 16,
-                .height = 1 + (uint32_t)sizeFb.height / 16,
-        },
-            { .textures = {
-                  lvk::TextureHandle(texOpaqueDepth),
-                  lvk::TextureHandle(texSSAO),
-              } });
+            { .width  = 1 + (uint32_t)sizeFb.width  / 16,
+              .height = 1 + (uint32_t)sizeFb.height / 16 },
+            { .textures = { lvk::TextureHandle(texOpaqueDepth),
+                            lvk::TextureHandle(texSSAO) } });
+		  // clang-format on
 
         // 3. Blur SSAO
         if (ssaoEnableBlur) {
@@ -744,22 +742,19 @@ int main()
                 .texOut         = p.texOut.index(),
                 .depthThreshold = pcSSAO.zFar * ssaoDepthThreshold,
             });
-            buf.cmdDispatchThreadGroups(
-                blurDim, {
-                             .textures = {p.texIn, p.texOut, lvk::TextureHandle(texOpaqueDepth)}
-            });
+            // clang-format off
+            buf.cmdDispatchThreadGroups(blurDim, { .textures = {p.texIn, p.texOut, lvk::TextureHandle(texOpaqueDepth)} });
+				// clang-format on
           }
         }
 
         // combine SSAO
+        // clang-format off
         buf.cmdBeginRendering(
-            {
-                .color = {{ .loadOp = lvk::LoadOp_Load, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } }},
-        },
-            {
-                .color = { { .texture = texOpaqueColorWithSSAO } },
-            },
+            { .color = {{ .loadOp = lvk::LoadOp_Load, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } }} },
+            { .color = { { .texture = texOpaqueColorWithSSAO } } },
             { .textures = { lvk::TextureHandle(texSSAO), lvk::TextureHandle(texOpaqueColor) } });
+        // clang-format on
         buf.cmdBindRenderPipeline(pipelineCombineSSAO);
         buf.cmdPushConstants(pcCombineSSAO);
         buf.cmdBindDepthState({});
@@ -771,15 +766,13 @@ int main()
       const lvk::Framebuffer framebufferOffscreen = {
         .color = { { .texture = texSceneColor } },
       };
-
+      // clang-format off
       buf.cmdBeginRendering(
-          lvk::RenderPass{
-              .color = {{ .loadOp = lvk::LoadOp_Load, .storeOp = lvk::StoreOp_Store }},
-      },
+          lvk::RenderPass{ .color = {{ .loadOp = lvk::LoadOp_Load, .storeOp = lvk::StoreOp_Store }} },
           framebufferOffscreen,
           { .textures = { lvk::TextureHandle(texHeadsOIT), lvk::TextureHandle(texOpaqueColor), lvk::TextureHandle(texOpaqueColorWithSSAO) },
             .buffers  = { lvk::BufferHandle(bufferListsOIT) } });
-
+		// clang-format on
       const struct {
         uint64_t bufferTransparencyLists;
         uint32_t texColor;

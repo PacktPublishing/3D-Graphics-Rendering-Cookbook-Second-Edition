@@ -456,7 +456,7 @@ struct GLTFContext {
 
   std::vector<GLTFNode> nodesStorage;
   std::vector<GLTFMesh> meshesStorage;
-  std::unordered_map<std::string, GLTFBone> bonesStorage;
+  std::unordered_map<std::string, GLTFBone> bonesByName;
 
   std::vector<MorphTarget> morphTargets;
   std::unordered_map<std::string, uint32_t> meshesRemap;

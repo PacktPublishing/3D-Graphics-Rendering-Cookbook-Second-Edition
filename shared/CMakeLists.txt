@@ -25,6 +25,6 @@ if(WIN32)
   target_compile_definitions(SharedUtils PUBLIC "NOMINMAX")
 endif()
 
-if(UNIX)
+if(UNIX AND NOT APPLE)
   target_link_libraries(SharedUtils PUBLIC tbb)
 endif()

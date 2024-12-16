@@ -46,9 +46,9 @@ void loadMaterialTexture(
 
 uint32_t getNextMtxId(GLTFContext& gltf, const char* name, uint32_t& nextEmptyId, const mat4& mtx)
 {
-  const auto it = gltf.bonesStorage.find(name);
+  const auto it = gltf.bonesByName.find(name);
 
-  const uint32_t mtxId = (it == gltf.bonesStorage.end()) ? nextEmptyId++ : it->second.boneId;
+  const uint32_t mtxId = (it == gltf.bonesByName.end()) ? nextEmptyId++ : it->second.boneId;
 
   if (gltf.matrices.size() <= mtxId) {
     gltf.matrices.resize(mtxId + 1);
@@ -503,12 +503,12 @@ void loadGLTF(GLTFContext& gltf, const char* glTFName, const char* glTFDataPath)
       const aiBone& bone   = *mesh->mBones[id];
       const char* boneName = bone.mName.C_Str();
 
-      const bool hasBone = gltf.bonesStorage.contains(boneName);
+      const bool hasBone = gltf.bonesByName.contains(boneName);
 
-      const uint32_t boneId = hasBone ? gltf.bonesStorage[boneName].boneId : numBones++;
+      const uint32_t boneId = hasBone ? gltf.bonesByName[boneName].boneId : numBones++;
 
       if (!hasBone) {
-        gltf.bonesStorage[boneName] = {
+        gltf.bonesByName[boneName] = {
           .boneId    = boneId,
           .transform = aiMatrix4x4ToMat4(bone.mOffsetMatrix),
         };
@@ -845,7 +845,6 @@ void updateCamera(GLTFContext& gltf, const mat4& model, mat4& view, mat4& proj, 
 void buildTransformsList(GLTFContext& gltf)
 {
   gltf.transforms.clear();
-  // gltf.matrices.clear();
   gltf.opaqueNodes.clear();
   gltf.transmissionNodes.clear();
   gltf.transparentNodes.clear();
@@ -1038,14 +1037,14 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
       };
       buf.cmdBindComputePipeline(gltf.pipelineComputeAnimations);
       buf.cmdPushConstants(pc);
+      // clang-format off
       buf.cmdDispatchThreadGroups(
-          {
-              .width = gltf.maxVertices / 16,
-      },
-          { .buffers = { { lvk::BufferHandle(gltf.vertexBuffer) },
-                         { lvk::BufferHandle(gltf.morphStatesBuffer) },
-                         { lvk::BufferHandle(gltf.matricesBuffer) },
-                         { lvk::BufferHandle(gltf.vertexSkinningBuffer) } } });
+          { .width = gltf.maxVertices / 16 },
+          { .buffers = { lvk::BufferHandle(gltf.vertexBuffer),
+                         lvk::BufferHandle(gltf.morphStatesBuffer),
+                         lvk::BufferHandle(gltf.matricesBuffer),
+                         lvk::BufferHandle(gltf.vertexSkinningBuffer) } });
+      // clang-format on
     }
   }
 
