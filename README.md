@@ -80,6 +80,259 @@ cmake ..
 cd ..
 ```
 
+Running the demos:
+------------------
+
+**Run compiled demos from the root folder of this repository**
+
+Here's the complete list of all the demo applications included in this book.
+
+### Chapter 1: Establishing a Build Environment
+
+* 01_CMake
+* 02_GLFW
+* 03_Taskflow
+* 04_GLSLang
+* 05_BC7Compression
+
+### Chapter 2: Getting Started with Vulkan
+
+* 01_Swapchain
+
+  ![image](.github/screenshots/Chapter02/Ch02_Fig01_Swapchain.jpg)
+
+* 02_HelloTriangle
+
+  ![image](.github/screenshots/Chapter02/Ch02_Fig02_Triangle.jpg)
+
+* 03_GLM
+
+  ![image](.github/screenshots/Chapter02/Ch02_Fig03_GLM.jpg)
+
+### Chapter 3: Working with Vulkan objects
+
+* 01_Assimp
+
+  ![image](.github/screenshots/Chapter03/Ch03_Fig01_Assimp.jpg)
+
+* 02_STB
+
+  ![image](.github/screenshots/Chapter03/Ch03_Fig03_STB.jpg)
+
+### Chapter 4: Adding User Interaction and Productivity Tools
+
+* 01_ImGui
+
+  ![image](.github/screenshots/Chapter04/Ch04_Fig01_ImGui.jpg)
+
+* 02_TracyProfiler
+
+  ![image](.github/screenshots/Chapter04/Ch04_Fig02_Tracy.jpg)
+
+* 03_FPS
+
+  ![image](.github/screenshots/Chapter04/Ch04_Fig03_FPS.jpg)
+
+* 04_CubeMap
+
+  ![image](.github/screenshots/Chapter04/Ch04_Fig07_CubeMapDuck.jpg)
+
+* 05_Camera
+
+  ![image](.github/screenshots/Chapter04/Ch04_Fig08_Camera.jpg)
+
+* 06_DemoApp
+
+  ![image](.github/screenshots/Chapter04/Ch04_Fig11_FinalDemo.jpg)
+
+
+### Chapter 5: Working with Geometry Data
+
+* 01_MeshOptimizer
+
+  ![image](.github/screenshots/Chapter05/Ch05_Fig01_MeshOptimizer.jpg)
+
+* 02_VertexPulling
+
+  ![image](.github/screenshots/Chapter05/Ch05_Fig02_PVP.jpg)
+
+* 03_MillionCubes
+
+  ![image](.github/screenshots/Chapter05/Ch05_Fig03_MillionCubes.jpg)
+
+* 04_InstancedMeshes
+
+  ![image](.github/screenshots/Chapter05/Ch05_Fig04_InstancedMeshes.jpg)
+
+* 05_Grid
+
+  ![image](.github/screenshots/Chapter05/Ch05_Fig05_Grid.jpg)
+
+* 06_Tessellation
+
+  ![image](.github/screenshots/Chapter05/Ch05_Fig06_Tessellation.jpg)
+
+* 07_MeshRenderer
+
+  ![image](.github/screenshots/Chapter05/Ch05_Fig07_BistroMeshRendering.jpg)
+
+* 08_ComputeTexture
+
+  ![image](.github/screenshots/Chapter05/Ch05_Fig08_ComputeTexture.jpg)
+
+* 09_ComputeMesh
+
+  ![image](.github/screenshots/Chapter05/Ch05_Fig09_TorusKnot.jpg)
+
+### Chapter 6: Physically Based Rendering Using the glTF 2.0 Shading Model
+
+* 01_Unlit
+
+  ![image](.github/screenshots/Chapter06/Ch06_Fig04_Unlit.jpg)
+
+* 02_BRDF_LUT
+
+  ![image](.github/screenshots/Chapter06/Ch06_Fig05_BRDF_LUT.jpg)
+
+* 03_FilterEnvmap
+
+  ![image](.github/screenshots/Chapter06/Ch06_Fig07_PrefilteredEnvMap.jpg)
+
+* 04_MetallicRoughness
+
+  ![image](.github/screenshots/Chapter06/Ch06_Fig08_MetallicRoughness.jpg)
+
+* 05_SpecularGlossiness
+
+  ![image](.github/screenshots/Chapter06/Ch06_Fig09_SpecularGlossiness.jpg)
+
+### Chapter 7: Advanced PBR extensions
+
+* 01_Clearcoat
+
+  ![image](.github/screenshots/Chapter07/Ch07_Fig02_Clearcoat.jpg)
+
+* 02_Sheen
+
+  ![image](.github/screenshots/Chapter07/Ch07_Fig03_Sheen.jpg)
+
+* 03_Transmission
+
+  ![image](.github/screenshots/Chapter07/Ch07_Fig04_Transmission.jpg)
+
+* 04_Volume
+
+  ![image](.github/screenshots/Chapter07/Ch07_Fig05_Volume.jpg)
+
+* 05_IOR
+
+  ![image](.github/screenshots/Chapter07/Ch07_Fig06_IOR.jpg)
+
+* 06_Specular
+
+  ![image](.github/screenshots/Chapter07/Ch07_Fig07_Specular.jpg)
+
+* 07_EmissiveStrength
+
+  ![image](.github/screenshots/Chapter07/Ch07_Fig08_EmissiveStrength.jpg)
+
+* 08_AnalyticalLight
+
+  ![image](.github/screenshots/Chapter07/Ch07_Fig09_AnalyticalLights.jpg)
+
+### Chapter 8: Graphics Rendering Pipeline
+
+* 01_DescriptorIndexing
+
+  ![image](.github/screenshots/Chapter08/Ch08_Fig03_DescriptorIndexing.jpg)
+
+* 02_SceneGraph
+
+  ![image](.github/screenshots/Chapter08/Ch08_Fig07_SceneGraph.jpg)
+
+* 03_LargeScene
+
+  ![image](.github/screenshots/Chapter08/Ch08_Fig09_Bistro.jpg)
+
+### Chapter 9: glTF Animations
+
+* 01_AnimationPlayer
+
+  ![image](.github/screenshots/Chapter09/Ch09_Fig01_AnimationPlayer.jpg)
+
+* 02_Skinning
+
+  ![image](.github/screenshots/Chapter09/Ch09_Fig02_Skinning.jpg)
+
+* 03_Morphing
+
+  ![image](.github/screenshots/Chapter09/Ch09_Fig03_Morphing.jpg)
+
+* 04_AnimationBlending
+
+  ![image](.github/screenshots/Chapter09/Ch09_Fig04_AnimationBlending.jpg)
+
+* 05_ImportLights
+
+  ![image](.github/screenshots/Chapter09/Ch09_Fig05_ImportLights.jpg)
+
+* 06_ImportCameras
+
+  ![image](.github/screenshots/Chapter09/Ch09_Fig06_ImportCameras.jpg)
+
+### Chapter 10: Image-based Techniques
+
+* 01_OffscreenRendering
+
+  ![image](.github/screenshots/Chapter10/Ch10_Fig01_Icosahedron.jpg)
+
+* 02_ShadowMapping
+
+  ![image](.github/screenshots/Chapter10/Ch10_Fig04_ShadowMapping.jpg)
+
+* 03_MSAA
+
+  ![image](.github/screenshots/Chapter10/Ch10_Fig05_MSAA.jpg)
+
+* 04_SSAO
+
+  ![image](.github/screenshots/Chapter10/Ch10_Fig08_SSAO_Blur.jpg)
+
+* 05_HDR
+
+  ![image](.github/screenshots/Chapter10/Ch10_Fig12_HDR.jpg)
+
+* 06_HDR_Adaptation
+
+  ![image](.github/screenshots/Chapter10/Ch10_Fig13_HDR_Light_Adaptation.jpg)
+
+### Chapter 11: Advanced Rendering Techniques and Optimizations
+
+* 01_CullingCPU
+
+  ![image](.github/screenshots/Chapter11/Ch11_Fig01_CullingCPU.jpg)
+
+* 02_CullingGPU
+
+  ![image](.github/screenshots/Chapter11/Ch11_Fig02_CullingGPU.jpg)
+
+* 03_DirectionalShadows
+
+  ![image](.github/screenshots/Chapter11/Ch11_Fig04_ShadowMapping.jpg)
+
+* 04_OIT
+
+  ![image](.github/screenshots/Chapter11/Ch11_Fig05_OIT.jpg)
+
+* 05_LazyLoading
+
+  ![image](.github/screenshots/Chapter11/Ch11_Fig06_LazyLoading.jpg)
+
+* 06_FinalDemo
+
+  ![image](.github/screenshots/Chapter11/Ch11_Fig08_Final.jpg)
+
+
 ## Screenshots
 
 ![image](.github/Ch11_Fig08_Final.jpg)
