@@ -354,18 +354,18 @@ int main()
           ImGui::Begin("Tone mapping curve", nullptr, flags);
           const int kNumGraphPoints = 1001;
           float xs[kNumGraphPoints];
-          float ysUnchimura[kNumGraphPoints];
+          float ysUchimura[kNumGraphPoints];
           float ysReinhard2[kNumGraphPoints];
           float ysKhronosPBR[kNumGraphPoints];
           for (int i = 0; i != kNumGraphPoints; i++) {
             xs[i]           = float(i) / kNumGraphPoints;
-            ysUnchimura[i]  = uchimura(xs[i], pcHDR.P, pcHDR.a, pcHDR.m, pcHDR.l, pcHDR.c, pcHDR.b);
+            ysUchimura[i]   = uchimura(xs[i], pcHDR.P, pcHDR.a, pcHDR.m, pcHDR.l, pcHDR.c, pcHDR.b);
             ysReinhard2[i]  = reinhard2(xs[i], pcHDR.maxWhite);
             ysKhronosPBR[i] = PBRNeutralToneMapping(xs[i], pcHDR.startCompression, pcHDR.desaturation);
           }
           if (ImPlot::BeginPlot("Tone mapping curves", { width * 0.4f, height * 0.3f }, ImPlotFlags_NoInputs)) {
             ImPlot::SetupAxes("Input", "Output");
-            ImPlot::PlotLine("Uchimura", xs, ysUnchimura, kNumGraphPoints);
+            ImPlot::PlotLine("Uchimura", xs, ysUchimura, kNumGraphPoints);
             ImPlot::PlotLine("Reinhard", xs, ysReinhard2, kNumGraphPoints);
             ImPlot::PlotLine("Khronos PBR", xs, ysKhronosPBR, kNumGraphPoints);
             ImPlot::EndPlot();
