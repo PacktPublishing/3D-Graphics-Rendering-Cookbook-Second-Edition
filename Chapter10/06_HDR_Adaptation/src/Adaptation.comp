@@ -15,7 +15,8 @@ void main() {
   float lumCurr = imageLoad(kTextures2DIn[pc.texCurrSceneLuminance  ], ivec2(0, 0)).x;
   float lumPrev = imageLoad(kTextures2DIn[pc.texPrevAdaptedLuminance], ivec2(0, 0)).x;
 
-  float newAdaptation = lumPrev + (lumCurr - lumPrev) * (1.0 - pow(0.98, pc.adaptationSpeed));
+  float factor        = 1.0 - exp(-pc.adaptationSpeed);
+  float newAdaptation = lumPrev + (lumCurr - lumPrev) * factor;
 
   imageStore(kTextures2DOut[pc.texAdaptedOut], ivec2(0, 0), vec4(newAdaptation));
 }

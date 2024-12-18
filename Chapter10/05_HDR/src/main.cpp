@@ -95,7 +95,7 @@ int main()
 
   const lvk::ComponentMapping swizzle = { .r = lvk::Swizzle_R, .g = lvk::Swizzle_R, .b = lvk::Swizzle_R, .a = lvk::Swizzle_1 };
 
-  lvk::Holder<lvk::TextureHandle> texLuminanceViews[10] = { ctx->createTexture({
+  lvk::Holder<lvk::TextureHandle> texLumViews[10] = { ctx->createTexture({
       .format       = lvk::Format_R_F16,
       .dimensions   = sizeBloom,
       .usage        = lvk::TextureUsageBits_Sampled | lvk::TextureUsageBits_Storage,
@@ -104,8 +104,8 @@ int main()
       .debugName    = "texLuminance",
   }) };
 
-  for (uint32_t l = 1; l != LVK_ARRAY_NUM_ELEMENTS(texLuminanceViews); l++) {
-    texLuminanceViews[l] = ctx->createTextureView(texLuminanceViews[0], { .mipLevel = l, .swizzle = swizzle });
+  for (uint32_t l = 1; l != LVK_ARRAY_NUM_ELEMENTS(texLumViews); l++) {
+    texLumViews[l] = ctx->createTextureView(texLumViews[0], { .mipLevel = l, .swizzle = swizzle });
   }
 
   lvk::Holder<lvk::TextureHandle> offscreenColor = ctx->createTexture({
@@ -164,7 +164,7 @@ int main()
     float desaturation     = 0.15f; // desaturation speed
   } pcHDR = {
     .texColor     = offscreenColor.index(),
-    .texLuminance = texLuminanceViews[LVK_ARRAY_NUM_ELEMENTS(texLuminanceViews) - 1].index(), // 1x1
+    .texLuminance = texLumViews[LVK_ARRAY_NUM_ELEMENTS(texLumViews) - 1].index(), // 1x1
     .texBloom     = texBloomPass.index(),
     .sampler      = samplerClamp.index(),
   };
@@ -204,17 +204,16 @@ int main()
       } pcBrightPass = {
         .texColor     = offscreenColor.index(),
         .texOut       = texBrightPass.index(),
-        .texLuminance = texLuminanceViews[0].index(),
+        .texLuminance = texLumViews[0].index(),
         .sampler      = samplerClamp.index(),
         .exposure     = pcHDR.exposure,
       };
       buf.cmdBindComputePipeline(pipelineBrightPass);
       buf.cmdPushConstants(pcBrightPass);
-      buf.cmdDispatchThreadGroups(
-          sizeBloom.divide2D(16), {
-                                      .textures = {lvk::TextureHandle(offscreenColor), lvk::TextureHandle(texLuminanceViews[0])}
-      });
-      buf.cmdGenerateMipmap(texLuminanceViews[0]);
+      // clang-format off
+      buf.cmdDispatchThreadGroups(sizeBloom.divide2D(16), { .textures = {lvk::TextureHandle(offscreenColor), lvk::TextureHandle(texLumViews[0])} });
+      // clang-format on
+      buf.cmdGenerateMipmap(texLumViews[0]);
 
       // 2.1. Bloom
       struct BlurPC {
@@ -266,7 +265,7 @@ int main()
       };
 
       // transition the entire mip-pyramid
-      buf.cmdBeginRendering(renderPassMain, framebufferMain, { .textures = { lvk::TextureHandle(texLuminanceViews[0]) } });
+      buf.cmdBeginRendering(renderPassMain, framebufferMain, { .textures = { lvk::TextureHandle(texLumViews[0]) } });
 
       buf.cmdBindRenderPipeline(pipelineToneMap);
       buf.cmdPushConstants(pcHDR);
@@ -339,8 +338,8 @@ int main()
         ImGui::Image(texBloomPass.index(), ImVec2(windowWidth, windowWidth / aspectRatio));
         ImGui::Separator();
         ImGui::Text("Luminance pyramid 512x512");
-        for (uint32_t l = 0; l != LVK_ARRAY_NUM_ELEMENTS(texLuminanceViews); l++) {
-          ImGui::Image(texLuminanceViews[l].index(), ImVec2((int)windowWidth >> l, ((int)windowWidth >> l)));
+        for (uint32_t l = 0; l != LVK_ARRAY_NUM_ELEMENTS(texLumViews); l++) {
+          ImGui::Image(texLumViews[l].index(), ImVec2((int)windowWidth >> l, ((int)windowWidth >> l)));
         }
         ImGui::Separator();
         ImGui::End();

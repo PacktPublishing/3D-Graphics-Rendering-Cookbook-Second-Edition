@@ -99,7 +99,7 @@ int main()
 
   const lvk::ComponentMapping swizzle = { .r = lvk::Swizzle_R, .g = lvk::Swizzle_R, .b = lvk::Swizzle_R, .a = lvk::Swizzle_1 };
 
-  lvk::Holder<lvk::TextureHandle> texLuminanceViews[10] = { ctx->createTexture({
+  lvk::Holder<lvk::TextureHandle> texLumViews[10] = { ctx->createTexture({
       .format       = lvk::Format_R_F16,
       .dimensions   = sizeBloom,
       .usage        = lvk::TextureUsageBits_Sampled | lvk::TextureUsageBits_Storage,
@@ -108,8 +108,8 @@ int main()
       .debugName    = "texLuminance",
   }) };
 
-  for (uint32_t l = 1; l != LVK_ARRAY_NUM_ELEMENTS(texLuminanceViews); l++) {
-    texLuminanceViews[l] = ctx->createTextureView(texLuminanceViews[0], { .mipLevel = l, .swizzle = swizzle });
+  for (uint32_t l = 1; l != LVK_ARRAY_NUM_ELEMENTS(texLumViews); l++) {
+    texLumViews[l] = ctx->createTextureView(texLumViews[0], { .mipLevel = l, .swizzle = swizzle });
   }
 
   const uint16_t brightPixel = glm::packHalf1x16(50.0f);
@@ -122,7 +122,7 @@ int main()
     .swizzle    = swizzle,
     .data       = &brightPixel,
   };
-  lvk::Holder<lvk::TextureHandle> texAdaptedLuminance[2] = {
+  lvk::Holder<lvk::TextureHandle> texAdaptedLum[2] = {
     ctx->createTexture(luminanceTextureDesc, "texAdaptedLuminance0"),
     ctx->createTexture(luminanceTextureDesc, "texAdaptedLuminance1"),
   };
@@ -154,7 +154,7 @@ int main()
   bool enableBloom    = true;
   float bloomStrength = 0.01f;
   int numBloomPasses  = 2;
-  float adaptationSpeed = 1.0f;
+  float adaptationSpeed = 3.0f;
 
   ImPlotContext* implotCtx = ImPlot::CreateContext();
 
@@ -184,7 +184,7 @@ int main()
     float desaturation     = 0.15f; // desaturation speed
   } pcHDR = {
     .texColor     = offscreenColor.index(),
-    .texLuminance = texAdaptedLuminance[0].index(), // 1x1
+    .texLuminance = texAdaptedLum[0].index(), // 1x1
     .texBloom     = texBloomPass.index(),
     .sampler      = samplerClamp.index(),
   };
@@ -224,17 +224,16 @@ int main()
       } pcBrightPass = {
         .texColor     = offscreenColor.index(),
         .texOut       = texBrightPass.index(),
-        .texLuminance = texLuminanceViews[0].index(),
+        .texLuminance = texLumViews[0].index(),
         .sampler      = samplerClamp.index(),
         .exposure     = pcHDR.exposure,
       };
       buf.cmdBindComputePipeline(pipelineBrightPass);
       buf.cmdPushConstants(pcBrightPass);
-      buf.cmdDispatchThreadGroups(
-          sizeBloom.divide2D(16), {
-                                      .textures = {lvk::TextureHandle(offscreenColor), lvk::TextureHandle(texLuminanceViews[0])}
-      });
-      buf.cmdGenerateMipmap(texLuminanceViews[0]);
+      // clang-format off
+      buf.cmdDispatchThreadGroups(sizeBloom.divide2D(16), { .textures = {lvk::TextureHandle(offscreenColor), lvk::TextureHandle(texLumViews[0])} });
+      // clang-format on
+      buf.cmdGenerateMipmap(texLumViews[0]);
 
       // 2.1. Bloom
       struct BlurPC {
@@ -284,22 +283,22 @@ int main()
         uint32_t texNewAdaptedLuminance;
         float adaptationSpeed;
       } pcAdaptationPass = {
-        .texCurrSceneLuminance   = texLuminanceViews[LVK_ARRAY_NUM_ELEMENTS(texLuminanceViews) - 1].index(), // 1x1,
-        .texPrevAdaptedLuminance = texAdaptedLuminance[0].index(),
-        .texNewAdaptedLuminance  = texAdaptedLuminance[1].index(),
-        .adaptationSpeed         = 100.0f * deltaSeconds * adaptationSpeed,
+        .texCurrSceneLuminance   = texLumViews[LVK_ARRAY_NUM_ELEMENTS(texLumViews) - 1].index(), // 1x1,
+        .texPrevAdaptedLuminance = texAdaptedLum[0].index(),
+        .texNewAdaptedLuminance  = texAdaptedLum[1].index(),
+        .adaptationSpeed         = deltaSeconds * adaptationSpeed,
       };
       buf.cmdBindComputePipeline(pipelineAdaptationPass);
       buf.cmdPushConstants(pcAdaptationPass);
+      // clang-format off
       buf.cmdDispatchThreadGroups(
-          {
-              1, 1, 1
-      },
+          { 1, 1, 1 },
           { .textures = {
-                lvk::TextureHandle(texLuminanceViews[0]), // transition the entire mip-pyramid
-                lvk::TextureHandle(texAdaptedLuminance[0]),
-                lvk::TextureHandle(texAdaptedLuminance[1]),
+                lvk::TextureHandle(texLumViews[0]), // transition the entire mip-pyramid
+                lvk::TextureHandle(texAdaptedLum[0]),
+                lvk::TextureHandle(texAdaptedLum[1]),
             } });
+      // clang-format on
 
       // 4. Render tone-mapped scene into a swapchain image
       const lvk::RenderPass renderPassMain = {
@@ -310,7 +309,7 @@ int main()
       };
 
       // transition the entire mip-pyramid
-      buf.cmdBeginRendering(renderPassMain, framebufferMain, { .textures = { lvk::TextureHandle(texAdaptedLuminance[1]) } });
+      buf.cmdBeginRendering(renderPassMain, framebufferMain, { .textures = { lvk::TextureHandle(texAdaptedLum[1]) } });
 
       buf.cmdBindRenderPipeline(pipelineToneMap);
       buf.cmdPushConstants(pcHDR);
@@ -334,7 +333,7 @@ int main()
         const float indentSize = 32.0f;
         ImGui::Text("Tone mapping params:");
         ImGui::SliderFloat("Exposure", &pcHDR.exposure, 0.1f, 2.0f);
-        ImGui::SliderFloat("Adaptation speed", &adaptationSpeed, 0.1f, 2.0f);
+        ImGui::SliderFloat("Adaptation speed", &adaptationSpeed, 1.0f, 10.0f);
         ImGui::Checkbox("Enable bloom", &enableBloom);
         pcHDR.bloomStrength = enableBloom ? bloomStrength : 0.0f;
         ImGui::BeginDisabled(!enableBloom);
@@ -376,9 +375,9 @@ int main()
         ImGui::Separator();
 
         ImGui::Text("Average luminance 1x1:");
-        ImGui::Image(texLuminanceViews[LVK_ARRAY_NUM_ELEMENTS(texLuminanceViews) - 1].index(), ImVec2(128, 128));
+        ImGui::Image(texLumViews[LVK_ARRAY_NUM_ELEMENTS(texLumViews) - 1].index(), ImVec2(128, 128));
         ImGui::Text("Adapted luminance 1x1:");
-        ImGui::Image(texAdaptedLuminance[0].index(), ImVec2(128, 128));
+        ImGui::Image(texAdaptedLum[0].index(), ImVec2(128, 128));
         ImGui::Separator();
         ImGui::Text("Bright pass:");
         ImGui::Image(texBrightPass.index(), ImVec2(windowWidth, windowWidth / aspectRatio));
@@ -423,7 +422,7 @@ int main()
     ctx->submit(buf, ctx->getCurrentSwapchainTexture());
 
     // swap ping-bong textures
-    std::swap(texAdaptedLuminance[0], texAdaptedLuminance[1]);
+    std::swap(texAdaptedLum[0], texAdaptedLum[1]);
   });
 
   ImPlot::DestroyContext(implotCtx);
