@@ -51,7 +51,7 @@ struct Scene {
   std::unordered_map<uint32_t, uint32_t> nameForNode;
 
   // List of scene node names
-  std::vector<std::string> names;
+  std::vector<std::string> nodeNames;
 
   // Debug list of material names
   std::vector<std::string> materialNames;
@@ -66,13 +66,13 @@ int findNodeByName(const Scene& scene, const std::string& name);
 inline std::string getNodeName(const Scene& scene, int node)
 {
   int strID = scene.nameForNode.contains(node) ? scene.nameForNode.at(node) : -1;
-  return (strID > -1) ? scene.names[strID] : std::string();
+  return (strID > -1) ? scene.nodeNames[strID] : std::string();
 }
 
 inline void setNodeName(Scene& scene, int node, const std::string& name)
 {
-  uint32_t stringID = (uint32_t)scene.names.size();
-  scene.names.push_back(name);
+  uint32_t stringID = (uint32_t)scene.nodeNames.size();
+  scene.nodeNames.push_back(name);
   scene.nameForNode[node] = stringID;
 }
 

@@ -55,8 +55,10 @@ std::string convertTexture(
   const int maxNewWidth  = DEMO_TEXTURE_MAX_SIZE;
   const int maxNewHeight = DEMO_TEXTURE_MAX_SIZE;
 
-  if (!std::filesystem::exists(DEMO_TEXTURE_CACHE_FOLDER)) {
-    std::filesystem::create_directories(DEMO_TEXTURE_CACHE_FOLDER);
+  namespace fs = std::filesystem;
+
+  if (!fs::exists(DEMO_TEXTURE_CACHE_FOLDER)) {
+    fs::create_directories(DEMO_TEXTURE_CACHE_FOLDER);
   }
 
   const std::string srcFile = replaceAll(basePath + file, "\\", "/");
@@ -210,16 +212,16 @@ void traverse(const aiScene* sourceScene, Scene& scene, aiNode* N, int parent, i
     printPrefix(depth);
     printf("Node[%d].name = %s\n", newNode, N->mName.C_Str());
 
-    const uint32_t stringID = (uint32_t)scene.names.size();
-    scene.names.push_back(std::string(N->mName.C_Str()));
+    const uint32_t stringID = (uint32_t)scene.nodeNames.size();
+    scene.nodeNames.push_back(std::string(N->mName.C_Str()));
     scene.nameForNode[newNode] = stringID;
   }
 
   for (size_t i = 0; i < N->mNumMeshes; i++) {
     const int newSubNode = addNode(scene, newNode, depth + 1);
 
-    const uint32_t stringID = (uint32_t)scene.names.size();
-    scene.names.push_back(std::string(N->mName.C_Str()) + "_Mesh_" + std::to_string(i));
+    const uint32_t stringID = (uint32_t)scene.nodeNames.size();
+    scene.nodeNames.push_back(std::string(N->mName.C_Str()) + "_Mesh_" + std::to_string(i));
     scene.nameForNode[newSubNode] = stringID;
 
     const int mesh                    = (int)N->mMeshes[i];

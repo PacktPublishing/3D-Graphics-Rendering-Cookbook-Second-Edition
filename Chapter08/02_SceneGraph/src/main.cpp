@@ -78,7 +78,7 @@ bool editTransformUI(const mat4& view, const mat4& projection, mat4& matrix)
 
 int* textureToEdit = nullptr;
 
-bool editMaterialUI(Scene& scene, MeshData& meshData, int node, int& outUpdateMaterialIndex, TextureCache& textureCache)
+bool editMaterialUI(Scene& scene, MeshData& meshData, int node, int& outUpdateMaterialIndex, const TextureCache& textureCache)
 {
   if (!scene.materialForNode.contains(node))
     return false;
@@ -141,7 +141,7 @@ bool editMaterialUI(Scene& scene, MeshData& meshData, int node, int& outUpdateMa
 }
 
 void editNodeUI(
-    Scene& scene, MeshData& meshData, const mat4& view, const mat4 proj, int node, int& outUpdateMaterialIndex, TextureCache& textureCache)
+    Scene& scene, MeshData& meshData, const mat4& view, const mat4 proj, int node, int& outUpdateMaterialIndex, const TextureCache& textureCache)
 {
   ImGuizmo::SetOrthographic(false);
   ImGuizmo::BeginFrame();

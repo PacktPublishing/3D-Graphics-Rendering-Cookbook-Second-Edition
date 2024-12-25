@@ -56,7 +56,7 @@ int findNodeByName(const Scene& scene, const std::string& name)
     if (scene.nameForNode.contains(i)) {
       int strID = scene.nameForNode.at(i);
       if (strID > -1)
-        if (scene.names[strID] == name)
+        if (scene.nodeNames[strID] == name)
           return (int)i;
     }
 
@@ -131,7 +131,7 @@ void loadScene(const char* fileName, Scene& scene)
 
   if (!feof(f)) {
     loadMap(f, scene.nameForNode);
-    loadStringList(f, scene.names);
+    loadStringList(f, scene.nodeNames);
     loadStringList(f, scene.materialNames);
   }
 
@@ -169,9 +169,9 @@ void saveScene(const char* fileName, const Scene& scene)
   saveMap(f, scene.materialForNode);
   saveMap(f, scene.meshForNode);
 
-  if (!scene.names.empty() && !scene.nameForNode.empty()) {
+  if (!scene.nodeNames.empty() && !scene.nameForNode.empty()) {
     saveMap(f, scene.nameForNode);
-    saveStringList(f, scene.names);
+    saveStringList(f, scene.nodeNames);
     saveStringList(f, scene.materialNames);
   }
   fclose(f);
@@ -289,7 +289,7 @@ void mergeScenes(
   };
 
   scene.nameForNode[0] = 0;
-  scene.names          = { "NewRoot" };
+  scene.nodeNames      = { "NewRoot" };
 
   scene.localTransform.push_back(glm::mat4(1.f));
   scene.globalTransform.push_back(glm::mat4(1.f));
@@ -299,7 +299,7 @@ void mergeScenes(
 
   int offs        = 1;
   int meshOffs    = 0;
-  int nameOffs    = (int)scene.names.size();
+  int nameOffs    = (int)scene.nodeNames.size();
   int materialOfs = 0;
   auto meshCount  = meshCounts.begin();
 
@@ -313,7 +313,7 @@ void mergeScenes(
 
     mergeVectors(scene.hierarchy, s->hierarchy);
 
-    mergeVectors(scene.names, s->names);
+    mergeVectors(scene.nodeNames, s->nodeNames);
     if (mergeMaterials)
       mergeVectors(scene.materialNames, s->materialNames);
 
@@ -328,7 +328,7 @@ void mergeScenes(
     offs += nodeCount;
 
     materialOfs += (int)s->materialNames.size();
-    nameOffs += (int)s->names.size();
+    nameOffs += (int)s->nodeNames.size();
 
     if (mergeMeshes) {
       meshOffs += *meshCount;
@@ -371,7 +371,7 @@ void dumpSceneToDot(const char* fileName, const Scene& scene, int* visited)
     std::string extra = "";
     if (scene.nameForNode.contains(i)) {
       int strID = scene.nameForNode.at(i);
-      name      = scene.names[strID];
+      name      = scene.nodeNames[strID];
     }
     if (visited) {
       if (visited[i])

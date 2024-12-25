@@ -33,7 +33,7 @@ template <typename T> inline void mergeVectors(std::vector<T>& v1, const std::ve
 // Delete a list of items from std::vector with indices in 'selection'
 // e.g., eraseSelected({1, 2, 3, 4, 5}, {1, 3})  ->   {1, 3, 5}
 //                         ^     ^    2 and 4 get deleted
-template <class T, class Index = int> inline void eraseSelected(std::vector<T>& v, const std::vector<Index>& selection)
+template <typename T, typename Index = int> inline void eraseSelected(std::vector<T>& v, const std::vector<Index>& selection)
 {
   // cut off the elements moved to the end of the vector by std::stable_partition
   v.resize(std::distance(
