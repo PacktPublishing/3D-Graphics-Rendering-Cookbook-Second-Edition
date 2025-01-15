@@ -1,6 +1,6 @@
 #include <shared/HelpersGLFW.h>
 
-int main(void)
+int main()
 {
   uint32_t w = 1280;
   uint32_t h = 800;
