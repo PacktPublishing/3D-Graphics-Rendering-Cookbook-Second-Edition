@@ -31,9 +31,9 @@ int main()
     const ImGuiMouseButton_ imguiButton = (button == GLFW_MOUSE_BUTTON_LEFT)
                                               ? ImGuiMouseButton_Left
                                               : (button == GLFW_MOUSE_BUTTON_RIGHT ? ImGuiMouseButton_Right : ImGuiMouseButton_Middle);
-    ImGuiIO& io               = ImGui::GetIO();
-    io.MousePos               = ImVec2((float)xpos, (float)ypos);
-    io.MouseDown[imguiButton] = action == GLFW_PRESS;
+    ImGuiIO& io                         = ImGui::GetIO();
+    io.MousePos                         = ImVec2((float)xpos, (float)ypos);
+    io.MouseDown[imguiButton]           = action == GLFW_PRESS;
   });
 
   int w, h, comp;
@@ -75,8 +75,8 @@ int main()
     ctx->submit(buf, ctx->getCurrentSwapchainTexture());
   }
 
-  imgui       = nullptr;
-  texture     = nullptr;
+  imgui   = nullptr;
+  texture = nullptr;
 
   ctx.reset();
 

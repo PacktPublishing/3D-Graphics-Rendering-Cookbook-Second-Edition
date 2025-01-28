@@ -9,14 +9,14 @@ layout (location=0) in vec2 uv;
 layout (location=0) out vec4 out_FragColor;
 
 layout(push_constant) uniform PerFrameData {
-	uniform mat4 MVP;
-	uint textureId;
+  uniform mat4 MVP;
+  uint textureId;
 };
 
 vec4 textureBindless2D(uint textureid, uint samplerid, vec2 uv) {
-  return texture(sampler2D(kTextures2D[textureid], kSamplers[samplerid]), uv);
+  return texture(nonuniformEXT(sampler2D(kTextures2D[textureid], kSamplers[samplerid])), uv);
 }
 
 void main() {
-	out_FragColor = textureBindless2D(textureId, 0, uv);
+  out_FragColor = textureBindless2D(textureId, 0, uv);
 };

@@ -31,8 +31,6 @@ int main()
       .cullMode    = lvk::CullMode_Back,
   });
 
-  const lvk::DepthState dState = { .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true };
-
   LVK_ASSERT(pipeline.valid());
 
   const aiScene* scene = aiImportFile("data/rubber_duck/scene.gltf", aiProcess_Triangulate);
@@ -95,22 +93,19 @@ int main()
         .storage   = lvk::StorageType_Device,
         .size      = sizeof(vec3) * positions.size(),
         .data      = positions.data(),
-        .debugName = "Buffer: vertex" },
-      nullptr);
+        .debugName = "Buffer: vertex" });
   lvk::Holder<lvk::BufferHandle> indexBuffer = ctx->createBuffer(
       { .usage     = lvk::BufferUsageBits_Index,
         .storage   = lvk::StorageType_Device,
         .size      = sizeof(uint32_t) * indices.size(),
         .data      = indices.data(),
-        .debugName = "Buffer: index" },
-      nullptr);
+        .debugName = "Buffer: index" });
   lvk::Holder<lvk::BufferHandle> indexBufferLod = ctx->createBuffer(
       { .usage     = lvk::BufferUsageBits_Index,
         .storage   = lvk::StorageType_Device,
         .size      = sizeof(uint32_t) * indicesLod.size(),
         .data      = indicesLod.data(),
-        .debugName = "Buffer: index LOD" },
-      nullptr);
+        .debugName = "Buffer: index LOD" });
 
   app.run([&](uint32_t width, uint32_t height, float aspectRatio, float deltaSeconds) {
     const mat4 m  = glm::rotate(mat4(1.0f), glm::radians(-90.0f), vec3(1, 0, 0));
@@ -136,7 +131,7 @@ int main()
         {
           buf.cmdBindVertexBuffer(0, vertexBuffer, 0);
           buf.cmdBindRenderPipeline(pipeline);
-          buf.cmdBindDepthState(dState);
+          buf.cmdBindDepthState({ .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true });
           buf.cmdPushConstants(p * v1 * m);
           buf.cmdBindIndexBuffer(indexBuffer, lvk::IndexFormat_UI32);
           buf.cmdDrawIndexed(indices.size());

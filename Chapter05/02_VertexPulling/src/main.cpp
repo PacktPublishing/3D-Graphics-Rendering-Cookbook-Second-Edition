@@ -49,15 +49,13 @@ int main()
           .storage   = lvk::StorageType_Device,
           .size      = sizeof(Vertex) * positions.size(),
           .data      = positions.data(),
-          .debugName = "Buffer: vertex" },
-        nullptr);
+          .debugName = "Buffer: vertex" });
     lvk::Holder<lvk::BufferHandle> indexBuffer = ctx->createBuffer(
         { .usage     = lvk::BufferUsageBits_Index,
           .storage   = lvk::StorageType_Device,
           .size      = sizeof(uint32_t) * indices.size(),
           .data      = indices.data(),
-          .debugName = "Buffer: index" },
-        nullptr);
+          .debugName = "Buffer: index" });
 
     lvk::Holder<lvk::ShaderModuleHandle> vert = loadShaderModule(ctx, "Chapter05/02_VertexPulling/src/main.vert");
     lvk::Holder<lvk::ShaderModuleHandle> geom = loadShaderModule(ctx, "Chapter05/02_VertexPulling/src/main.geom");
@@ -71,8 +69,6 @@ int main()
         .depthFormat = app.getDepthFormat(),
         .cullMode    = lvk::CullMode_Back,
     });
-
-    const lvk::DepthState dState = { .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true };
 
     LVK_ASSERT(pipelineSolid.valid());
 
@@ -109,7 +105,7 @@ int main()
           buf.cmdBindIndexBuffer(indexBuffer, lvk::IndexFormat_UI32);
           buf.cmdBindRenderPipeline(pipelineSolid);
           buf.cmdPushConstants(pc);
-          buf.cmdBindDepthState(dState);
+          buf.cmdBindDepthState({ .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true });
           buf.cmdDrawIndexed(indices.size());
         }
         buf.cmdPopDebugGroupLabel();

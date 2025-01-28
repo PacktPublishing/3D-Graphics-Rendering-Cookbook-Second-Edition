@@ -24,23 +24,11 @@ int main()
 {
   minilog::initialize(nullptr, { .threadNames = false });
 
-  GLFWwindow* window = nullptr;
-  std::unique_ptr<lvk::IContext> ctx;
-  lvk::Holder<lvk::TextureHandle> depthTexture;
-  {
-    int width  = -95;
-    int height = -90;
+  int width  = -95;
+  int height = -90;
 
-    window       = lvk::initWindow("Simple example", width, height);
-    ctx          = lvk::createVulkanContextWithSwapchain(window, width, height, {});
-    depthTexture = ctx->createTexture({
-        .type       = lvk::TextureType_2D,
-        .format     = lvk::Format_Z_F32,
-        .dimensions = {(uint32_t)width, (uint32_t)height},
-        .usage      = lvk::TextureUsageBits_Attachment,
-        .debugName  = "Depth buffer",
-    });
-  }
+  GLFWwindow* window = window        = lvk::initWindow("Simple example", width, height);
+  std::unique_ptr<lvk::IContext> ctx = lvk::createVulkanContextWithSwapchain(window, width, height, {});
 
   const aiScene* scene = aiImportFile("data/rubber_duck/scene.gltf", aiProcess_Triangulate);
 
@@ -70,15 +58,21 @@ int main()
         .storage   = lvk::StorageType_Device,
         .size      = sizeof(vec3) * positions.size(),
         .data      = positions.data(),
-        .debugName = "Buffer: vertex" },
-      nullptr);
+        .debugName = "Buffer: vertex" });
   lvk::Holder<lvk::BufferHandle> indexBuffer = ctx->createBuffer(
       { .usage     = lvk::BufferUsageBits_Index,
         .storage   = lvk::StorageType_Device,
         .size      = sizeof(uint32_t) * indices.size(),
         .data      = indices.data(),
-        .debugName = "Buffer: index" },
-      nullptr);
+        .debugName = "Buffer: index" });
+
+  lvk::Holder<lvk::TextureHandle> depthTexture = ctx->createTexture({
+      .type       = lvk::TextureType_2D,
+      .format     = lvk::Format_Z_F32,
+      .dimensions = {(uint32_t)width, (uint32_t)height},
+      .usage      = lvk::TextureUsageBits_Attachment,
+      .debugName  = "Depth buffer",
+  });
 
   const lvk::VertexInput vdesc = {
     .attributes    = { { .location = 0, .format = lvk::VertexFormat::Float3, .offset = 0 } },
@@ -109,8 +103,6 @@ int main()
       .cullMode    = lvk::CullMode_Back,
       .polygonMode = lvk::PolygonMode_Line,
   });
-
-  const lvk::DepthState dState = { .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true };
 
   LVK_ASSERT(pipelineSolid.valid());
   LVK_ASSERT(pipelineWireframe.valid());
@@ -146,10 +138,11 @@ int main()
           buf.cmdBindVertexBuffer(0, vertexBuffer);
           buf.cmdBindIndexBuffer(indexBuffer, lvk::IndexFormat_UI32);
           buf.cmdBindRenderPipeline(pipelineSolid);
-          buf.cmdBindDepthState(dState);
+          buf.cmdBindDepthState({ .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true });
           buf.cmdPushConstants(p * v * m);
           buf.cmdDrawIndexed(indices.size());
           buf.cmdBindRenderPipeline(pipelineWireframe);
+          buf.cmdSetDepthBiasEnable(true);
           buf.cmdSetDepthBias(0.0f, -1.0f, 0.0f);
           buf.cmdDrawIndexed(indices.size());
         }

@@ -98,8 +98,6 @@ int main()
         .patchControlPoints = 3,
     });
 
-    const lvk::DepthState dState = { .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true };
-
     LVK_ASSERT(pipelineSolid.valid());
 
     app.run([&](uint32_t width, uint32_t height, float aspectRatio, float deltaSeconds) {
@@ -127,9 +125,9 @@ int main()
         .vertices          = ctx->gpuAddress(vertexBuffer),
       };
 
-      ctx->upload(bufferPerFrame, &pc, sizeof(pc));
-
       lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
+
+		buf.cmdUpdateBuffer(bufferPerFrame, pc);
 
       buf.cmdBeginRendering(renderPass, framebuffer);
       {
@@ -138,7 +136,7 @@ int main()
           buf.cmdBindIndexBuffer(indexBuffer, lvk::IndexFormat_UI32);
           buf.cmdBindRenderPipeline(pipelineSolid);
           buf.cmdPushConstants(ctx->gpuAddress(bufferPerFrame));
-          buf.cmdBindDepthState(dState);
+          buf.cmdBindDepthState({ .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true });
           buf.cmdDrawIndexed(indices.size());
         }
         buf.cmdPopDebugGroupLabel();

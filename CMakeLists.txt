@@ -83,10 +83,7 @@ include_directories(deps/src)
 include_directories(deps/src/lightweightvk/third-party/deps/src/taskflow)
 include_directories(deps/src/lightweightvk/third-party/deps/src/glm)
 include_directories(deps/src/lightweightvk/third-party/deps/src/imgui)
-#include_directories(deps/src/rapidjson/include)
-#include_directories(deps/src/bullet/src)
 
-#add_subdirectory(deps/cmake/bullet)
 add_subdirectory(deps/cmake/ImGuizmo)
 
 set_property(TARGET assimp          PROPERTY FOLDER "third-party")

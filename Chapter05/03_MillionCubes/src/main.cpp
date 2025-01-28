@@ -53,8 +53,6 @@ int main()
 
     LVK_ASSERT(pipelineSolid.valid());
 
-    const lvk::DepthState dState = { .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true };
-
     app.run([&](uint32_t width, uint32_t height, float aspectRatio, float deltaSeconds) {
       const mat4 proj = glm::perspective(45.0f, aspectRatio, 0.2f, 1500.0f);
 
@@ -88,7 +86,7 @@ int main()
         buf.cmdPushDebugGroupLabel("Solid cube", 0xff0000ff);
         buf.cmdBindRenderPipeline(pipelineSolid);
         buf.cmdPushConstants(pc);
-        buf.cmdBindDepthState(dState);
+        buf.cmdBindDepthState({ .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true });
         buf.cmdDraw(36, kNumCubes);
         buf.cmdPopDebugGroupLabel();
         buf.cmdEndRendering();

@@ -188,15 +188,13 @@ public:
           .storage   = lvk::StorageType_Device,
           .size      = header.vertexDataSize,
           .data      = vertexData,
-          .debugName = "Buffer: vertex" },
-        nullptr);
+          .debugName = "Buffer: vertex" });
     bufferIndices_ = ctx->createBuffer(
         { .usage     = lvk::BufferUsageBits_Index,
           .storage   = lvk::StorageType_Device,
           .size      = header.indexDataSize,
           .data      = indices,
-          .debugName = "Buffer: index" },
-        nullptr);
+          .debugName = "Buffer: index" });
 
     std::vector<uint8_t> drawCommands;
 
@@ -225,8 +223,7 @@ public:
           .storage   = lvk::StorageType_Device,
           .size      = sizeof(DrawIndexedIndirectCommand) * numCommands + sizeof(uint32_t),
           .data      = drawCommands.data(),
-          .debugName = "Buffer: indirect" },
-        nullptr);
+          .debugName = "Buffer: indirect" });
 
     vert_ = loadShaderModule(ctx, "Chapter05/07_MeshRenderer/src/main.vert");
     geom_ = loadShaderModule(ctx, "Chapter05/07_MeshRenderer/src/main.geom");

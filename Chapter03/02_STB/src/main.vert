@@ -17,5 +17,5 @@ const vec2 pos[4] = vec2[4](
 
 void main() {
 	gl_Position = MVP * vec4(0.5 * pos[gl_VertexIndex], 0.0, 1.0);
-	uv = (pos[gl_VertexIndex]+vec2(0.5)) * 0.5;
+	uv = 0.5 * (pos[gl_VertexIndex]+vec2(0.5));
 }

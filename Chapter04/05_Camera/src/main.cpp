@@ -99,8 +99,6 @@ int main(void)
         .depthFormat = ctx->getFormat(depthTexture),
     });
 
-    const lvk::DepthState dState = { .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true };
-
     const aiScene* scene = aiImportFile("data/rubber_duck/scene.gltf", aiProcess_Triangulate);
 
     if (!scene || !scene->HasMeshes()) {
@@ -294,7 +292,7 @@ int main(void)
             buf.cmdPushDebugGroupLabel("Mesh", 0xff0000ff);
             buf.cmdBindVertexBuffer(0, bufferVertices);
             buf.cmdBindRenderPipeline(pipeline);
-            buf.cmdBindDepthState(dState);
+            buf.cmdBindDepthState({ .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true });
             buf.cmdBindIndexBuffer(bufferIndices, lvk::IndexFormat_UI32);
             buf.cmdDrawIndexed(indices.size());
             buf.cmdPopDebugGroupLabel();

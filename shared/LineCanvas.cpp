@@ -201,8 +201,8 @@ void LineCanvas3D::render(lvk::IContext& ctx, const lvk::Framebuffer& desc, lvk:
     ctx.upload(linesBuffer_[currentFrame_], lines_.data(), requiredSize);
   }
 
-  if (pipeline_.empty() || pipelineSamples != numSamples) {
-    pipelineSamples = numSamples;
+  if (pipeline_.empty() || pipelineSamples_ != numSamples) {
+    pipelineSamples_ = numSamples;
 
     vert_     = ctx.createShaderModule({ codeVS, lvk::Stage_Vert, "Shader Module: imgui (vert)" });
     frag_     = ctx.createShaderModule({ codeFS, lvk::Stage_Frag, "Shader Module: imgui (frag)" });

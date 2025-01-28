@@ -45,7 +45,7 @@ private:
   lvk::Holder<lvk::RenderPipelineHandle> pipeline_;
   lvk::Holder<lvk::BufferHandle> linesBuffer_[3] = {};
 
-  uint32_t pipelineSamples = 1;
+  uint32_t pipelineSamples_ = 1;
 
   uint32_t currentBufferSize_[3] = {};
   uint32_t currentFrame_         = 0;
