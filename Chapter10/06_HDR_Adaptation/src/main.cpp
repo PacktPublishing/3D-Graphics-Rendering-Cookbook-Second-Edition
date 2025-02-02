@@ -108,8 +108,8 @@ int main()
       .debugName    = "texLuminance",
   }) };
 
-  for (uint32_t l = 1; l != LVK_ARRAY_NUM_ELEMENTS(texLumViews); l++) {
-    texLumViews[l] = ctx->createTextureView(texLumViews[0], { .mipLevel = l, .swizzle = swizzle });
+  for (uint32_t v = 1; v != LVK_ARRAY_NUM_ELEMENTS(texLumViews); v++) {
+    texLumViews[v] = ctx->createTextureView(texLumViews[0], { .mipLevel = v, .swizzle = swizzle });
   }
 
   const uint16_t brightPixel = glm::packHalf1x16(50.0f);

@@ -258,11 +258,11 @@ void process_cubemap(
     .vkFormat         = VK_FORMAT_R32G32B32A32_SFLOAT,
     .baseWidth        = 64,
     .baseHeight       = 64,
-    .baseDepth        = 1u,
-    .numDimensions    = 2u,
-    .numLevels        = 1u,
-    .numLayers        = 1u,
-    .numFaces         = 6u,
+    .baseDepth        = 1,
+    .numDimensions    = 2,
+    .numLevels        = 1,
+    .numLayers        = 1,
+    .numFaces         = 6,
     .generateMipmaps  = KTX_FALSE,
   };
 

@@ -70,11 +70,11 @@ int main()
     .vkFormat         = VK_FORMAT_R16G16B16A16_SFLOAT,
     .baseWidth        = kBrdfW,
     .baseHeight       = kBrdfH,
-    .baseDepth        = 1u,
-    .numDimensions    = 2u,
+    .baseDepth        = 1,
+    .numDimensions    = 2,
     .numLevels        = 1,
-    .numLayers        = 1u,
-    .numFaces         = 1u,
+    .numLayers        = 1,
+    .numFaces         = 1,
     .generateMipmaps  = KTX_FALSE,
   };
 

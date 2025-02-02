@@ -275,7 +275,7 @@ int main()
         .debugName = "PerFrame materials",
     });
 
-    struct PerDrawData {
+    struct PerFrameData {
       mat4 model;
       mat4 view;
       mat4 proj;
@@ -284,44 +284,23 @@ int main()
       uint32_t envId;
     };
 
-    lvk::Holder<lvk::BufferHandle> drawableBuffers[2] = {
-      ctx->createBuffer({
-          .usage     = lvk::BufferUsageBits_Uniform,
-          .storage   = lvk::StorageType_HostVisible,
-          .size      = sizeof(PerDrawData),
-          .debugName = "PerDraw 1",
-      }),
-      ctx->createBuffer({
-          .usage     = lvk::BufferUsageBits_Uniform,
-          .storage   = lvk::StorageType_HostVisible,
-          .size      = sizeof(PerDrawData),
-          .debugName = "PerDraw 2",
-      }),
-    };
+    lvk::Holder<lvk::BufferHandle> perFrameBuffer = ctx->createBuffer({
+        .usage     = lvk::BufferUsageBits_Storage,
+        .storage   = lvk::StorageType_HostVisible,
+        .size      = sizeof(PerFrameData),
+        .debugName = "perFrameBuffer",
+    });
 
     LVK_ASSERT(pipelineSolid.valid());
 
     aiReleaseImport(scene);
 
     const bool rotateModel = true;
-    uint32_t currentBuffer = 0;
 
     app.run([&](uint32_t width, uint32_t height, float aspectRatio, float deltaSeconds) {
       const mat4 m1 = glm::rotate(mat4(1.0f), glm::radians(+90.0f), vec3(1, 0, 0));
       const mat4 m2 = glm::rotate(mat4(1.0f), rotateModel ? (float)glfwGetTime() : 0.0f, vec3(0.0f, 1.0f, 0.0f));
       const mat4 p  = glm::perspective(45.0f, aspectRatio, 0.1f, 1000.0f);
-
-      const PerDrawData perDrawData = {
-        .model     = m2 * m1,
-        .view      = app.camera_.getViewMatrix(),
-        .proj      = p,
-        .cameraPos = vec4(app.camera_.getPosition(), 1.0f),
-        .matId     = 0,
-        .envId     = 0,
-      };
-
-      ctx->upload(drawableBuffers[currentBuffer], &perDrawData, sizeof(PerDrawData));
-      currentBuffer = (currentBuffer + 1) % LVK_ARRAY_NUM_ELEMENTS(drawableBuffers);
 
       const lvk::RenderPass renderPass = {
         .color = { { .loadOp = lvk::LoadOp_Clear, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } } },
@@ -333,8 +312,18 @@ int main()
         .depthStencil = { .texture = app.getDepthTexture() },
       };
 
+      const PerFrameData perFrameData = {
+        .model     = m2 * m1,
+        .view      = app.camera_.getViewMatrix(),
+        .proj      = p,
+        .cameraPos = vec4(app.camera_.getPosition(), 1.0f),
+        .matId     = 0,
+        .envId     = 0,
+      };
+
       lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
       {
+        buf.cmdUpdateBuffer(perFrameBuffer, perFrameData);
         buf.cmdBeginRendering(renderPass, framebuffer);
         {
           buf.cmdPushDebugGroupLabel("Mesh", 0xff0000ff);
@@ -348,7 +337,7 @@ int main()
               uint64_t materials;
               uint64_t environments;
             } perFrameData = {
-              .draw         = ctx->gpuAddress(drawableBuffers[currentBuffer]),
+              .draw         = ctx->gpuAddress(perFrameBuffer),
               .materials    = ctx->gpuAddress(matBuffer),
               .environments = ctx->gpuAddress(envBuffer),
             };

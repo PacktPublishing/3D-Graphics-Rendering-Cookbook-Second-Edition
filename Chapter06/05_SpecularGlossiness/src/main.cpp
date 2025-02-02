@@ -345,7 +345,7 @@ int main()
         .debugName = "PerFrame environments",
     });
 
-    struct FrameData {
+    struct PerFrameData {
       mat4 model;
       mat4 view;
       mat4 proj;
@@ -353,10 +353,10 @@ int main()
     };
 
     lvk::Holder<lvk::BufferHandle> perFrameBuffer = ctx->createBuffer({
-        .usage     = lvk::BufferUsageBits_Uniform,
+        .usage     = lvk::BufferUsageBits_Storage,
         .storage   = lvk::StorageType_HostVisible,
-        .size      = sizeof(FrameData),
-        .debugName = "Per Frame data",
+        .size      = sizeof(PerFrameData),
+        .debugName = "perFrameBuffer",
     });
 
     LVK_ASSERT(pipelineSolid.valid());
@@ -366,13 +366,12 @@ int main()
     app.run([&](uint32_t width, uint32_t height, float aspectRatio, float deltaSeconds) {
       const mat4 p = glm::perspective(45.0f, aspectRatio, 0.01f, 100.0f);
 
-      const FrameData frameData = {
+      const PerFrameData perFrameData = {
         .model     = glm::rotate(mat4(1.0f), rotateModel ? (float)glfwGetTime() : 0.0f, vec3(0.0f, 1.0f, 0.0f)),
         .view      = app.camera_.getViewMatrix(),
         .proj      = p,
         .cameraPos = vec4(app.camera_.getPosition(), 1.0f),
       };
-      ctx->upload(perFrameBuffer, &frameData, sizeof(FrameData));
 
       struct PushConstants {
         mat4 model;
@@ -402,6 +401,7 @@ int main()
 
       lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
       {
+        buf.cmdUpdateBuffer(perFrameBuffer, perFrameData);
         buf.cmdBeginRendering(renderPass, framebuffer);
         buf.cmdBindVertexBuffer(0, vertexBuffer, 0);
         buf.cmdBindIndexBuffer(indexBuffer, lvk::IndexFormat_UI32);

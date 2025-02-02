@@ -104,8 +104,8 @@ int main()
       .debugName    = "texLuminance",
   }) };
 
-  for (uint32_t l = 1; l != LVK_ARRAY_NUM_ELEMENTS(texLumViews); l++) {
-    texLumViews[l] = ctx->createTextureView(texLumViews[0], { .mipLevel = l, .swizzle = swizzle });
+  for (uint32_t v = 1; v != LVK_ARRAY_NUM_ELEMENTS(texLumViews); v++) {
+    texLumViews[v] = ctx->createTextureView(texLumViews[0], { .mipLevel = v, .swizzle = swizzle });
   }
 
   lvk::Holder<lvk::TextureHandle> offscreenColor = ctx->createTexture({
@@ -338,8 +338,8 @@ int main()
         ImGui::Image(texBloomPass.index(), ImVec2(windowWidth, windowWidth / aspectRatio));
         ImGui::Separator();
         ImGui::Text("Luminance pyramid 512x512");
-        for (uint32_t l = 0; l != LVK_ARRAY_NUM_ELEMENTS(texLumViews); l++) {
-          ImGui::Image(texLumViews[l].index(), ImVec2((int)windowWidth >> l, ((int)windowWidth >> l)));
+        for (uint32_t v = 0; v != LVK_ARRAY_NUM_ELEMENTS(texLumViews); v++) {
+          ImGui::Image(texLumViews[v].index(), ImVec2((int)windowWidth >> v, (int)windowWidth >> v));
         }
         ImGui::Separator();
         ImGui::End();
