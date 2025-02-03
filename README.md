@@ -6,7 +6,7 @@ by <a href="https://github.com/corporateshark">Sergey Kosarevsky</a> & <a href="
 
 <a href="https://www.packtpub.com/en-us/product/vulkan-3d-graphics-rendering-cookbook-9781803236612"><img src=".github/cover_image.png" alt="Book Name" height="256px" align="right"></a>
 
-This is the code repository for [Vulkan 3D Graphics Rendering Cookbook - 2nd Edition](https://www.packtpub.com/en-us/product/vulkan-3d-graphics-rendering-cookbook-9781803236612), published by Packt.
+This is the code repository for [Vulkan 3D Graphics Rendering Cookbook - 2nd Edition](https://www.packtpub.com/en-us/product/vulkan-3d-graphics-rendering-cookbook-9781803236612), published by Packt in 2025.
 
 ## What is this book about?
 Vulkan is a low-overhead, cross-platform 3D graphics API that targets high-performance applications. 3D Graphics Rendering Cookbook helps you learn about modern graphics rendering algorithms and techniques using C++ programming with the Vulkan API.
