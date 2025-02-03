@@ -5,6 +5,7 @@ data/piazza_bologni_1k_irradiance.hdr
 deps/.bootstrap.json
 deps/archives/
 deps/src/
+.DS_Store
 imgui.ini
 .idea
 .vs/
