@@ -160,8 +160,8 @@ int main()
       .debugName    = "texLuminance",
   }) };
 
-  for (uint32_t l = 1; l != LVK_ARRAY_NUM_ELEMENTS(texLumViews); l++) {
-    texLumViews[l] = ctx->createTextureView(texLumViews[0], { .mipLevel = l, .swizzle = swizzle });
+  for (uint32_t v = 1; v != LVK_ARRAY_NUM_ELEMENTS(texLumViews); v++) {
+    texLumViews[v] = ctx->createTextureView(texLumViews[0], { .mipLevel = v, .swizzle = swizzle });
   }
 
   const uint16_t brightPixel = glm::packHalf1x16(50.0f);
@@ -579,9 +579,10 @@ int main()
 
         DrawIndexedIndirectCommand* cmd = meshesOpaque.getDrawIndexedIndirectCommandPtr();
         for (size_t i = 0; i != meshesOpaque.drawCommands_.size(); i++) {
-          const BoundingBox box = reorderedBoxes[mesh.drawData_[cmd->baseInstance].transformId];
-          cmd->instanceCount    = isBoxInFrustum(cullingData.frustumPlanes, cullingData.frustumCorners, box) ? 1 : 0;
-          numVisibleMeshes += (cmd++)->instanceCount;
+          const BoundingBox box  = reorderedBoxes[mesh.drawData_[cmd->baseInstance].transformId];
+          const uint32_t count   = isBoxInFrustum(cullingData.frustumPlanes, cullingData.frustumCorners, box) ? 1 : 0;
+          (cmd++)->instanceCount = count;
+          numVisibleMeshes += count;
         }
         ctx->flushMappedMemory(meshesOpaque.bufferIndirect_, 0, meshesOpaque.drawCommands_.size() * sizeof(DrawIndexedIndirectCommand));
       } else if (cullingMode == CullingMode_GPU) {

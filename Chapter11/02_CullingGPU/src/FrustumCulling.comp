@@ -9,7 +9,7 @@ struct DrawIndexedIndirectCommand {
   uint count;
   uint instanceCount;
   uint firstIndex;
-  uint baseVertex;
+  int  baseVertex;
   uint baseInstance;
 };
 

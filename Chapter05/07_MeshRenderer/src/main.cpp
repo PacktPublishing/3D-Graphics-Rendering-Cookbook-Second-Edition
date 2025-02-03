@@ -169,7 +169,7 @@ struct DrawIndexedIndirectCommand {
   uint32_t count;
   uint32_t instanceCount;
   uint32_t firstIndex;
-  uint32_t baseVertex;
+  int32_t baseVertex;
   uint32_t baseInstance;
 };
 
@@ -213,7 +213,7 @@ public:
         .count         = meshData.meshes[i].getLODIndicesCount(0),
         .instanceCount = 1,
         .firstIndex    = meshData.meshes[i].indexOffset,
-        .baseVertex    = meshData.meshes[i].vertexOffset,
+        .baseVertex    = (int32_t)meshData.meshes[i].vertexOffset,
         .baseInstance  = 0,
       };
     }

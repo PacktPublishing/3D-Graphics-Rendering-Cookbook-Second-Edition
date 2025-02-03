@@ -170,7 +170,7 @@ public:
         .count         = mesh.getLODIndicesCount(lod),
         .instanceCount = 1,
         .firstIndex    = mesh.indexOffset, // + mesh.lodOffset[lod],
-        .baseVertex    = mesh.vertexOffset,
+        .baseVertex    = (int32_t)mesh.vertexOffset,
         .baseInstance  = ddIndex++,
       };
       *dd++ = {

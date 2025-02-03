@@ -83,9 +83,10 @@ int main()
       {
         DrawIndexedIndirectCommand* cmd = mesh.getDrawIndexedIndirectCommandPtr();
         for (auto& p : scene.meshForNode) {
-          const BoundingBox box = meshData.boxes[p.second].getTransformed(scene.globalTransform[p.first]);
-          cmd->instanceCount    = isBoxInFrustum(frustumPlanes, frustumCorners, box) ? 1 : 0;
-          numVisibleMeshes += (cmd++)->instanceCount;
+          const BoundingBox box  = meshData.boxes[p.second].getTransformed(scene.globalTransform[p.first]);
+          const uint32_t count   = isBoxInFrustum(frustumPlanes, frustumCorners, box) ? 1 : 0;
+          (cmd++)->instanceCount = count;
+          numVisibleMeshes += count;
         }
         ctx->flushMappedMemory(mesh.indirectBuffer_.bufferIndirect_, 0, mesh.numMeshes_ * sizeof(DrawIndexedIndirectCommand));
       }
