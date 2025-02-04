@@ -107,7 +107,7 @@ struct LightDataGPU {
 };
 
 struct GLTFGlobalSamplers {
-  GLTFGlobalSamplers(const std::unique_ptr<lvk::IContext>& ctx)
+  explicit GLTFGlobalSamplers(const std::unique_ptr<lvk::IContext>& ctx)
   {
     clamp = ctx->createSampler({
         .minFilter = lvk::SamplerFilter::SamplerFilter_Linear,

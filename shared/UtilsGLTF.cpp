@@ -6,7 +6,7 @@ bool assignUVandSampler(
 {
   aiString path;
   aiTextureMapMode mapmode[3] = { aiTextureMapMode_Clamp, aiTextureMapMode_Clamp, aiTextureMapMode_Clamp };
-  bool res                    = mtlDescriptor->GetTexture(textureType, index, &path, 0, &uvIndex, 0, 0, mapmode) == AI_SUCCESS;
+  const bool res              = mtlDescriptor->GetTexture(textureType, index, &path, 0, &uvIndex, 0, 0, mapmode) == AI_SUCCESS;
   switch (mapmode[0]) {
   case aiTextureMapMode_Clamp:
     textureSampler = samplers.clamp.index();
