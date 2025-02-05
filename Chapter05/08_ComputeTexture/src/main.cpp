@@ -14,7 +14,7 @@ int main()
     lvk::Holder<lvk::TextureHandle> texture = ctx->createTexture({
         .type       = lvk::TextureType_2D,
         .format     = lvk::Format_RGBA_UN8,
-        .dimensions = {1024, 720},
+        .dimensions = {1280, 720},
         .usage      = lvk::TextureUsageBits_Sampled | lvk::TextureUsageBits_Storage,
         .debugName  = "Texture: compute",
     });
@@ -58,7 +58,7 @@ int main()
         };        
         buf.cmdBindComputePipeline(pipelineComputeMatrices);
         buf.cmdPushConstants(pc);
-        buf.cmdDispatchThreadGroups({ .width = 1024 / 16, .height = 720 / 16 });
+        buf.cmdDispatchThreadGroups({ .width = 1280 / 16, .height = 720 / 16 });
         buf.cmdBeginRendering(renderPass, framebuffer, { .textures = { { lvk::TextureHandle(texture) } } });
         buf.cmdBindRenderPipeline(pipelineFullScreenQuad);
         buf.cmdPushConstants(pc);
