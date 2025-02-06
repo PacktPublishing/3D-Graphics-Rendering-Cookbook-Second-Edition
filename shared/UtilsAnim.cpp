@@ -260,8 +260,9 @@ void updateAnimationBlending(GLTFContext& glTF, AnimationState& anim1, Animation
     if (anim1.playOnce && anim1.currentTime > activeAnim1.duration) {
       anim1.currentTime = activeAnim1.duration;
       anim1.active      = false;
-    } else
+    } else {
       anim1.currentTime = fmodf(anim1.currentTime, activeAnim1.duration);
+    }
 
     const Animation& activeAnim2 = glTF.animations[anim2.animId];
     anim2.currentTime += activeAnim2.ticksPerSecond * dt;
@@ -269,8 +270,9 @@ void updateAnimationBlending(GLTFContext& glTF, AnimationState& anim1, Animation
     if (anim2.playOnce && anim2.currentTime > activeAnim2.duration) {
       anim2.currentTime = activeAnim2.duration;
       anim2.active      = false;
-    } else
+    } else {
       anim2.currentTime = fmodf(anim2.currentTime, activeAnim2.duration);
+    }
 
     // Update skinning
     std::function<void(GLTFNodeRef gltfNode, const mat4& parentTransform)> traverseTree = [&](GLTFNodeRef gltfNode,
