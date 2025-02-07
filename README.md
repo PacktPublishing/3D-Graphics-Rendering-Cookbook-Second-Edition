@@ -18,9 +18,8 @@ This book covers the following exciting features:
 * Discover how to debug and profile graphics applications
 * Understand how to use the bindless approach in Vulkan
 * Integrate various rendering techniques into a single application
-* Find out how to develop Vulkan applications
+* Find out how to leverage bindless Vulkan
 * Implement a physically based glTF2 rendering pipeline from scratch
-* Integrate a physics library with your rendering engine
 
 If you feel this book is for you, get your [copy](https://www.amazon.com/Vulkan-Graphics-Rendering-Cookbook-High-Performance/dp/1803248114) today!
 
