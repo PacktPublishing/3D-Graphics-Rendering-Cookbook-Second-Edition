@@ -67,7 +67,7 @@ Windows build instructions:
 
 ```
 cd .build 
-cmake .. -G "Visual Studio 16 2022" -A x64
+cmake .. -G "Visual Studio 17 2022" -A x64
 start RenderingCookbook2.sln
 ```
 
