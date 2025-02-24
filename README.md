@@ -75,8 +75,11 @@ Linux build instructions:
 -------------------------
 
 ```
+sudo apt update
+sudo apt install libtbb-dev
 cd .build 
 cmake ..
+cmake --build .
 cd ..
 ```
 
