@@ -86,7 +86,7 @@ cd ..
 Running the demos:
 ------------------
 
-**Run compiled demos from the root folder of this repository**
+$\color{red}{\textbf{Run compiled demos from the root folder of this repository!!!}}$
 
 Here's the complete list of all the demo applications included in this book.
 
