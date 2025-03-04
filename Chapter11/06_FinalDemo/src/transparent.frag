@@ -50,7 +50,8 @@ void main() {
   // Order-Independent Transparency: https://fr.slideshare.net/hgruen/oit-and-indirect-illumination-using-dx11-linked-lists
   float alpha = clamp(baseColor.a * mat.clearcoatTransmissionThickness.z, 0.0, 1.0);
   bool isTransparent = (alpha > 0.01) && (alpha < 0.99);
-  if (isTransparent && !gl_HelperInvocation && gl_SampleMaskIn[0] == (1 << gl_SampleID)) {
+  uint mask = 1 << gl_SampleID;
+  if (isTransparent && !gl_HelperInvocation && ((gl_SampleMaskIn[0] & mask) == mask)) {
     uint index = atomicAdd(pc.oit.atomicCounter.numFragments, 1);
     if (index < pc.oit.maxOITFragments) {
       uint prevIndex = imageAtomicExchange(kTextures2DInOut[pc.oit.texHeadsOIT], ivec2(gl_FragCoord.xy), index);
