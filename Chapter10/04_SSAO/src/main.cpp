@@ -96,7 +96,7 @@ int main()
   lvk::Holder<lvk::TextureHandle> offscreenDepth = ctx->createTexture({
       .format     = app.getDepthFormat(),
       .dimensions = sizeOffscreen,
-      .usage      = lvk::TextureUsageBits_Attachment | lvk::TextureUsageBits_Sampled | lvk::TextureUsageBits_Storage,
+      .usage      = lvk::TextureUsageBits_Attachment | lvk::TextureUsageBits_Sampled,
       .debugName  = "offscreenDepth",
   });
 

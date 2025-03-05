@@ -93,7 +93,7 @@ int main()
   lvk::Holder<lvk::TextureHandle> texOpaqueDepth = ctx->createTexture({
       .format     = app.getDepthFormat(),
       .dimensions = sizeFb,
-      .usage      = lvk::TextureUsageBits_Attachment | lvk::TextureUsageBits_Sampled | lvk::TextureUsageBits_Storage,
+      .usage      = lvk::TextureUsageBits_Attachment | lvk::TextureUsageBits_Sampled,
       .debugName  = "opaqueDepth",
   });
 
