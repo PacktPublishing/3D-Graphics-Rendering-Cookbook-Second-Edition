@@ -5,7 +5,7 @@
 # sk@linderdaum.com
 #
 # The MIT License (MIT)
-# Copyright (c) 2016-2024, Sergey Kosarevsky
+# Copyright (c) 2016-2025, Sergey Kosarevsky
 #
 # ---
 # Based on https://bitbucket.org/blippar/bootstrapping-external-libs
@@ -66,6 +66,8 @@ except:
     print("> brew install xz")
     print("> pip install pyliblzma")
     lzma_available = False
+
+BOOTSTRAP_VERSION = "1.0.6 (2025)"
 
 SRC_DIR_BASE = "src"
 ARCHIVE_DIR_BASE = "archives"
@@ -489,6 +491,8 @@ def listLibraries(data):
 
 def printOptions():
         print("--------------------------------------------------------------------------------")
+        print(BOOTSTRAP_VERSION)
+        print("--------------------------------------------------------------------------------")
         print("Downloads external libraries, and applies patches or scripts if necessary.")
         print("If the --name argument is not provided, all available libraries will be")
         print("downloaded.")
@@ -528,6 +532,7 @@ def printOptions():
         print("                          sources")
         print("  --debug-output          Enables extra debugging output")
         print("  --break-on-first-error  Terminate script once the first error is encountered")
+        print("  --version               Print the script version")
         print("--------------------------------------------------------------------------------")
 
 
@@ -541,7 +546,7 @@ def main(argv):
             "ln:N:cCb:h",
             ["list", "name=", "name-file=", "skip=", "clean", "clean-all", "base-dir", "bootstrap-file=",
              "local-bootstrap-file=", "use-tar", "use-unzip", "repo-snapshots", "fallback-url=",
-             "force-fallback", "debug-output", "help", "break-on-first-error"])
+             "force-fallback", "debug-output", "help", "break-on-first-error", "version"])
     except getopt.GetoptError:
         printOptions()
         return 0
@@ -565,6 +570,9 @@ def main(argv):
     for opt, arg in opts:
         if opt in ("-h", "--help"):
             printOptions()
+            return 0
+        if opt in ("--version"):
+            print(BOOTSTRAP_VERSION)
             return 0
         if opt in ("-l", "--list"):
             list_libraries = True
@@ -633,7 +641,7 @@ def main(argv):
                     opt_names += opt_names_local
                     dlog("Name file contains: " + ", ".join(opt_names_local))
             except:
-                log("ERROR: cannot parse name file " + name_file)
+                log("ERROR: cannot parse name file '" + name_file + "'")
                 return -1
 
     if force_fallback and not FALLBACK_URL:
@@ -709,12 +717,19 @@ def main(argv):
         name = library.get('name', None)
         source = library.get('source', None)
         post = library.get('postprocess', None)
+        predicate = library.get('predicate', None)
 
         if (skip_libs) and (name in skip_libs):
             continue
 
         if (opt_names) and (not name in opt_names):
             continue
+
+        if predicate is not None:
+            log("Running predicate code for '" + name + "'")
+            if eval(predicate) is not True:
+                log("Predicate is not True for '" + name + "'; skipping library")
+                continue
 
         lib_dir = os.path.join(SRC_DIR, name)
         lib_dir = lib_dir.replace(os.path.sep, '/')
@@ -732,7 +747,7 @@ def main(argv):
                     break
 
         if cached_state_ok:
-            log("Cached state for " + name + " equals expected state; skipping library")
+            log("Cached state for '" + name + "' equals expected state; skipping library")
             continue
         else:
             # remove cached state for library
@@ -750,10 +765,10 @@ def main(argv):
             # download source
             if source is not None:
                 if 'type' not in source:
-                    log("ERROR: Invalid schema for " + name + ": 'source' object must have a 'type'")
+                    log("ERROR: Invalid schema for '" + name + "': 'source' object must have a 'type'")
                     return -1
                 if 'url' not in source:
-                    log("ERROR: Invalid schema for " + name + ": 'source' object must have a 'url'")
+                    log("ERROR: Invalid schema for '" + name + "': 'source' object must have a 'url'")
                     return -1
                 src_type = source['type']
                 src_url = source['url']
@@ -815,7 +830,7 @@ def main(argv):
                         cloneRepository(src_type, src_url, name, revision, False, recursive)
 
                         if create_repo_snapshots:
-                            log("Creating snapshot of library repository " + name)
+                            log("Creating snapshot of library repository '" + name + "'")
                             repo_dir = os.path.join(SRC_DIR, name)
                             archive_filename = os.path.join(SNAPSHOT_DIR, archive_name)
 
@@ -847,10 +862,10 @@ def main(argv):
             # post-processing
             if post is not None:
                 if 'type' not in post:
-                    log("ERROR: Invalid schema for " + name + ": 'postprocess' object must have a 'type'")
+                    log("ERROR: Invalid schema for '" + name + "': 'postprocess' object must have a 'type'")
                     return -1
                 if 'file' not in post:
-                    log("ERROR: Invalid schema for " + name + ": 'postprocess' object must have a 'file'")
+                    log("ERROR: Invalid schema for '" + name + "': 'postprocess' object must have a 'file'")
                     return -1
                 post_type = post['type']
                 post_file = post['file']
@@ -869,13 +884,13 @@ def main(argv):
             # write out cached state
             writeJSONData(sdata, state_filename)
         except urllib.error.URLError as e:
-            log("ERROR: Failure to bootstrap library " + name + " (urllib.error.URLError: reason " + str(e.reason) + ")")
+            log("ERROR: Failure to bootstrap library '" + name + "' (urllib.error.URLError: reason " + str(e.reason) + ")")
             if break_on_first_error:
                 exit(-1)
             traceback.print_exc()
             failed_libraries.append(name)
         except:
-            log("ERROR: Failure to bootstrap library " + name + " (reason: " + str(sys.exc_info()[0]) + ")")
+            log("ERROR: Failure to bootstrap library '" + name + "' (reason: " + str(sys.exc_info()[0]) + ")")
             if break_on_first_error:
                 exit(-1)
             traceback.print_exc()
