@@ -256,17 +256,6 @@ int main(void)
       const mat4 m2 = glm::rotate(mat4(1.0f), (float)glfwGetTime(), vec3(0.0f, 1.0f, 0.0f));
       const mat4 v  = glm::translate(mat4(1.0f), vec3(cameraPos));
 
-      const PerFrameData pc = {
-        .model     = m2 * m1,
-        .view      = camera.getViewMatrix(),
-        .proj      = p,
-        .cameraPos = cameraPos,
-        .tex       = texture.index(),
-        .texCube   = cubemapTex.index(),
-      };
-
-      ctx->upload(bufferPerFrame, &pc, sizeof(pc));
-
       const lvk::RenderPass renderPass = {
         .color = { { .loadOp = lvk::LoadOp_Clear, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } } },
         .depth = { .loadOp = lvk::LoadOp_Clear, .clearDepth = 1.0f }
@@ -278,6 +267,15 @@ int main(void)
       };
 
       lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
+      buf.cmdUpdateBuffer(
+          bufferPerFrame, PerFrameData{
+                              .model     = m2 * m1,
+                              .view      = camera.getViewMatrix(),
+                              .proj      = p,
+                              .cameraPos = cameraPos,
+                              .tex       = texture.index(),
+                              .texCube   = cubemapTex.index(),
+                          });
       {
         buf.cmdBeginRendering(renderPass, framebuffer);
         {

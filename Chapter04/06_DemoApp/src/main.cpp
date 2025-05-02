@@ -177,7 +177,7 @@ int main()
       const mat4 m2 = glm::rotate(mat4(1.0f), (float)glfwGetTime(), vec3(0.0f, 1.0f, 0.0f));
       const mat4 v  = glm::translate(mat4(1.0f), app.camera_.getPosition());
 
-      const PerFrameData pc = {
+      const PerFrameData perFrameData = {
         .model     = m2 * m1,
         .view      = app.camera_.getViewMatrix(),
         .proj      = p,
@@ -185,8 +185,6 @@ int main()
         .tex       = texture.index(),
         .texCube   = cubemapTex.index(),
       };
-
-      ctx->upload(bufferPerFrame, &pc, sizeof(pc));
 
       const lvk::RenderPass renderPass = {
         .color = { { .loadOp = lvk::LoadOp_Clear, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } } },
@@ -199,6 +197,7 @@ int main()
       };
 
       lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
+      buf.cmdUpdateBuffer(bufferPerFrame, perFrameData);
       {
         buf.cmdBeginRendering(renderPass, framebuffer);
         {
@@ -292,7 +291,7 @@ int main()
           canvas2d.render("##plane");
 
           canvas3d.clear();
-          canvas3d.setMatrix(pc.proj * pc.view);
+          canvas3d.setMatrix(perFrameData.proj * perFrameData.view);
           canvas3d.plane(vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 0, 1), 40, 40, 10.0f, 10.0f, vec4(1, 0, 0, 1), vec4(0, 1, 0, 1));
           canvas3d.box(mat4(1.0f), BoundingBox(vec3(-2), vec3(+2)), vec4(1, 1, 0, 1));
           canvas3d.frustum(
