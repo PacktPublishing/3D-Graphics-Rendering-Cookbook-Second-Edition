@@ -6,6 +6,8 @@ by <a href="https://github.com/corporateshark">Sergey Kosarevsky</a> & <a href="
 
 This is the code repository for [Vulkan 3D Graphics Rendering Cookbook - 2nd Edition](https://www.packtpub.com/en-us/product/vulkan-3d-graphics-rendering-cookbook-9781803236612), published by Packt in 2025.
 
+Discord: https://discord.com/invite/bEyHyKCrvq
+
 ## What is this book about?
 
 <a href="https://www.packtpub.com/en-us/product/vulkan-3d-graphics-rendering-cookbook-9781803236612"><img src=".github/cover_image.png" alt="Book Name" height="256px" align="right"></a>
@@ -21,6 +23,8 @@ This book covers the following exciting features:
 * Integrate various rendering techniques into a single application
 * Find out how to leverage bindless Vulkan
 * Implement a physically based glTF2 rendering pipeline from scratch
+
+The book uses the [LightweightVK](https://github.com/corporateshark/lightweightvk) library as a Vulkan wrapper and dives deep into its implementation.
 
 If you feel this book is for you, get your [copy](https://www.amazon.com/Vulkan-Graphics-Rendering-Cookbook-High-Performance/dp/1803248114) today!
 
