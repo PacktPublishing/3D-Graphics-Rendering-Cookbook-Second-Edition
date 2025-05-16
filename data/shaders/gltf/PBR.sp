@@ -4,6 +4,9 @@
 // We store values in this struct to simplify the integration of alternative implementations
 // of the shading terms, outlined in the Readme.MD Appendix.
 
+// reduce register pressure
+layout (constant_id = 0) const bool isSpecularGlossiness = false;
+
 struct PBRInfo {
   // geometry properties
   float NdotL;                  // cos angle between normal and light direction
@@ -299,8 +302,12 @@ vec3 getIBLRadianceCharlie(PBRInfo pbrInputs, EnvironmentMapDataGPU envMap) {
 
 PBRInfo calculatePBRInputsMetallicRoughness(InputAttributes tc, vec4 albedo, vec4 mrSample, MetallicRoughnessDataGPU mat) {
   PBRInfo pbrInputs;
-  
-  bool isSpecularGlossiness = (getMaterialType(mat) & 2) != 0;
+
+  if (isSpecularGlossiness != ((getMaterialType(mat) & 2) != 0)) {
+    // ERROR: the `isSpecularGlossiness` specialization constant should match the `SpecularGlossiness` material flag
+    return pbrInputs;
+  }
+
   bool isSpecular = (getMaterialType(mat) & 0x10) != 0;
 
   pbrInputs.ior = getIOR(mat);
