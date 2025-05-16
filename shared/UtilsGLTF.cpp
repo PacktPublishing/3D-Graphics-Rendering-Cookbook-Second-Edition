@@ -1101,6 +1101,7 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
     };
 
     if (screenCopy) {
+      buf.cmdPushDebugGroupLabel("Screen Copy", 0x00FFFFff);
       buf.cmdCopyImage(
           gltf.offscreenTex[gltf.currentOffscreenTex], ctx->getCurrentSwapchainTexture(),
           ctx->getDimensions(ctx->getCurrentSwapchainTexture()));
@@ -1108,6 +1109,7 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
 
       pushConstants.transmissionFramebuffer = gltf.offscreenTex[gltf.currentOffscreenTex].index();
       buf.cmdPushConstants(pushConstants);
+      buf.cmdPopDebugGroupLabel();
     }
 
     buf.cmdBeginRendering(renderPass, framebuffer, { .textures = { lvk::TextureHandle(gltf.offscreenTex[gltf.currentOffscreenTex]) } });
