@@ -34,6 +34,7 @@ import getopt
 import traceback
 import urllib
 import ssl
+import ctypes
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -67,7 +68,12 @@ except:
     print("> pip install pyliblzma")
     lzma_available = False
 
-BOOTSTRAP_VERSION = "1.0.6 (2025)"
+BOOTSTRAP_VERSION = "1.0.7 (2025)"
+
+class Colors:
+    GREEN = '\033[92m'
+    WARNING = '\033[91m'
+    NORMAL = '\033[0m'
 
 SRC_DIR_BASE = "src"
 ARCHIVE_DIR_BASE = "archives"
@@ -93,8 +99,18 @@ TOOL_COMMAND_PATCH = "patch"
 TOOL_COMMAND_TAR = "tar"
 TOOL_COMMAND_UNZIP = "unzip"
 
+ansi_console = True
+
 if platform.system() == "Windows":
     os.environ['CYGWIN'] = "nodosfilewarning"
+    ansi_console = False
+    if sys.getwindowsversion().major >= 10:
+        ansi_console = True
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.GetStdHandle(-11)
+        mode = ctypes.c_uint32()
+        kernel32.GetConsoleMode(handle, ctypes.byref(mode))
+        kernel32.SetConsoleMode(handle, mode.value | 0x0004)
 
 if not sys.version_info[0] >= 3:
     raise ValueError("I require Python 3.0 or a later version")
@@ -102,6 +118,11 @@ if not sys.version_info[0] >= 3:
 def log(string):
     print("--- " + string)
 
+def warning(string):
+    if ansi_console:
+      print(Colors.WARNING, "--- " + string, Colors.NORMAL)
+    else:
+      print("--- " + string)
 
 def dlog(string):
     if DEBUG_OUTPUT:
@@ -228,7 +249,17 @@ def extractFile(filename, target_dir):
     stem, extension = os.path.splitext(os.path.basename(filename))
 
     if extension == ".zip" or extension == "":
-        zfile = zipfile.ZipFile(filename)
+        zfile = None
+        try:
+            zfile = zipfile.ZipFile(filename)
+        except zipfile.BadZipFile:
+            warning("WARNING: Invalid ZIP file '" + filename + "'")
+            if os.path.exists(filename) and os.path.getsize(filename) == 0:
+                warning("WARNING: Zero-sized file was deleted. Run the script again.")
+                os.remove(filename)
+            else:
+                warning("WARNING: Try deleting the cached file and run the script again.")
+            raise RuntimeError("Invalid ZIP file '" + filename + "'") from None
         extract_dir = os.path.commonprefix(zfile.namelist())
         hasFolder = False
         for fname in zfile.namelist():
@@ -321,7 +352,7 @@ def createArchiveFromDirectory(src_dir_name, archive_name, delete_existing_archi
 
 def downloadSCP(hostname, username, path, target_dir):
     if not scp_available:
-        log("ERROR: missing Python packages [paramiko, scp]; cannot continue.")
+        warning("ERROR: missing Python packages [paramiko, scp]; cannot continue.")
         raise RuntimeError("Missing Python packages [paramiko, scp]; cannot continue.")
     ssh = paramiko.SSHClient()
     ssh.load_system_host_keys()
@@ -426,7 +457,7 @@ def applyPatchFile(patch_name, dir_name, pnum):
         arguments = argumentsBinary
         res = executeCommand(TOOL_COMMAND_PATCH + " --dry-run " + arguments, quiet = True)
     if res != 0:
-        log("ERROR: patch application failure; has this patch already been applied?")
+        warning("ERROR: patch application failure; has this patch already been applied?")
         executeCommand(TOOL_COMMAND_PATCH + " --dry-run " + arguments, printCommand = True)
         exit(255)
     else:
@@ -452,7 +483,7 @@ def findToolCommand(command, paths_to_search, required = False):
             break;
 
     if required and not found:
-        log("WARNING: command " + command + " not found, but required by script")
+        warning("WARNING: command " + command + " not found, but required by script")
 
     dlog("Found '" + command + "' as " + command_res)
     return command_res
@@ -462,16 +493,16 @@ def readJSONData(filename):
     try:
         json_data = open(filename).read()
     except:
-        log("ERROR: Could not read JSON file: " + filename)
+        warning("ERROR: Could not read JSON file: " + filename)
         return None
 
     try:
         data = json.loads(json_data)
     except json.JSONDecodeError as e:
-        log("ERROR: Could not parse JSON document: {}\n    {} (line {}:{})\n".format(filename, e.msg, e.lineno, e.colno))
+        warning("ERROR: Could not parse JSON document: {}\n    {} (line {}:{})\n".format(filename, e.msg, e.lineno, e.colno))
         return None
     except:
-        log("ERROR: Could not parse JSON document: " + filename)
+        warning("ERROR: Could not parse JSON document: " + filename)
         return None
 
     return data
@@ -641,11 +672,11 @@ def main(argv):
                     opt_names += opt_names_local
                     dlog("Name file contains: " + ", ".join(opt_names_local))
             except:
-                log("ERROR: cannot parse name file '" + name_file + "'")
+                warning("ERROR: cannot parse name file '" + name_file + "'")
                 return -1
 
     if force_fallback and not FALLBACK_URL:
-        log("Error: cannot force usage of the fallback location without specifying a fallback URL")
+        warning("Error: cannot force usage of the fallback location without specifying a fallback URL")
         return -1;
 
     state_filename = os.path.join(os.path.dirname(os.path.splitext(bootstrap_filename)[0]), \
@@ -663,7 +694,7 @@ def main(argv):
     # some sanity checking
     for library in data:
         if library.get('name', None) is None:
-            log("ERROR: Invalid schema: library object does not have a 'name'")
+            warning("ERROR: Invalid schema: library object does not have a 'name'")
             return -1
 
     # read local libraries data, if available
@@ -677,7 +708,7 @@ def main(argv):
         # some sanity checking
         for local_library in local_data:
             if local_library.get('name', None) is None:
-                log("ERROR: Invalid schema: local library object does not have a 'name'")
+                warning("ERROR: Invalid schema: local library object does not have a 'name'")
                 return -1
 
     # merge canonical and local library data, if applicable; local libraries take precedence
@@ -765,10 +796,10 @@ def main(argv):
             # download source
             if source is not None:
                 if 'type' not in source:
-                    log("ERROR: Invalid schema for '" + name + "': 'source' object must have a 'type'")
+                    warning("ERROR: Invalid schema for '" + name + "': 'source' object must have a 'type'")
                     return -1
                 if 'url' not in source:
-                    log("ERROR: Invalid schema for '" + name + "': 'source' object must have a 'url'")
+                    warning("ERROR: Invalid schema for '" + name + "': 'source' object must have a 'url'")
                     return -1
                 src_type = source['type']
                 src_url = source['url']
@@ -862,10 +893,10 @@ def main(argv):
             # post-processing
             if post is not None:
                 if 'type' not in post:
-                    log("ERROR: Invalid schema for '" + name + "': 'postprocess' object must have a 'type'")
+                    warning("ERROR: Invalid schema for '" + name + "': 'postprocess' object must have a 'type'")
                     return -1
                 if 'file' not in post:
-                    log("ERROR: Invalid schema for '" + name + "': 'postprocess' object must have a 'file'")
+                    warning("ERROR: Invalid schema for '" + name + "': 'postprocess' object must have a 'file'")
                     return -1
                 post_type = post['type']
                 post_file = post['file']
@@ -875,7 +906,7 @@ def main(argv):
                 elif post_type == "script":
                     runPythonScript(post_file)
                 else:
-                    log("ERROR: Unknown post-processing type '" + post_type + "' for " + name)
+                    warning("ERROR: Unknown post-processing type '" + post_type + "' for " + name)
                     return -1
 
             # add to cached state
@@ -884,23 +915,23 @@ def main(argv):
             # write out cached state
             writeJSONData(sdata, state_filename)
         except urllib.error.URLError as e:
-            log("ERROR: Failure to bootstrap library '" + name + "' (urllib.error.URLError: reason " + str(e.reason) + ")")
+            warning("ERROR: Failure to bootstrap library '" + name + "' (urllib.error.URLError: reason " + str(e.reason) + ")")
             if break_on_first_error:
                 exit(-1)
             traceback.print_exc()
             failed_libraries.append(name)
         except:
-            log("ERROR: Failure to bootstrap library '" + name + "' (reason: " + str(sys.exc_info()[0]) + ")")
+            warning("ERROR: Failure to bootstrap library '" + name + "' (reason: " + str(sys.exc_info()[0]) + ")")
             if break_on_first_error:
                 exit(-1)
             traceback.print_exc()
             failed_libraries.append(name)
 
     if failed_libraries:
-        log("***************************************")
-        log("FAILURE to bootstrap the following libraries:")
-        log(', '.join(failed_libraries))
-        log("***************************************")
+        warning("***************************************")
+        warning("FAILURE to bootstrap the following libraries:")
+        warning(', '.join(failed_libraries))
+        warning("***************************************")
         return -1
 
     log("Finished")
