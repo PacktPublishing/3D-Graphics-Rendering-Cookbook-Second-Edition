@@ -145,7 +145,7 @@ int main()
 
   lvk::Holder<lvk::RenderPipelineHandle> pipelineShadow = ctx->createRenderPipeline(lvk::RenderPipelineDesc{
       .vertexInput =
-          lvk::VertexInput{
+          {
                            .attributes    = { { .location = 0, .format = lvk::VertexFormat::Float3, .offset = offsetof(VertexData, pos) } },
                            .inputBindings = { { .stride = sizeof(VertexData) } },
                            },
