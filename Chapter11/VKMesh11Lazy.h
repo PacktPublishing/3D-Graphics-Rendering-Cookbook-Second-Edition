@@ -64,6 +64,8 @@ GLTFMaterialDataGPU convertToGPUMaterialLazy(
     const std::unique_ptr<lvk::IContext>& ctx, const Material& mat, const TextureFiles& files, TextureCache& cache,
     std::vector<LoadedTextureData>& loadedTextureData, std::mutex& loadingMutex)
 {
+  LVK_PROFILER_FUNCTION();
+
   GLTFMaterialDataGPU result = {
     .baseColorFactor                  = mat.baseColorFactor,
     .metallicRoughnessNormalOcclusion = vec4(mat.metallicFactor, mat.roughness, 1.0f, 1.0f),
@@ -120,6 +122,8 @@ public:
 
   bool processLoadedTextures()
   {
+    LVK_PROFILER_FUNCTION();
+
     // process only 1 texture to prevent stuttering
     LoadedTextureData tex;
 

@@ -124,6 +124,8 @@ lvk::Format VulkanApp::getDepthFormat() const
 
 void VulkanApp::run(DrawFrameFunc drawFrame)
 {
+  LVK_PROFILER_FUNCTION();
+
   double timeStamp   = glfwGetTime();
   float deltaSeconds = 0.0f;
 
@@ -203,6 +205,8 @@ void VulkanApp::drawGTFInspector_Animations(GLTFIntrospective& intro)
 }
 
 void VulkanApp::drawGTFInspector_Materials(GLTFIntrospective& intro) {
+  LVK_PROFILER_FUNCTION();
+
   if (!intro.showMaterials || intro.materials.empty())
     return;
 
@@ -372,6 +376,8 @@ void VulkanApp::drawGrid(lvk::ICommandBuffer& buf, const mat4& proj, const vec3&
 void VulkanApp::drawGrid(
     lvk::ICommandBuffer& buf, const mat4& mvp, const vec3& origin, const vec3& camPos, uint32_t numSamples, lvk::Format colorFormat)
 {
+  LVK_PROFILER_FUNCTION();
+
   if (gridPipeline.empty() || pipelineSamples != numSamples) {
     gridVert = loadShaderModule(ctx_, "data/shaders/Grid.vert");
     gridFrag = loadShaderModule(ctx_, "data/shaders/Grid.frag");

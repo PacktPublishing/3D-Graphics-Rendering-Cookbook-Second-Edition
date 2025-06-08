@@ -535,6 +535,8 @@ int main()
   };
 
   app.run([&](uint32_t width, uint32_t height, float aspectRatio, float deltaSeconds) {
+    LVK_PROFILER_FUNCTION();
+
     mesh.processLoadedTextures();
 
     const mat4 view = app.camera_.getViewMatrix();
