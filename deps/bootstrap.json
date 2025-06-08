@@ -12,7 +12,7 @@
     "source": {
         "type": "git",
         "url": "https://github.com/assimp/assimp.git",
-        "revision": "d91e0e4f428bd5c40d92901603c484810882a30c"
+        "revision": "v6.0.1"
     }
 },
 {
