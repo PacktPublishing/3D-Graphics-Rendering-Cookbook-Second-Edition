@@ -120,7 +120,7 @@ public:
     executor_.run(taskflow_);
   }
 
-  bool processLoadedTextures()
+  bool processLoadedTextures(lvk::ICommandBuffer& buf)
   {
     LVK_PROFILER_FUNCTION();
 
@@ -166,7 +166,15 @@ public:
       }
     }
 
-    ctx->upload(bufferMaterials_, materialsGPU_.data(), materialsGPU_.size() * sizeof(decltype(materialsGPU_)::value_type));
+    size_t size   = materialsGPU_.size() * sizeof(decltype(materialsGPU_)::value_type);
+    size_t offset = 0;
+
+    while (size) {
+      const size_t chunk = std::min(size, (size_t)65536);
+      buf.cmdUpdateBuffer(bufferMaterials_, offset, chunk, materialsGPU_.data());
+      size -= chunk;
+      offset += chunk;
+    }
 
     return true;
   }

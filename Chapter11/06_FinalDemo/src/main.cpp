@@ -537,8 +537,6 @@ int main()
   app.run([&](uint32_t width, uint32_t height, float aspectRatio, float deltaSeconds) {
     LVK_PROFILER_FUNCTION();
 
-    mesh.processLoadedTextures();
-
     const mat4 view = app.camera_.getViewMatrix();
     const mat4 proj = glm::perspective(45.0f, aspectRatio, pcSSAO.zNear, pcSSAO.zFar);
 
@@ -565,6 +563,8 @@ int main()
 
     lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
     {
+      mesh.processLoadedTextures(buf);
+
       clearTransparencyBuffers(buf);
 
       // cull scene (we cull only opaque meshes)

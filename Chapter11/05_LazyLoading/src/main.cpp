@@ -131,8 +131,6 @@ int main()
   // clang-format on
 
   app.run([&](uint32_t width, uint32_t height, float aspectRatio, float deltaSeconds) {
-    mesh.processLoadedTextures();
-
     const mat4 view = app.camera_.getViewMatrix();
     const mat4 proj = glm::perspective(45.0f, aspectRatio, 0.1f, 200.0f);
 
@@ -147,6 +145,8 @@ int main()
 
     lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
     {
+      mesh.processLoadedTextures(buf);
+
       // update shadow map
       if (prevLight != light) {
         prevLight = light;
