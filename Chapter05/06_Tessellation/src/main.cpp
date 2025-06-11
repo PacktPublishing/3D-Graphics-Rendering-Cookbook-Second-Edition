@@ -144,7 +144,7 @@ int main()
 
         app.imgui_->beginFrame(framebuffer);
 
-        ImGui::Begin("Camera Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::Begin("Tessellation Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
         ImGui::SliderFloat("Tessellation scale", &tessellationScale, 0.7f, 1.2f, "%.1f");
         ImGui::End();
 
