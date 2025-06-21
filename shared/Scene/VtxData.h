@@ -33,7 +33,7 @@ struct Mesh final {
 };
 
 struct MeshFileHeader {
-  // Unique 64-bit value to check integrity of the file
+  // Unique 32-bit value to check integrity of the file
   uint32_t magicValue = 0x12345678;
 
   // Number of mesh descriptors following this header
