@@ -166,7 +166,7 @@ int main()
     const aiScene* scene = aiImportFile("deps/src/glTF-Sample-Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf", aiProcess_Triangulate);
 
     if (!scene || !scene->HasMeshes()) {
-      printf("Unable to load data/rubber_duck/scene.gltf\n");
+      printf("Unable to load deps/src/glTF-Sample-Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf\n");
       exit(255);
     }
 
