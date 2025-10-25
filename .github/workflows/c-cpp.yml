@@ -78,6 +78,6 @@ jobs:
             CC:  ${{ matrix.config.cc }}
             CXX: ${{ matrix.config.cxx }}
           run: |
-            cmake ${{ env.CMAKE_GENERATOR }} -S "${{ github.workspace }}" -B build ${{ matrix.config.cmake_args }}
-            cd build
+            cmake ${{ env.CMAKE_GENERATOR }} -S "${{ github.workspace }}" -B ~/build ${{ matrix.config.cmake_args }}
+            cd ~/build
             cmake --build . --parallel ${{ steps.cpu-cores.outputs.count }}
