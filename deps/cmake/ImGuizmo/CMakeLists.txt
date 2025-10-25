@@ -5,7 +5,7 @@ project("ImGuizmo")
 include_directories(../../src/imgui)
 include_directories(../../src/ImGuizmo)
 
-add_library(ImGuizmo ../../src/ImGuizmo/ImGuizmo.cpp ../../src/ImGuizmo/ImGuizmo.h)
+add_library(ImGuizmo STATIC ../../src/ImGuizmo/ImGuizmo.cpp ../../src/ImGuizmo/ImGuizmo.h)
 
 set_property(TARGET ImGuizmo PROPERTY FOLDER "third-party")
 set_property(TARGET ImGuizmo PROPERTY CXX_STANDARD 20)
