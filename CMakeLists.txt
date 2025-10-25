@@ -4,6 +4,8 @@ project(RenderingCookbook2 CXX C)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+set(BUILD_SHARED_LIBS OFF)
+
 set(COOKBOOK_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(COOKBOOK_DEPS_CACHE_FILE "${COOKBOOK_ROOT_DIR}/deps/.bootstrap.json")
 

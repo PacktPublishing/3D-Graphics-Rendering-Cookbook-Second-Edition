@@ -8,15 +8,12 @@ file(GLOB_RECURSE SRC_FILES LIST_DIRECTORIES false RELATIVE ${CMAKE_CURRENT_SOUR
 file(GLOB_RECURSE HEADER_FILES LIST_DIRECTORIES false RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.h)
 
 
-add_library(SharedUtils ${SRC_FILES} ${HEADER_FILES})
+add_library(SharedUtils STATIC ${SRC_FILES} ${HEADER_FILES})
 
 set_property(TARGET SharedUtils PROPERTY CXX_STANDARD 20)
 set_property(TARGET SharedUtils PROPERTY CXX_STANDARD_REQUIRED ON)
 
 target_link_libraries(SharedUtils PUBLIC assimp)
-target_link_libraries(SharedUtils PUBLIC glslang)
-target_link_libraries(SharedUtils PUBLIC glfw)
-target_link_libraries(SharedUtils PUBLIC LUtils)
 target_link_libraries(SharedUtils PUBLIC LVKLibrary)
 target_link_libraries(SharedUtils PUBLIC LVKstb)
 target_link_libraries(SharedUtils PUBLIC ktx)
