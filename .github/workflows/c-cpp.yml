@@ -42,6 +42,8 @@ jobs:
         - if: startsWith(matrix.config.os, 'windows')
           run: |
             git config --system core.longpaths true
+            New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
+          shell: pwsh
 
         - if: startsWith(matrix.config.os, 'ubuntu')
           run: |
