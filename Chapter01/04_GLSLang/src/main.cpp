@@ -14,8 +14,8 @@
 #include <ldrutils/lutils/ScopeExit.h>
 #include <minilog/minilog.h>
 
-lvk::Result lvk::compileShader(
-    VkShaderStageFlagBits stage, const char* code, std::vector<uint8_t>* outSPIRV, const glslang_resource_t* glslLangResource);
+lvk::Result lvk::compileShaderGlslang(
+    lvk::ShaderStage stage, const char* code, std::vector<uint8_t>* outSPIRV, const glslang_resource_t* glslLangResource);
 
 void saveSPIRVBinaryFile(const char* filename, const uint8_t* code, size_t size)
 {
@@ -35,7 +35,8 @@ void testShaderCompilation(const char* sourceFilename, const char* destFilename)
   assert(!shaderSource.empty());
 
   std::vector<uint8_t> spirv;
-  lvk::Result res = lvk::compileShader(vkShaderStageFromFileName(sourceFilename), shaderSource.c_str(), &spirv, glslang_default_resource());
+  lvk::Result res =
+      lvk::compileShaderGlslang(lvkShaderStageFromFileName(sourceFilename), shaderSource.c_str(), &spirv, glslang_default_resource());
 
   assert(!spirv.empty());
 

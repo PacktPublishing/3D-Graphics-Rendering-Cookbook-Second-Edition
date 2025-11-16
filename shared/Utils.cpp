@@ -66,29 +66,6 @@ std::string readShaderFile(const char* fileName)
   return code;
 }
 
-VkShaderStageFlagBits vkShaderStageFromFileName(const char* fileName)
-{
-  if (endsWith(fileName, ".vert"))
-    return VK_SHADER_STAGE_VERTEX_BIT;
-
-  if (endsWith(fileName, ".frag"))
-    return VK_SHADER_STAGE_FRAGMENT_BIT;
-
-  if (endsWith(fileName, ".geom"))
-    return VK_SHADER_STAGE_GEOMETRY_BIT;
-
-  if (endsWith(fileName, ".comp"))
-    return VK_SHADER_STAGE_COMPUTE_BIT;
-
-  if (endsWith(fileName, ".tesc"))
-    return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-
-  if (endsWith(fileName, ".tese"))
-    return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-
-  return VK_SHADER_STAGE_VERTEX_BIT;
-}
-
 lvk::ShaderStage lvkShaderStageFromFileName(const char* fileName)
 {
   if (endsWith(fileName, ".vert"))
