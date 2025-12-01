@@ -28,8 +28,8 @@ jobs:
               name: "Ubuntu - Clang",
               os: ubuntu-latest,
               build_type: "Debug",
-              cc: "clang-15",
-              cxx: "clang++-15",
+              cc: "clang-16",
+              cxx: "clang++-16",
               generators: "Unix Makefiles",
             }
       runs-on: ${{ matrix.config.os }}
@@ -49,7 +49,7 @@ jobs:
           run: |
             sudo sed -i 's/azure\.//' /etc/apt/sources.list
             sudo apt-get update
-            sudo apt-get install -y gcc-12 clang-15 xorg-dev libxinerama-dev libxcursor-dev libgles2-mesa-dev libegl1-mesa-dev libglfw3-dev libglew-dev libstdc++-12-dev extra-cmake-modules libxkbcommon-x11-dev wayland-protocols libtbb-dev
+            sudo apt-get install -y gcc-13 clang-16 xorg-dev libxinerama-dev libxcursor-dev libgles2-mesa-dev libegl1-mesa-dev libglfw3-dev libglew-dev libstdc++-12-dev extra-cmake-modules libxkbcommon-x11-dev wayland-protocols libtbb-dev
             sudo apt remove cmake -y
             sudo pip install cmake --upgrade
 
