@@ -4,9 +4,9 @@
 #include <execution>
 #include <filesystem>
 
-#include <ktx-software/lib/gl_format.h>
-#include <ktx-software/lib/vkformat_enum.h>
 #include <ktx.h>
+#include <ktx-software/lib/src/gl_format.h>
+#include <ktx-software/lib/src/vkformat_enum.h>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"

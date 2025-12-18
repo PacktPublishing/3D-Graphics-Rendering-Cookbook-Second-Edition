@@ -8,7 +8,7 @@
 
 #include <stb/stb_image.h>
 #include <ktx.h>
-#include <ktx-software/lib/gl_format.h>
+#include <ktx-software/lib/src/gl_format.h>
 
 #include <unordered_map>
 

@@ -5,8 +5,8 @@
 #include <shared/Utils.h>
 
 #include <ktx.h>
-#include <ktx-software/lib/gl_format.h>
-#include <ktx-software/lib/vk_format.h>
+#include <ktx-software/lib/src/gl_format.h>
+#include <ktx-software/lib/src/vkformat_enum.h>
 #include <glm/ext.hpp>
 #include <glm/glm.hpp>
 
