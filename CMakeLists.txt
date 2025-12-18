@@ -69,7 +69,7 @@ if(APPLE)
   target_compile_options(assimp PRIVATE -Wno-deprecated-declarations)
 endif()
 if(UNIX)
-  target_compile_options(assimp PRIVATE -Wdeprecated-non-prototype)
+  target_compile_options(assimp PRIVATE -Wno-deprecated-non-prototype)
 endif()
 
 set(MESHOPT_BUILD_DEMO OFF CACHE BOOL "")
