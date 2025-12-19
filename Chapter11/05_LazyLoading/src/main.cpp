@@ -67,7 +67,7 @@ int main()
       .format     = lvk::Format_Z_UN16,
       .dimensions = { 4096, 4096 },
       .usage      = lvk::TextureUsageBits_Attachment | lvk::TextureUsageBits_Sampled,
-      .swizzle    = { .r = lvk::Swizzle_R, .g = lvk::Swizzle_R, .b = lvk::Swizzle_R, .a = lvk::Swizzle_1 },
+      .components = { .r = lvk::Swizzle_R, .g = lvk::Swizzle_R, .b = lvk::Swizzle_R, .a = lvk::Swizzle_1 },
       .debugName  = "Shadow map",
   });
 

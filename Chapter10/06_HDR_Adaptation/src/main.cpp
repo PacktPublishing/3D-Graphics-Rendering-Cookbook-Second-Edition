@@ -104,12 +104,12 @@ int main()
       .dimensions   = sizeBloom,
       .usage        = lvk::TextureUsageBits_Sampled | lvk::TextureUsageBits_Storage,
       .numMipLevels = lvk::calcNumMipLevels(sizeBloom.width, sizeBloom.height),
-      .swizzle      = swizzle,
+      .components   = swizzle,
       .debugName    = "texLuminance",
   }) };
 
   for (uint32_t v = 1; v != LVK_ARRAY_NUM_ELEMENTS(texLumViews); v++) {
-    texLumViews[v] = ctx->createTextureView(texLumViews[0], { .mipLevel = v, .swizzle = swizzle });
+    texLumViews[v] = ctx->createTextureView(texLumViews[0], { .mipLevel = v, .components = swizzle });
   }
 
   const uint16_t brightPixel = glm::packHalf1x16(50.0f);
@@ -119,7 +119,7 @@ int main()
     .format     = lvk::Format_R_F16,
     .dimensions = {1, 1},
     .usage      = lvk::TextureUsageBits_Sampled | lvk::TextureUsageBits_Storage,
-    .swizzle    = swizzle,
+    .components = swizzle,
     .data       = &brightPixel,
   };
   lvk::Holder<lvk::TextureHandle> texAdaptedLum[2] = {
