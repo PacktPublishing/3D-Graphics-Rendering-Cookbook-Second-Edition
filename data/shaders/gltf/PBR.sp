@@ -303,6 +303,9 @@ vec3 getIBLRadianceCharlie(PBRInfo pbrInputs, EnvironmentMapDataGPU envMap) {
 PBRInfo calculatePBRInputsMetallicRoughness(InputAttributes tc, vec4 albedo, vec4 mrSample, MetallicRoughnessDataGPU mat) {
   PBRInfo pbrInputs;
 
+  pbrInputs.thickness = 0;
+  pbrInputs.attenuation = vec4(0);
+
   if (isSpecularGlossiness != ((getMaterialType(mat) & 2) != 0)) {
     // ERROR: the `isSpecularGlossiness` specialization constant should match the `SpecularGlossiness` material flag
     return pbrInputs;
