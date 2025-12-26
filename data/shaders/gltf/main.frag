@@ -179,7 +179,7 @@ void main()
   specularColor = lights_specular + mix(specularColor, specularColor * occlusion, occlusionStrength);
   sheenColor = lights_sheen + mix(sheenColor, sheenColor * occlusion, occlusionStrength);
 
-  vec3 emissiveColor = Ke.rgb * sampleEmissive(tc, mat).rgb;
+  vec3 emissiveColor = Ke.rgb;
 
   vec3 clearcoatFresnel = vec3(0);
   if (isClearCoat) {
