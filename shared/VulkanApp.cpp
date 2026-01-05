@@ -3,17 +3,6 @@
 #include "UtilsGLTF.h"
 #include <unordered_map>
 
-extern std::unordered_map<uint32_t, std::string> debugGLSLSourceCode;
-
-static void shaderModuleCallback(lvk::IContext*, lvk::ShaderModuleHandle handle, int line, int col, const char* debugName)
-{
-  const auto it = debugGLSLSourceCode.find(handle.index());
-
-  if (it != debugGLSLSourceCode.end()) {
-    lvk::logShaderSource(it->second.c_str());
-  }
-}
-
 VulkanApp::VulkanApp(const VulkanAppConfig& cfg)
 : cfg_(cfg)
 {
@@ -23,12 +12,7 @@ VulkanApp::VulkanApp(const VulkanAppConfig& cfg)
   int height = -90;
 
   window_ = lvk::initWindow("Simple example", width, height);
-  ctx_    = lvk::createVulkanContextWithSwapchain(
-      window_, width, height,
-      {
-             .enableValidation          = true,
-             .shaderModuleErrorCallback = &shaderModuleCallback,
-      });
+  ctx_          = lvk::createVulkanContextWithSwapchain(window_, width, height, { .enableValidation = true });
   depthTexture_ = ctx_->createTexture({
       .type       = lvk::TextureType_2D,
       .format     = lvk::Format_Z_F32,
