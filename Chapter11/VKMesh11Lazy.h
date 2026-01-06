@@ -142,6 +142,9 @@ public:
 
     ktxTexture_Destroy(ktxTexture(tex.ktxTex));
 
+    // calculate a span of updated materials
+    size_t begin = 0;
+    size_t end   = 0;
     {
       std::lock_guard lock(loadingMutex_);
 
@@ -157,21 +160,30 @@ public:
       for (size_t i = 0; i != materialsCPU_.size(); i++) {
         const Material& mtl = materialsCPU_[i];
 
-        GLTFMaterialDataGPU& m = materialsGPU_[i];
+        GLTFMaterialDataGPU m = materialsGPU_[i]; // make a local copy
 
         m.baseColorTexture    = getTextureFromCache(mtl.baseColorTexture);
         m.emissiveTexture     = getTextureFromCache(mtl.emissiveTexture);
         m.normalTexture       = getTextureFromCache(mtl.normalTexture);
         m.transmissionTexture = getTextureFromCache(mtl.opacityTexture);
+
+        if (memcmp(&m, &materialsGPU_[i], sizeof(m))) {
+          if (begin == end)
+            begin = i;
+          end = i + 1;
+
+          materialsGPU_[i] = m;
+        }
       }
     }
 
-    size_t size   = materialsGPU_.size() * sizeof(decltype(materialsGPU_)::value_type);
-    size_t offset = 0;
+    // update the buffer
+    size_t size   = (end - begin) * sizeof(decltype(materialsGPU_)::value_type);
+    size_t offset = begin * sizeof(decltype(materialsGPU_)::value_type);
 
     while (size) {
       const size_t chunk = std::min(size, (size_t)65536);
-      buf.cmdUpdateBuffer(bufferMaterials_, offset, chunk, materialsGPU_.data());
+      buf.cmdUpdateBuffer(bufferMaterials_, offset, chunk, &materialsGPU_[begin]);
       size -= chunk;
       offset += chunk;
     }
