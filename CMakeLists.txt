@@ -87,6 +87,7 @@ include_directories(deps/src)
 include_directories(deps/src/lightweightvk/third-party/deps/src/taskflow)
 include_directories(deps/src/lightweightvk/third-party/deps/src/glm)
 include_directories(deps/src/lightweightvk/third-party/deps/src/imgui)
+include_directories(deps/src/lightweightvk/third-party/deps/src/glslang)
 
 add_subdirectory(deps/cmake/ImGuizmo)
 
