@@ -11,18 +11,16 @@ VulkanApp::VulkanApp(const VulkanAppConfig& cfg)
   int width  = -95;
   int height = -90;
 
-  window_ = lvk::initWindow("Simple example", width, height);
+  window_       = lvk::initWindow("Simple example", width, height);
   ctx_          = lvk::createVulkanContextWithSwapchain(window_, width, height, { .enableValidation = true });
-  depthTexture_ = ctx_->createTexture({
-      .type       = lvk::TextureType_2D,
-      .format     = lvk::Format_Z_F32,
-      .dimensions = {(uint32_t)width, (uint32_t)height},
-      .usage      = lvk::TextureUsageBits_Attachment,
-      .debugName  = "Depth buffer",
+  depthTexture_ = ctx_->createTexture(
+      {
+          .type       = lvk::TextureType_2D,
+          .format     = lvk::Format_Z_F32,
+          .dimensions = { (uint32_t)width, (uint32_t)height },
+          .usage      = lvk::TextureUsageBits_Attachment,
+          .debugName  = "Depth buffer",
   });
-
-  imgui_     = std::make_unique<lvk::ImGuiRenderer>(*ctx_, "data/OpenSans-Light.ttf", 30.0f);
-  implotCtx_ = ImPlot::CreateContext();
 
   glfwSetWindowUserPointer(window_, this);
 
@@ -31,30 +29,16 @@ VulkanApp::VulkanApp(const VulkanAppConfig& cfg)
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
       app->mouseState_.pressedLeft = action == GLFW_PRESS;
     }
-    double xpos, ypos;
-    glfwGetCursorPos(window, &xpos, &ypos);
-    const ImGuiMouseButton_ imguiButton = (button == GLFW_MOUSE_BUTTON_LEFT)
-                                              ? ImGuiMouseButton_Left
-                                              : (button == GLFW_MOUSE_BUTTON_RIGHT ? ImGuiMouseButton_Right : ImGuiMouseButton_Middle);
-    ImGuiIO& io                         = ImGui::GetIO();
-    io.MousePos                         = ImVec2((float)xpos, (float)ypos);
-    io.MouseDown[imguiButton]           = action == GLFW_PRESS;
     for (auto& cb : app->callbacksMouseButton) {
       cb(window, button, action, mods);
     }
-  });
-  glfwSetScrollCallback(window_, [](GLFWwindow* window, double dx, double dy) {
-    ImGuiIO& io    = ImGui::GetIO();
-    io.MouseWheelH = (float)dx;
-    io.MouseWheel  = (float)dy;
   });
   glfwSetCursorPosCallback(window_, [](GLFWwindow* window, double x, double y) {
     VulkanApp* app = (VulkanApp*)glfwGetWindowUserPointer(window);
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
-    ImGui::GetIO().MousePos = ImVec2(x, y);
-    app->mouseState_.pos.x  = static_cast<float>(x / width);
-    app->mouseState_.pos.y  = 1.0f - static_cast<float>(y / height);
+    app->mouseState_.pos.x = static_cast<float>(x / width);
+    app->mouseState_.pos.y = 1.0f - static_cast<float>(y / height);
   });
   glfwSetKeyCallback(window_, [](GLFWwindow* window, int key, int scancode, int action, int mods) {
     VulkanApp* app     = (VulkanApp*)glfwGetWindowUserPointer(window);
@@ -84,6 +68,9 @@ VulkanApp::VulkanApp(const VulkanAppConfig& cfg)
       cb(window, key, scancode, action, mods);
     }
   });
+  // initialize ImGUi after GLFW callbacks have been installed
+  imgui_     = std::make_unique<lvk::ImGuiRenderer>(*ctx_, window_, "data/OpenSans-Light.ttf", 30.0f);
+  implotCtx_ = ImPlot::CreateContext();
 }
 
 VulkanApp::~VulkanApp()
@@ -188,7 +175,8 @@ void VulkanApp::drawGTFInspector_Animations(GLTFIntrospective& intro)
   ImGui::End();
 }
 
-void VulkanApp::drawGTFInspector_Materials(GLTFIntrospective& intro) {
+void VulkanApp::drawGTFInspector_Materials(GLTFIntrospective& intro)
+{
   LVK_PROFILER_FUNCTION();
 
   if (!intro.showMaterials || intro.materials.empty())
@@ -368,19 +356,20 @@ void VulkanApp::drawGrid(
 
     pipelineSamples = numSamples;
 
-    gridPipeline = ctx_->createRenderPipeline({
-        .smVert       = gridVert,
-        .smFrag       = gridFrag,
-        .color        = { {
-                   .format            = colorFormat != lvk::Format_Invalid ? colorFormat : ctx_->getSwapchainFormat(),
-                   .blendEnabled      = true,
-                   .srcRGBBlendFactor = lvk::BlendFactor_SrcAlpha,
-                   .dstRGBBlendFactor = lvk::BlendFactor_OneMinusSrcAlpha,
-        } },
-        .depthFormat  = this->getDepthFormat(),
-        .samplesCount = numSamples,
-        .debugName    = "Pipeline: drawGrid()",
-    });
+    gridPipeline = ctx_->createRenderPipeline(
+        {
+            .smVert       = gridVert,
+            .smFrag       = gridFrag,
+            .color        = { {
+                       .format            = colorFormat != lvk::Format_Invalid ? colorFormat : ctx_->getSwapchainFormat(),
+                       .blendEnabled      = true,
+                       .srcRGBBlendFactor = lvk::BlendFactor_SrcAlpha,
+                       .dstRGBBlendFactor = lvk::BlendFactor_OneMinusSrcAlpha,
+            } },
+            .depthFormat  = this->getDepthFormat(),
+            .samplesCount = numSamples,
+            .debugName    = "Pipeline: drawGrid()",
+        });
   }
 
   const struct {

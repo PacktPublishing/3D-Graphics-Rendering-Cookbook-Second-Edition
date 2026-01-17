@@ -22,19 +22,7 @@ int main()
     ctx    = lvk::createVulkanContextWithSwapchain(window, width, height, {});
   }
 
-  std::unique_ptr<lvk::ImGuiRenderer> imgui = std::make_unique<lvk::ImGuiRenderer>(*ctx, "data/OpenSans-Light.ttf", 30.0f);
-
-  glfwSetCursorPosCallback(window, [](auto* window, double x, double y) { ImGui::GetIO().MousePos = ImVec2(x, y); });
-  glfwSetMouseButtonCallback(window, [](auto* window, int button, int action, int mods) {
-    double xpos, ypos;
-    glfwGetCursorPos(window, &xpos, &ypos);
-    const ImGuiMouseButton_ imguiButton = (button == GLFW_MOUSE_BUTTON_LEFT)
-                                              ? ImGuiMouseButton_Left
-                                              : (button == GLFW_MOUSE_BUTTON_RIGHT ? ImGuiMouseButton_Right : ImGuiMouseButton_Middle);
-    ImGuiIO& io                         = ImGui::GetIO();
-    io.MousePos                         = ImVec2((float)xpos, (float)ypos);
-    io.MouseDown[imguiButton]           = action == GLFW_PRESS;
-  });
+  std::unique_ptr<lvk::ImGuiRenderer> imgui = std::make_unique<lvk::ImGuiRenderer>(*ctx, window, "data/OpenSans-Light.ttf", 30.0f);
 
   double timeStamp   = glfwGetTime();
   float deltaSeconds = 0.0f;
@@ -66,8 +54,10 @@ int main()
       }
       ImGui::SetNextWindowBgAlpha(0.30f);
       ImGui::SetNextWindowSize(ImVec2(ImGui::CalcTextSize("FPS : _______").x, 0));
-      if (ImGui::Begin("##FPS", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
-                                     ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove)) {
+      if (ImGui::Begin(
+              "##FPS", nullptr,
+              ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
+                  ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove)) {
         ImGui::Text("FPS : %i", (int)fpsCounter.getFPS());
         ImGui::Text("Ms  : %.1f", 1000.0 / fpsCounter.getFPS());
       }

@@ -195,15 +195,6 @@ int main(void)
       if (button == GLFW_MOUSE_BUTTON_LEFT) {
         mouseState.pressedLeft = action == GLFW_PRESS;
       }
-      double xpos, ypos;
-      glfwGetCursorPos(window, &xpos, &ypos);
-      const ImGuiMouseButton_ imguiButton = (button == GLFW_MOUSE_BUTTON_LEFT)
-                                                ? ImGuiMouseButton_Left
-                                                : (button == GLFW_MOUSE_BUTTON_RIGHT ? ImGuiMouseButton_Right : ImGuiMouseButton_Middle);
-
-      ImGuiIO& io               = ImGui::GetIO();
-      io.MousePos               = ImVec2((float)xpos, (float)ypos);
-      io.MouseDown[imguiButton] = action == GLFW_PRESS;
     });
 
     glfwSetKeyCallback(window, [](GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -230,7 +221,7 @@ int main(void)
       }
     });
 
-    std::unique_ptr<lvk::ImGuiRenderer> imgui = std::make_unique<lvk::ImGuiRenderer>(*ctx, "data/OpenSans-Light.ttf", 30.0f);
+    std::unique_ptr<lvk::ImGuiRenderer> imgui = std::make_unique<lvk::ImGuiRenderer>(*ctx, window, "data/OpenSans-Light.ttf", 30.0f);
 
     double timeStamp   = glfwGetTime();
     float deltaSeconds = 0.0f;

@@ -22,19 +22,7 @@ int main()
     ctx    = lvk::createVulkanContextWithSwapchain(window, width, height, {});
   }
 
-  std::unique_ptr<lvk::ImGuiRenderer> imgui = std::make_unique<lvk::ImGuiRenderer>(*ctx, "data/OpenSans-Light.ttf", 30.0f);
-
-  glfwSetCursorPosCallback(window, [](auto* window, double x, double y) { ImGui::GetIO().MousePos = ImVec2(x, y); });
-  glfwSetMouseButtonCallback(window, [](auto* window, int button, int action, int mods) {
-    double xpos, ypos;
-    glfwGetCursorPos(window, &xpos, &ypos);
-    const ImGuiMouseButton_ imguiButton = (button == GLFW_MOUSE_BUTTON_LEFT)
-                                              ? ImGuiMouseButton_Left
-                                              : (button == GLFW_MOUSE_BUTTON_RIGHT ? ImGuiMouseButton_Right : ImGuiMouseButton_Middle);
-    ImGuiIO& io                         = ImGui::GetIO();
-    io.MousePos                         = ImVec2((float)xpos, (float)ypos);
-    io.MouseDown[imguiButton]           = action == GLFW_PRESS;
-  });
+  std::unique_ptr<lvk::ImGuiRenderer> imgui = std::make_unique<lvk::ImGuiRenderer>(*ctx, window, "data/OpenSans-Light.ttf", 30.0f);
 
   int w, h, comp;
   const uint8_t* img = stbi_load("data/wood.jpg", &w, &h, &comp, 4);
