@@ -201,7 +201,11 @@ void convertAndDownscaleAllTextures(
     return convertTexture(s, basePath, opacityMapIndices, opacityMaps);
   };
 
+#if defined(__cpp_lib_execution)
   std::transform(std::execution::par, std::begin(files), std::end(files), std::begin(files), converter);
+#else
+    std::transform(std::begin(files), std::end(files), std::begin(files), converter);
+#endif
 }
 
 void traverse(const aiScene* sourceScene, Scene& scene, aiNode* N, int parent, int depth)
