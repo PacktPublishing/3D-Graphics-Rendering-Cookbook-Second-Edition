@@ -281,7 +281,7 @@ MeshFileHeader mergeMeshData(MeshData& m, const std::vector<MeshData*> md)
   uint32_t mtlOffset = 0;
 
   for (const MeshData* i : md) {
-    LVK_ASSERT(m.streams == i->streams);
+    LVK_ASSERT(memcmp(&m.streams, &i->streams, sizeof(lvk::VertexInput)) == 0);
     mergeVectors(m.indexData, i->indexData);
     mergeVectors(m.vertexData, i->vertexData);
     mergeVectors(m.meshes, i->meshes);
