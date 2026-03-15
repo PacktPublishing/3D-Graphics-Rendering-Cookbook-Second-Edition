@@ -15,6 +15,8 @@ endif()
 
 find_package(Python3 COMPONENTS Interpreter)
 
+set(ENV{LVK_WITH_SLANG} "OFF")
+
 execute_process(COMMAND ${Python3_EXECUTABLE} deploy_deps.py WORKING_DIRECTORY ${COOKBOOK_ROOT_DIR} COMMAND_ERROR_IS_FATAL ANY)
 execute_process(COMMAND ${Python3_EXECUTABLE} deploy_deps.py WORKING_DIRECTORY ${COOKBOOK_ROOT_DIR}/deps/src/lightweightvk COMMAND_ERROR_IS_FATAL ANY)
 
@@ -44,6 +46,7 @@ endif()
 set(LVK_WITH_SAMPLES   OFF CACHE BOOL "")
 set(LVK_WITH_TRACY     ON  CACHE BOOL "")
 set(LVK_WITH_TRACY_GPU ON  CACHE BOOL "")
+set(LVK_WITH_SLANG     OFF CACHE BOOL "")
 add_subdirectory(deps/src/lightweightvk)
 lvk_set_folder(ktx "third-party/ktx-software")
 lvk_set_folder(ktx_version "third-party/ktx-software")
