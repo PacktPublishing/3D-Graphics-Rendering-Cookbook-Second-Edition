@@ -75,7 +75,7 @@ int main()
   });
 
   const lvk::VertexInput vdesc = {
-    .attributes    = { { .location = 0, .format = lvk::VertexFormat::Float3, .offset = 0 } },
+    .attributes    = { { .location = 0, .format = lvk::VertexFormat_Float3, .offset = 0 } },
     .inputBindings = { { .stride = sizeof(vec3) } },
   };
 

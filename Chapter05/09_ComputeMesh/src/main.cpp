@@ -152,9 +152,9 @@ int main()
     lvk::Holder<lvk::ShaderModuleHandle> frag = loadShaderModule(ctx, "Chapter05/09_ComputeMesh/src/main.frag");
 
     const lvk::VertexInput vdesc = {
-      .attributes    = { { .location = 0, .format = lvk::VertexFormat::Float4, .offset = 0 },
-                         { .location = 1, .format = lvk::VertexFormat::Float4, .offset = sizeof(vec4) },
-                         { .location = 2, .format = lvk::VertexFormat::Float4, .offset = sizeof(vec4)+sizeof(vec4) }, },
+      .attributes    = { { .location = 0, .format = lvk::VertexFormat_Float4, .offset = 0 },
+                         { .location = 1, .format = lvk::VertexFormat_Float4, .offset = sizeof(vec4) },
+                         { .location = 2, .format = lvk::VertexFormat_Float4, .offset = sizeof(vec4)+sizeof(vec4) }, },
       .inputBindings = { { .stride = sizeof(vec4) + sizeof(vec4) + sizeof(vec4) } },
     };
 

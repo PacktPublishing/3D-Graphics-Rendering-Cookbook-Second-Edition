@@ -222,11 +222,11 @@ int main()
     EnvironmentMapTextures envMapTextures(ctx);
 
     const lvk::VertexInput vdesc = {
-    .attributes    = { { .location = 0, .format = lvk::VertexFormat::Float3, .offset = 0  },
-							  { .location = 1, .format = lvk::VertexFormat::Float3, .offset = 12 },
-                       { .location = 2, .format = lvk::VertexFormat::Float4, .offset = 24 },
-							  { .location = 3, .format = lvk::VertexFormat::Float2, .offset = 40 },
-							  { .location = 4, .format = lvk::VertexFormat::Float2, .offset = 48 }, },
+    .attributes    = { { .location = 0, .format = lvk::VertexFormat_Float3, .offset = 0  },
+							  { .location = 1, .format = lvk::VertexFormat_Float3, .offset = 12 },
+                       { .location = 2, .format = lvk::VertexFormat_Float4, .offset = 24 },
+							  { .location = 3, .format = lvk::VertexFormat_Float2, .offset = 40 },
+							  { .location = 4, .format = lvk::VertexFormat_Float2, .offset = 48 }, },
     .inputBindings = { { .stride = sizeof(Vertex) } },
     };
 

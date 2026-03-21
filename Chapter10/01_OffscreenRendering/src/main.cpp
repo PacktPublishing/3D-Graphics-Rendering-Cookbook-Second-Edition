@@ -60,7 +60,7 @@ int main()
   lvk::Holder<lvk::ShaderModuleHandle> frag = loadShaderModule(ctx, "Chapter10/01_OffscreenRendering/src/main.frag");
 
   const lvk::VertexInput vdesc = {
-    .attributes    = { { .location = 0, .format = lvk::VertexFormat::Float3 } },
+    .attributes    = { { .location = 0, .format = lvk::VertexFormat_Float3 } },
     .inputBindings = { { .stride = sizeof(VertexData) } },
   };
 

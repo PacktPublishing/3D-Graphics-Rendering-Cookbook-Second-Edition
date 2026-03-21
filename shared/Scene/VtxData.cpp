@@ -316,7 +316,7 @@ MeshFileHeader mergeMeshData(MeshData& m, const std::vector<MeshData*> md)
 
 void recalculateBoundingBoxes(MeshData& m)
 {
-  LVK_ASSERT(m.streams.attributes[0].format == lvk::VertexFormat::Float3);
+  LVK_ASSERT(m.streams.attributes[0].format == lvk::VertexFormat_Float3);
 
   const uint32_t stride = m.streams.getVertexSize();
 

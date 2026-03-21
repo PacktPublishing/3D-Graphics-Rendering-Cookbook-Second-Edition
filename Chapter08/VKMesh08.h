@@ -264,9 +264,9 @@ Mesh convertAIMesh(const aiMesh* m, MeshData& meshData, uint32_t& indexOffset, u
 
   // pos, uv, normal
   meshData.streams = {
-    .attributes    = { { .location = 0, .format = lvk::VertexFormat::Float3, .offset = 0 },                // pos
-                       { .location = 1, .format = lvk::VertexFormat::HalfFloat2, .offset = sizeof(vec3) }, // uv
-                       { .location = 2, .format = lvk::VertexFormat::Int_2_10_10_10_REV, .offset = sizeof(vec3) + sizeof(uint32_t) } }, // n
+    .attributes    = { { .location = 0, .format = lvk::VertexFormat_Float3, .offset = 0 },                // pos
+                       { .location = 1, .format = lvk::VertexFormat_HalfFloat2, .offset = sizeof(vec3) }, // uv
+                       { .location = 2, .format = lvk::VertexFormat_Int_2_10_10_10_REV, .offset = sizeof(vec3) + sizeof(uint32_t) } }, // n
     .inputBindings = { { .stride = sizeof(vec3) + sizeof(uint32_t) + sizeof(uint32_t) } },
   };
 

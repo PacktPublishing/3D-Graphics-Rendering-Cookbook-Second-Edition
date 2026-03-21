@@ -129,9 +129,9 @@ int main()
   lvk::Holder<lvk::ShaderModuleHandle> fragShadow = loadShaderModule(ctx, "Chapter10/02_ShadowMapping/src/shadow.frag");
 
   const lvk::VertexInput vdesc = {
-      .attributes    = {{ .location = 0, .format = lvk::VertexFormat::Float3, .offset = offsetof(VertexData, pos) },
-                        { .location = 1, .format = lvk::VertexFormat::Float3, .offset = offsetof(VertexData, n) },
-                        { .location = 2, .format = lvk::VertexFormat::Float2, .offset = offsetof(VertexData, tc) }, },
+      .attributes    = {{ .location = 0, .format = lvk::VertexFormat_Float3, .offset = offsetof(VertexData, pos) },
+                        { .location = 1, .format = lvk::VertexFormat_Float3, .offset = offsetof(VertexData, n) },
+                        { .location = 2, .format = lvk::VertexFormat_Float2, .offset = offsetof(VertexData, tc) }, },
       .inputBindings = { { .stride = sizeof(VertexData) } },
     };
 
@@ -146,7 +146,7 @@ int main()
   lvk::Holder<lvk::RenderPipelineHandle> pipelineShadow = ctx->createRenderPipeline(lvk::RenderPipelineDesc{
       .vertexInput =
           {
-                           .attributes    = { { .location = 0, .format = lvk::VertexFormat::Float3, .offset = offsetof(VertexData, pos) } },
+                           .attributes    = { { .location = 0, .format = lvk::VertexFormat_Float3, .offset = offsetof(VertexData, pos) } },
                            .inputBindings = { { .stride = sizeof(VertexData) } },
                            },
       .smVert      = vertShadow,

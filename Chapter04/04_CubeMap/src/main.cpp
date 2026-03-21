@@ -65,9 +65,9 @@ int main(void)
     lvk::Holder<lvk::ShaderModuleHandle> fragSkybox = loadShaderModule(ctx, "Chapter04/04_CubeMap/src/skybox.frag");
 
     const lvk::VertexInput vdesc = {
-      .attributes    = {{ .location = 0, .format = lvk::VertexFormat::Float3, .offset = offsetof(VertexData, pos) },
-                        { .location = 1, .format = lvk::VertexFormat::Float3, .offset = offsetof(VertexData, n) },
-                        { .location = 2, .format = lvk::VertexFormat::Float2, .offset = offsetof(VertexData, tc) }, },
+      .attributes    = {{ .location = 0, .format = lvk::VertexFormat_Float3, .offset = offsetof(VertexData, pos) },
+                        { .location = 1, .format = lvk::VertexFormat_Float3, .offset = offsetof(VertexData, n) },
+                        { .location = 2, .format = lvk::VertexFormat_Float2, .offset = offsetof(VertexData, tc) }, },
       .inputBindings = { { .stride = sizeof(VertexData) } },
     };
 

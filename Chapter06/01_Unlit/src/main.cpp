@@ -68,9 +68,9 @@ int main()
           .debugName = "Buffer: index" });
 
     const lvk::VertexInput vdesc = {
-      .attributes    = { { .location = 0, .format = lvk::VertexFormat::Float3, .offset = 0  },
-                       {   .location = 1, .format = lvk::VertexFormat::Float4, .offset = sizeof(vec3) },
-							  {   .location = 2, .format = lvk::VertexFormat::Float2, .offset = sizeof(vec3) + sizeof(vec4) }, },
+      .attributes    = { { .location = 0, .format = lvk::VertexFormat_Float3, .offset = 0  },
+                       {   .location = 1, .format = lvk::VertexFormat_Float4, .offset = sizeof(vec3) },
+							  {   .location = 2, .format = lvk::VertexFormat_Float2, .offset = sizeof(vec3) + sizeof(vec4) }, },
       .inputBindings = { { .stride = sizeof(Vertex) }, },
     };
 
