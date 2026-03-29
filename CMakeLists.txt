@@ -76,7 +76,7 @@ if(APPLE)
   target_compile_options(assimp PRIVATE -Wno-deprecated-declarations)
 endif()
 if(UNIX)
-  target_compile_options(assimp PRIVATE -Wno-deprecated-non-prototype)
+  target_compile_options(assimp PRIVATE $<$<COMPILE_LANGUAGE:C,OBJC>:-Wno-deprecated-non-prototype>)
 endif()
 
 set(MESHOPT_BUILD_DEMO OFF CACHE BOOL "")
