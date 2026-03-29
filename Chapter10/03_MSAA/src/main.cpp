@@ -64,7 +64,7 @@ int main()
       buf.cmdBeginRendering(
           lvk::RenderPass{
               .color = { { .loadOp     = lvk::LoadOp_Clear,
-                           .storeOp    = enableMSAA ? lvk::StoreOp_MsaaResolve : lvk::StoreOp_Store,
+                           .storeOp    = enableMSAA ? lvk::StoreOp_DontCare : lvk::StoreOp_Store,
                            .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } } },
               .depth = { .loadOp = lvk::LoadOp_Clear, .clearDepth = 1.0f }
       },

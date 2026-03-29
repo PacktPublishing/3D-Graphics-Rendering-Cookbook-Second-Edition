@@ -178,7 +178,7 @@ int main()
       };
       buf.cmdBeginRendering(
           lvk::RenderPass{
-              .color = { { .loadOp = lvk::LoadOp_Clear, .storeOp = lvk::StoreOp_MsaaResolve, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } } },
+              .color = { { .loadOp = lvk::LoadOp_Clear, .storeOp = lvk::StoreOp_DontCare, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } } },
               .depth = { .loadOp = lvk::LoadOp_Clear, .clearDepth = 1.0f }
       },
           framebufferMSAA, { .textures = { lvk::TextureHandle(shadowMap) } });
