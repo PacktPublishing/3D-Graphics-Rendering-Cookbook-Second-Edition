@@ -5,7 +5,7 @@
 # sk@linderdaum.com
 #
 # The MIT License (MIT)
-# Copyright (c) 2016-2025, Sergey Kosarevsky
+# Copyright (c) 2016-2026, Sergey Kosarevsky
 #
 # ---
 # Based on https://bitbucket.org/blippar/bootstrapping-external-libs
@@ -19,13 +19,15 @@
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-from __future__ import print_function
+BOOTSTRAP_VERSION = "1.0.8 (2026)"
+
 import platform
 import os
 import sys
 import io
 import shutil
 import subprocess
+import tempfile
 import zipfile
 import tarfile
 import hashlib
@@ -33,20 +35,12 @@ import json
 import getopt
 import traceback
 import urllib
+import urllib.request
 import ssl
 import ctypes
+from urllib.parse import urlparse, urlunparse, quote
 
 ssl._create_default_https_context = ssl._create_unverified_context
-
-try:
-    from urllib.request import urlparse
-    from urllib.request import urlunparse
-    from urllib.request import quote
-except ImportError:
-    from urlparse import urlparse
-    from urlparse import urlunparse
-    from urllib import URLopener
-    from urllib import quote
 
 try:
     import paramiko
@@ -54,7 +48,6 @@ try:
     scp_available = True
 except:
     scp_available = False
-    print("WARNING: Please install the Python packages [paramiko, scp] for full script operation.")
 
 try:
     import lzma
@@ -67,8 +60,6 @@ except:
     print("> brew install xz")
     print("> pip install pyliblzma")
     lzma_available = False
-
-BOOTSTRAP_VERSION = "1.0.7 (2025)"
 
 class Colors:
     GREEN = '\033[92m'
@@ -112,8 +103,8 @@ if platform.system() == "Windows":
         kernel32.GetConsoleMode(handle, ctypes.byref(mode))
         kernel32.SetConsoleMode(handle, mode.value | 0x0004)
 
-if not sys.version_info[0] >= 3:
-    raise ValueError("I require Python 3.0 or a later version")
+if sys.version_info < (3, 5):
+    raise ValueError("I require Python 3.5 or a later version")
 
 def log(string):
     print("--- " + string)
@@ -227,17 +218,16 @@ def decompressTarXZFile(src_filename, dst_filename):
 
     try:
         fs = open(src_filename, "rb")
-        if not fs:
-            raise RuntimeError("Opening file " + src_filename + " failed")
+    except:
+        raise RuntimeError("Opening file " + src_filename + " failed")
+    try:
         fd = open(dst_filename, "wb")
-        if not fd:
-            raise RuntimeError("Opening file " + dst_filename + " failed")
-
+    except:
+        fs.close()
+        raise RuntimeError("Opening file " + dst_filename + " failed")
+    with fs, fd:
         decompressed = lzma.decompress(fs.read())
         fd.write(decompressed)
-    finally:
-        fs.close()
-        fd.close()
 
 
 
@@ -274,7 +264,7 @@ def extractFile(filename, target_dir):
         extract_dir_abs = os.path.join(SRC_DIR, extract_dir_local)
 
         try:
-            os.mkdirs(extract_dir_abs)
+            os.makedirs(extract_dir_abs, exist_ok=True)
         except:
             pass
 
@@ -306,7 +296,7 @@ def extractFile(filename, target_dir):
         extract_dir_abs = os.path.join(SRC_DIR, extract_dir_local)
 
         try:
-            os.mkdirs(extract_dir_abs)
+            os.makedirs(extract_dir_abs, exist_ok=True)
         except:
             pass
 
@@ -406,25 +396,33 @@ def downloadFile(url, download_dir, target_dir_name, sha1_hash = None, force_dow
             opener = urllib.request.build_opener()
             if user_agent is not None:
                 opener.addheaders = [('User-agent', user_agent)]
-            f = open(target_filename, 'wb')
-            with opener.open(url) as response:
-                Length = response.getheader('content-length')
-                BlockSize = 128*1024 # default value
-                if Length:
-                    Length = int(Length)
-                    BlockSize = max(BlockSize, Length // 1000)
-                    Size = 0
-                    while True:
-                        Buffer = response.read(BlockSize)
-                        if not Buffer:
-                            break
-                        f.write(Buffer)
-                        Size += len(Buffer)
-                        downloadProgress(Size, Length)
-                    print();
-                else:
-                    f.write(response.read())
-            f.close()
+            # download to a temporary file first, so a failed download doesn't leave a partial file behind
+            fd, tmp_filename = tempfile.mkstemp(dir=download_dir)
+            try:
+                with os.fdopen(fd, 'wb') as f:
+                    with opener.open(url) as response:
+                        Length = response.getheader('content-length')
+                        BlockSize = 128*1024 # default value
+                        if Length:
+                            Length = int(Length)
+                            BlockSize = max(BlockSize, Length // 1000)
+                            Size = 0
+                            while True:
+                                Buffer = response.read(BlockSize)
+                                if not Buffer:
+                                    break
+                                f.write(Buffer)
+                                Size += len(Buffer)
+                                downloadProgress(Size, Length)
+                            print();
+                        else:
+                            f.write(response.read())
+                os.replace(tmp_filename, target_filename)
+            except:
+                # clean up the partial download
+                if os.path.exists(tmp_filename):
+                    os.remove(tmp_filename)
+                raise
     else:
         log("Skipping download of " + url + "; already downloaded")
 
@@ -459,7 +457,7 @@ def applyPatchFile(patch_name, dir_name, pnum):
     if res != 0:
         warning("ERROR: patch application failure; has this patch already been applied?")
         executeCommand(TOOL_COMMAND_PATCH + " --dry-run " + arguments, printCommand = True)
-        exit(255)
+        raise RuntimeError("Patch application failure for " + patch_name)
     else:
         dieIfNonZero(executeCommand(TOOL_COMMAND_PATCH + " " + arguments, quiet = True))
 
@@ -654,8 +652,8 @@ def main(argv):
         paths_to_search = os.environ["PATH"].split(":") + ["/usr/local/bin", "/opt/local/bin", "/usr/bin"]
         TOOL_COMMAND_PYTHON = findToolCommand(TOOL_COMMAND_PYTHON, paths_to_search, required = True)
         TOOL_COMMAND_GIT = findToolCommand(TOOL_COMMAND_GIT, paths_to_search, required = True)
-        TOOL_COMMAND_HG = findToolCommand(TOOL_COMMAND_HG, paths_to_search, required = True)
-        TOOL_COMMAND_SVN = findToolCommand(TOOL_COMMAND_SVN, paths_to_search, required = True)
+        TOOL_COMMAND_HG = findToolCommand(TOOL_COMMAND_HG, paths_to_search, required = False)
+        TOOL_COMMAND_SVN = findToolCommand(TOOL_COMMAND_SVN, paths_to_search, required = False)
         TOOL_COMMAND_PATCH = findToolCommand(TOOL_COMMAND_PATCH, paths_to_search, required = True)
         TOOL_COMMAND_TAR = findToolCommand(TOOL_COMMAND_TAR, paths_to_search, required = USE_TAR)
         TOOL_COMMAND_UNZIP = findToolCommand(TOOL_COMMAND_UNZIP, paths_to_search, required = USE_UNZIP)
