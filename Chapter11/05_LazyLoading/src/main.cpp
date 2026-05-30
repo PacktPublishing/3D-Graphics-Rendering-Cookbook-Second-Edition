@@ -181,7 +181,7 @@ int main()
               .color = { { .loadOp = lvk::LoadOp_Clear, .storeOp = lvk::StoreOp_DontCare, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } } },
               .depth = { .loadOp = lvk::LoadOp_Clear, .clearDepth = 1.0f }
       },
-          framebufferMSAA, { .textures = { lvk::TextureHandle(shadowMap) } });
+          framebufferMSAA, { .sampledImages = { lvk::TextureHandle(shadowMap) } });
       skyBox.draw(buf, view, proj);
       if (drawMeshes) {
         const struct {

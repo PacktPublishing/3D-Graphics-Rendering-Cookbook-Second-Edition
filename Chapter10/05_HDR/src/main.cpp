@@ -211,7 +211,7 @@ int main()
       buf.cmdBindComputePipeline(pipelineBrightPass);
       buf.cmdPushConstants(pcBrightPass);
       // clang-format off
-      buf.cmdDispatchThreadGroups(sizeBloom.divide2D(16), { .textures = {lvk::TextureHandle(offscreenColor), lvk::TextureHandle(texLumViews[0])} });
+      buf.cmdDispatchThreadGroups(sizeBloom.divide2D(16), { .sampledImages = {lvk::TextureHandle(offscreenColor)}, .storageImages = {lvk::TextureHandle(texLumViews[0])} });
       // clang-format on
       buf.cmdGenerateMipmap(texLumViews[0]);
 
@@ -252,7 +252,8 @@ int main()
         if (enableBloom)
           buf.cmdDispatchThreadGroups(
               sizeBloom.divide2D(16), {
-                                          .textures = {p.texIn, p.texOut, lvk::TextureHandle(texBrightPass)}
+                                          .sampledImages = {p.texIn, lvk::TextureHandle(texBrightPass)},
+                                          .storageImages = {p.texOut}
           });
       }
 
@@ -265,7 +266,7 @@ int main()
       };
 
       // transition the entire mip-pyramid
-      buf.cmdBeginRendering(renderPassMain, framebufferMain, { .textures = { lvk::TextureHandle(texLumViews[0]) } });
+      buf.cmdBeginRendering(renderPassMain, framebufferMain, { .sampledImages = { lvk::TextureHandle(texLumViews[0]) } });
 
       buf.cmdBindRenderPipeline(pipelineToneMap);
       buf.cmdPushConstants(pcHDR);

@@ -255,7 +255,7 @@ int main()
             .color = { { .loadOp = lvk::LoadOp_Clear, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } } },
             .depth = { .loadOp = lvk::LoadOp_Clear, .clearDepth = 1.0f }
     },
-        framebuffer, { .textures = { { lvk::TextureHandle(shadowMap) } } });
+        framebuffer, { .sampledImages = { { lvk::TextureHandle(shadowMap) } } });
     buf.cmdBindRenderPipeline(pipeline);
     buf.cmdBindDepthState({ .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true });
     {

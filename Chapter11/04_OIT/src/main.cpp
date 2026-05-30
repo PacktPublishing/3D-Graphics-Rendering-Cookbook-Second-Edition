@@ -203,8 +203,9 @@ int main()
               .color = {{ .loadOp = lvk::LoadOp_Load, .storeOp = lvk::StoreOp_Store }},
       },
           framebufferMain,
-          { .textures = { lvk::TextureHandle(textureHeadsOIT), lvk::TextureHandle(offscreenColor) },
-            .buffers  = { lvk::BufferHandle(bufferTransparencyLists) } });
+          { .sampledImages = { lvk::TextureHandle(offscreenColor) },
+            .storageImages = { lvk::TextureHandle(textureHeadsOIT) },
+            .buffers       = { lvk::BufferHandle(bufferTransparencyLists) } });
 
       // combine OIT
       const struct {

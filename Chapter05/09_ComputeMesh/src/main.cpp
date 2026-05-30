@@ -237,11 +237,11 @@ int main()
         buf.cmdDispatchThreadGroups({ .width = (kNumU * kNumV) / 16 }, { .buffers = { { lvk::BufferHandle(bufferVertex) } } });
         if (!g_UseColoredMesh) {
           buf.cmdBindComputePipeline(pipelineComputeTexture);
-          buf.cmdDispatchThreadGroups({ .width = 1024 / 16, .height = 1024 / 16 }, { .textures = { { lvk::TextureHandle(texture) } } });
+          buf.cmdDispatchThreadGroups({ .width = 1024 / 16, .height = 1024 / 16 }, { .storageImages = { { lvk::TextureHandle(texture) } } });
         }
         buf.cmdBeginRendering(
             renderPass, framebuffer,
-            { .textures = { { lvk::TextureHandle(texture) } }, .buffers = { { lvk::BufferHandle(bufferVertex) } } });
+            { .sampledImages = { { lvk::TextureHandle(texture) } }, .buffers = { { lvk::BufferHandle(bufferVertex) } } });
         buf.cmdBindRenderPipeline(g_UseColoredMesh ? pipelineMeshColored : pipelineMeshTextured);
         buf.cmdPushConstants(pc);
         buf.cmdBindDepthState({ .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true });

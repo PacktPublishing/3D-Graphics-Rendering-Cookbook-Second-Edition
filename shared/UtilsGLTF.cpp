@@ -1112,7 +1112,7 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
       buf.cmdPopDebugGroupLabel();
     }
 
-    buf.cmdBeginRendering(renderPass, framebuffer, { .textures = { lvk::TextureHandle(gltf.offscreenTex[gltf.currentOffscreenTex]) } });
+    buf.cmdBeginRendering(renderPass, framebuffer, { .sampledImages = { lvk::TextureHandle(gltf.offscreenTex[gltf.currentOffscreenTex]) } });
     buf.cmdBindVertexBuffer(0, gltf.vertexBuffer, 0);
     buf.cmdBindIndexBuffer(gltf.indexBuffer, lvk::IndexFormat_UI32);
 

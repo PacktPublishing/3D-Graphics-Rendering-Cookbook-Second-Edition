@@ -195,8 +195,10 @@ int main()
               .width  = 1 + (uint32_t)sizeFb.width / 16,
               .height = 1 + (uint32_t)sizeFb.height / 16,
       },
-          { .textures = {
+          { .sampledImages = {
                 lvk::TextureHandle(offscreenDepth),
+            },
+            .storageImages = {
                 lvk::TextureHandle(texSSAO),
             } });
 
@@ -237,7 +239,8 @@ int main()
           });
           buf.cmdDispatchThreadGroups(
               blurDim, {
-                           .textures = {p.texIn, p.texOut, lvk::TextureHandle(offscreenDepth)}
+                           .sampledImages = {p.texIn, lvk::TextureHandle(offscreenDepth)},
+                           .storageImages = {p.texOut}
           });
         }
       }
@@ -256,7 +259,7 @@ int main()
         .color = { { .texture = ctx->getCurrentSwapchainTexture() } },
       };
 
-      buf.cmdBeginRendering(renderPassMain, framebufferMain, { .textures = { lvk::TextureHandle(texSSAO) } });
+      buf.cmdBeginRendering(renderPassMain, framebufferMain, { .sampledImages = { lvk::TextureHandle(texSSAO) } });
 
       if (drawMode == DrawMode_ColorSSAO) {
         buf.cmdBindRenderPipeline(pipelineCombine);

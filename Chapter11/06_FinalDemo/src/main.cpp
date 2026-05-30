@@ -706,8 +706,8 @@ int main()
         buf.cmdDispatchThreadGroups(
             { .width  = 1 + (uint32_t)sizeFb.width  / 16,
               .height = 1 + (uint32_t)sizeFb.height / 16 },
-            { .textures = { lvk::TextureHandle(texOpaqueDepth),
-                            lvk::TextureHandle(texSSAO) } });
+            { .sampledImages = { lvk::TextureHandle(texOpaqueDepth) },
+              .storageImages = { lvk::TextureHandle(texSSAO) } });
 		  // clang-format on
 
         // 3. Blur SSAO
@@ -746,7 +746,7 @@ int main()
                 .depthThreshold = pcSSAO.zFar * ssaoDepthThreshold,
             });
             // clang-format off
-            buf.cmdDispatchThreadGroups(blurDim, { .textures = {p.texIn, p.texOut, lvk::TextureHandle(texOpaqueDepth)} });
+            buf.cmdDispatchThreadGroups(blurDim, { .sampledImages = {p.texIn, lvk::TextureHandle(texOpaqueDepth)}, .storageImages = {p.texOut} });
 				// clang-format on
           }
         }
@@ -756,7 +756,7 @@ int main()
         buf.cmdBeginRendering(
             { .color = {{ .loadOp = lvk::LoadOp_Load, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } }} },
             { .color = { { .texture = texOpaqueColorWithSSAO } } },
-            { .textures = { lvk::TextureHandle(texSSAO), lvk::TextureHandle(texOpaqueColor) } });
+            { .sampledImages = { lvk::TextureHandle(texSSAO), lvk::TextureHandle(texOpaqueColor) } });
         // clang-format on
         buf.cmdBindRenderPipeline(pipelineCombineSSAO);
         buf.cmdPushConstants(pcCombineSSAO);
@@ -773,7 +773,8 @@ int main()
       buf.cmdBeginRendering(
           lvk::RenderPass{ .color = {{ .loadOp = lvk::LoadOp_Load, .storeOp = lvk::StoreOp_Store }} },
           framebufferOffscreen,
-          { .textures = { lvk::TextureHandle(texHeadsOIT), lvk::TextureHandle(texOpaqueColor), lvk::TextureHandle(texOpaqueColorWithSSAO) },
+          { .sampledImages = { lvk::TextureHandle(texOpaqueColor), lvk::TextureHandle(texOpaqueColorWithSSAO) },
+            .storageImages = { lvk::TextureHandle(texHeadsOIT) },
             .buffers  = { lvk::BufferHandle(bufferListsOIT) } });
 		// clang-format on
       const struct {
@@ -814,7 +815,7 @@ int main()
       buf.cmdBindComputePipeline(pipelineBrightPass);
       buf.cmdPushConstants(pcBrightPass);
 		// clang-format off
-      buf.cmdDispatchThreadGroups(sizeBloom.divide2D(16), { .textures = {lvk::TextureHandle(texSceneColor), lvk::TextureHandle(texLumViews[0])} });
+      buf.cmdDispatchThreadGroups(sizeBloom.divide2D(16), { .sampledImages = {lvk::TextureHandle(texSceneColor)}, .storageImages = {lvk::TextureHandle(texLumViews[0])} });
 		// clang-format on
       buf.cmdGenerateMipmap(texLumViews[0]);
 
@@ -855,7 +856,7 @@ int main()
         if (hdrEnableBloom)
           buf.cmdDispatchThreadGroups(
               sizeBloom.divide2D(16), {
-                                          .textures = {p.texIn, p.texOut, lvk::TextureHandle(texBrightPass)}
+                                          .sampledImages = {p.texIn, lvk::TextureHandle(texBrightPass)}, .storageImages = {p.texOut}
           });
       }
 
@@ -876,7 +877,7 @@ int main()
       // clang-format off
       buf.cmdDispatchThreadGroups(
           { 1, 1, 1 },
-          { .textures = {
+          { .storageImages = {
                 lvk::TextureHandle(texLumViews[0]), // transition the entire mip-pyramid
                 lvk::TextureHandle(texAdaptedLum[0]),
                 lvk::TextureHandle(texAdaptedLum[1]),
@@ -892,7 +893,7 @@ int main()
       };
 
       // transition the entire mip-pyramid
-      buf.cmdBeginRendering(renderPassMain, framebufferMain, { .textures = { lvk::TextureHandle(texAdaptedLum[1]) } });
+      buf.cmdBeginRendering(renderPassMain, framebufferMain, { .sampledImages = { lvk::TextureHandle(texAdaptedLum[1]) } });
 
       buf.cmdBindRenderPipeline(pipelineToneMap);
       buf.cmdPushConstants(pcHDR);
