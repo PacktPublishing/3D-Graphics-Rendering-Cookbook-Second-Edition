@@ -17,12 +17,12 @@ jobs:
         matrix:
           config:
           - {
-              name: "Windows - MSVC 2022",
-              os: windows-latest,
+              name: "Windows - MSVC 2026",
+              os: windows-2025-vs2026,
               build_type: "Debug",
               cc: "cl",
               cxx: "cl",
-              generators: "Visual Studio 17 2022",
+              generators: "Visual Studio 18 2026",
             }
           - {
               name: "Ubuntu - Clang",
@@ -63,7 +63,7 @@ jobs:
 
         - name: Get the number of CPU cores
           id: cpu-cores
-          uses: SimenB/github-actions-cpu-cores@v1
+          uses: SimenB/github-actions-cpu-cores@v3
 
         - name: Run 'deploy_deps.py'
           run: python deploy_deps.py
