@@ -35,7 +35,7 @@ jobs:
       runs-on: ${{ matrix.config.os }}
 
       steps:
-        - uses: actions/checkout@v4
+        - uses: actions/checkout@v5
           with:
             submodules: recursive
 
@@ -54,7 +54,7 @@ jobs:
             sudo pip install cmake --upgrade
 
         - name: Install Vulkan SDK
-          uses: jakoch/install-vulkan-sdk-action@v1.2.5
+          uses: jakoch/install-vulkan-sdk-action@v1.5.5
           with:
             vulkan_version: 1.4.309.0
             install_runtime: true
