@@ -175,7 +175,7 @@ int main()
         pcCulling.meshes = ctx->gpuAddress(bufferCullingData[currentBufferId]);
         buf.cmdPushConstants(pcCulling);
         buf.cmdUpdateBuffer(bufferCullingData[currentBufferId], cullingData);
-        buf.cmdDispatchThreadGroups(
+        buf.cmdDispatch(
             { 1 + cullingData.numMeshesToCull / 64 }, { .buffers = { lvk::BufferHandle(mesh.indirectBuffer_.bufferIndirect_) } });
       }
 

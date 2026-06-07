@@ -230,9 +230,11 @@ int main()
       };
       buf.cmdBindComputePipeline(pipelineBrightPass);
       buf.cmdPushConstants(pcBrightPass);
-      // clang-format off
-      buf.cmdDispatchThreadGroups(sizeBloom.divide2D(16), { .sampledImages = {lvk::TextureHandle(offscreenColor)}, .storageImages = {lvk::TextureHandle(texLumViews[0])} });
-      // clang-format on
+      buf.cmdDispatch(
+          sizeBloom.divide2D(16), {
+                                      .sampledImages = { lvk::TextureHandle(offscreenColor) },
+                                      .storageImages = { lvk::TextureHandle(texLumViews[0]) },
+                                  });
       buf.cmdGenerateMipmap(texLumViews[0]);
 
       // 2.1. Bloom
@@ -269,12 +271,13 @@ int main()
             .texOut  = p.texOut.index(),
             .sampler = samplerClamp.index(),
         });
-        if (enableBloom)
-          buf.cmdDispatchThreadGroups(
+        if (enableBloom) {
+          buf.cmdDispatch(
               sizeBloom.divide2D(16), {
-                                          .sampledImages = {p.texIn, lvk::TextureHandle(texBrightPass)},
-                                          .storageImages = {p.texOut}
+                                          .sampledImages = { p.texIn, lvk::TextureHandle(texBrightPass) },
+                                          .storageImages = { p.texOut },
           });
+        }
       }
 
       // 3. Light adaptation pass
@@ -292,7 +295,7 @@ int main()
       buf.cmdBindComputePipeline(pipelineAdaptationPass);
       buf.cmdPushConstants(pcAdaptationPass);
       // clang-format off
-      buf.cmdDispatchThreadGroups(
+      buf.cmdDispatch(
           { 1, 1, 1 },
           { .storageImages = {
                 lvk::TextureHandle(texLumViews[0]), // transition the entire mip-pyramid

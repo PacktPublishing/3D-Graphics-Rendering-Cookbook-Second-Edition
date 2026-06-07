@@ -595,8 +595,7 @@ int main()
             static_cast<uint32_t>(meshesTransparent.drawCommands_.size()); // all transparent meshes are visible - we don't cull them
         buf.cmdPushConstants(pcCulling);
         buf.cmdUpdateBuffer(bufferCullingData[currentBufferId], cullingData);
-        buf.cmdDispatchThreadGroups(
-            { 1 + cullingData.numMeshesToCull / 64 }, { .buffers = { lvk::BufferHandle(meshesOpaque.bufferIndirect_) } });
+        buf.cmdDispatch({ 1 + cullingData.numMeshesToCull / 64 }, { .buffers = { lvk::BufferHandle(meshesOpaque.bufferIndirect_) } });
       }
 
       // 0. Update shadow map
@@ -703,7 +702,7 @@ int main()
         buf.cmdBindComputePipeline(pipelineSSAO);
         buf.cmdPushConstants(pcSSAO);
         // clang-format off
-        buf.cmdDispatchThreadGroups(
+        buf.cmdDispatch(
             { .width  = 1 + (uint32_t)sizeFb.width  / 16,
               .height = 1 + (uint32_t)sizeFb.height / 16 },
             { .sampledImages = { lvk::TextureHandle(texOpaqueDepth) },
@@ -745,9 +744,11 @@ int main()
                 .texOut         = p.texOut.index(),
                 .depthThreshold = pcSSAO.zFar * ssaoDepthThreshold,
             });
-            // clang-format off
-            buf.cmdDispatchThreadGroups(blurDim, { .sampledImages = {p.texIn, lvk::TextureHandle(texOpaqueDepth)}, .storageImages = {p.texOut} });
-				// clang-format on
+            buf.cmdDispatch(
+                blurDim, {
+                             .sampledImages = { p.texIn, lvk::TextureHandle(texOpaqueDepth) },
+                             .storageImages = { p.texOut },
+            });
           }
         }
 
@@ -814,9 +815,11 @@ int main()
       };
       buf.cmdBindComputePipeline(pipelineBrightPass);
       buf.cmdPushConstants(pcBrightPass);
-		// clang-format off
-      buf.cmdDispatchThreadGroups(sizeBloom.divide2D(16), { .sampledImages = {lvk::TextureHandle(texSceneColor)}, .storageImages = {lvk::TextureHandle(texLumViews[0])} });
-		// clang-format on
+      buf.cmdDispatch(
+          sizeBloom.divide2D(16), {
+                                      .sampledImages = { lvk::TextureHandle(texSceneColor) },
+                                      .storageImages = { lvk::TextureHandle(texLumViews[0]) },
+                                  });
       buf.cmdGenerateMipmap(texLumViews[0]);
 
       // 2.1. Bloom
@@ -854,9 +857,10 @@ int main()
             .sampler = samplerClamp.index(),
         });
         if (hdrEnableBloom)
-          buf.cmdDispatchThreadGroups(
+          buf.cmdDispatch(
               sizeBloom.divide2D(16), {
-                                          .sampledImages = {p.texIn, lvk::TextureHandle(texBrightPass)}, .storageImages = {p.texOut}
+                                          .sampledImages = { p.texIn, lvk::TextureHandle(texBrightPass) },
+                                          .storageImages = { p.texOut },
           });
       }
 
@@ -875,7 +879,7 @@ int main()
       buf.cmdBindComputePipeline(pipelineAdaptationPass);
       buf.cmdPushConstants(pcAdaptationPass);
       // clang-format off
-      buf.cmdDispatchThreadGroups(
+      buf.cmdDispatch(
           { 1, 1, 1 },
           { .storageImages = {
                 lvk::TextureHandle(texLumViews[0]), // transition the entire mip-pyramid

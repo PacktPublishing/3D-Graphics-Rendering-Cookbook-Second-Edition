@@ -1038,7 +1038,7 @@ void renderGLTF(GLTFContext& gltf, const mat4& model, const mat4& view, const ma
       buf.cmdBindComputePipeline(gltf.pipelineComputeAnimations);
       buf.cmdPushConstants(pc);
       // clang-format off
-      buf.cmdDispatchThreadGroups(
+      buf.cmdDispatch(
           { .width = gltf.maxVertices / 16 },
           { .buffers = { lvk::BufferHandle(gltf.vertexBuffer),
                          lvk::BufferHandle(gltf.morphStatesBuffer),

@@ -234,10 +234,10 @@ int main()
 
         buf.cmdBindComputePipeline(pipelineComputeMesh);
         buf.cmdPushConstants(pc);
-        buf.cmdDispatchThreadGroups({ .width = (kNumU * kNumV) / 16 }, { .buffers = { { lvk::BufferHandle(bufferVertex) } } });
+        buf.cmdDispatch({ .width = (kNumU * kNumV) / 16 }, { .buffers = { { lvk::BufferHandle(bufferVertex) } } });
         if (!g_UseColoredMesh) {
           buf.cmdBindComputePipeline(pipelineComputeTexture);
-          buf.cmdDispatchThreadGroups({ .width = 1024 / 16, .height = 1024 / 16 }, { .storageImages = { { lvk::TextureHandle(texture) } } });
+          buf.cmdDispatch({ .width = 1024 / 16, .height = 1024 / 16 }, { .storageImages = { { lvk::TextureHandle(texture) } } });
         }
         buf.cmdBeginRendering(
             renderPass, framebuffer,

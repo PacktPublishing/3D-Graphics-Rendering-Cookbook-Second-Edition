@@ -210,9 +210,11 @@ int main()
       };
       buf.cmdBindComputePipeline(pipelineBrightPass);
       buf.cmdPushConstants(pcBrightPass);
-      // clang-format off
-      buf.cmdDispatchThreadGroups(sizeBloom.divide2D(16), { .sampledImages = {lvk::TextureHandle(offscreenColor)}, .storageImages = {lvk::TextureHandle(texLumViews[0])} });
-      // clang-format on
+      buf.cmdDispatch(
+          sizeBloom.divide2D(16), {
+                                      .sampledImages = { lvk::TextureHandle(offscreenColor) },
+                                      .storageImages = { lvk::TextureHandle(texLumViews[0]) },
+                                  });
       buf.cmdGenerateMipmap(texLumViews[0]);
 
       // 2.1. Bloom
@@ -244,17 +246,19 @@ int main()
       for (uint32_t i = 0; i != passes.size(); i++) {
         const BlurPass p = passes[i];
         buf.cmdBindComputePipeline(i & 1 ? pipelineBloomX : pipelineBloomY);
-        buf.cmdPushConstants(BlurPC{
-            .texIn   = p.texIn.index(),
-            .texOut  = p.texOut.index(),
-            .sampler = samplerClamp.index(),
-        });
-        if (enableBloom)
-          buf.cmdDispatchThreadGroups(
+        buf.cmdPushConstants(
+            BlurPC{
+                .texIn   = p.texIn.index(),
+                .texOut  = p.texOut.index(),
+                .sampler = samplerClamp.index(),
+            });
+        if (enableBloom) {
+          buf.cmdDispatch(
               sizeBloom.divide2D(16), {
-                                          .sampledImages = {p.texIn, lvk::TextureHandle(texBrightPass)},
-                                          .storageImages = {p.texOut}
+                                          .sampledImages = { p.texIn, lvk::TextureHandle(texBrightPass) },
+                                          .storageImages = { p.texOut },
           });
+        }
       }
 
       // 3. Render tone-mapped scene into a swapchain image

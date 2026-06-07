@@ -148,7 +148,7 @@ int main()
         };
         buf.cmdBindComputePipeline(pipelineComputeMatrices);
         buf.cmdPushConstants(pc);
-        buf.cmdDispatchThreadGroups({ .width = kNumMeshes / 32 });
+        buf.cmdDispatch({ .width = kNumMeshes / 32 });
         buf.cmdBeginRendering(renderPass, framebuffer, { .buffers = { lvk::BufferHandle(bufferMatrices[frameId]) } });
         buf.cmdPushDebugGroupLabel("Solid cube", 0xff0000ff);
         buf.cmdBindRenderPipeline(pipelineSolid);

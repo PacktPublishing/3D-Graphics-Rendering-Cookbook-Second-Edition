@@ -190,7 +190,7 @@ int main()
       // 2. Compute SSAO
       buf.cmdBindComputePipeline(pipelineSSAO);
       buf.cmdPushConstants(pcSSAO);
-      buf.cmdDispatchThreadGroups(
+      buf.cmdDispatch(
           {
               .width  = 1 + (uint32_t)sizeFb.width / 16,
               .height = 1 + (uint32_t)sizeFb.height / 16,
@@ -237,10 +237,10 @@ int main()
               .texOut         = p.texOut.index(),
               .depthThreshold = pcSSAO.zFar * depthThreshold,
           });
-          buf.cmdDispatchThreadGroups(
+          buf.cmdDispatch(
               blurDim, {
-                           .sampledImages = {p.texIn, lvk::TextureHandle(offscreenDepth)},
-                           .storageImages = {p.texOut}
+                           .sampledImages = { p.texIn, lvk::TextureHandle(offscreenDepth) },
+                           .storageImages = { p.texOut },
           });
         }
       }

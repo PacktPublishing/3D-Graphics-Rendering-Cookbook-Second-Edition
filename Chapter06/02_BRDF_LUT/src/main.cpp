@@ -51,7 +51,7 @@ void calculateLUT(const std::unique_ptr<lvk::IContext>& ctx, void* output, uint3
       .addr = ctx->gpuAddress(dstBuffer),
     };
     buf.cmdPushConstants(pc);
-    buf.cmdDispatchThreadGroups({ kBrdfW / 16, kBrdfH / 16, 1 });
+    buf.cmdDispatch({ kBrdfW / 16, kBrdfH / 16, 1 });
     buf.cmdPopDebugGroupLabel();
   }
   ctx->wait(ctx->submit(buf));

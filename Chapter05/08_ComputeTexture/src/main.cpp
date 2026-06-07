@@ -58,7 +58,7 @@ int main()
         };        
         buf.cmdBindComputePipeline(pipelineComputeMatrices);
         buf.cmdPushConstants(pc);
-        buf.cmdDispatchThreadGroups({ .width = 1280 / 16, .height = 720 / 16 });
+        buf.cmdDispatch({ .width = 1280 / 16, .height = 720 / 16 });
         buf.cmdBeginRendering(renderPass, framebuffer, { .sampledImages = { { lvk::TextureHandle(texture) } } });
         buf.cmdBindRenderPipeline(pipelineFullScreenQuad);
         buf.cmdPushConstants(pc);
