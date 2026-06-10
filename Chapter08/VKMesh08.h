@@ -462,16 +462,33 @@ public:
         .samplesCount = numSamples,
     });
 
+    // alpha-to-coverage pipeline: anti-aliases alpha-tested foliage by turning the fragment alpha into an MSAA coverage mask
+    const uint32_t kEnableAlphaToCoverage = 1;
+    pipelineA2C_                          = ctx->createRenderPipeline({
+        .vertexInput      = meshData.streams,
+        .smVert           = vert_,
+        .smFrag           = frag_,
+        .specInfo         = { .entries  = { { .constantId = 0, .size = sizeof(uint32_t) } },
+                              .data     = &kEnableAlphaToCoverage,
+                              .dataSize = sizeof(uint32_t) },
+        .color            = { { .format = colorFormat } },
+        .depthFormat      = depthFormat,
+        .cullMode         = lvk::CullMode_None,
+        .samplesCount     = numSamples,
+        .minSampleShading = numSamples > 1 ? 0.25f : 0.0f,
+        .alphaToCoverage  = true,
+    });
+
     LVK_ASSERT(pipeline_.valid());
   }
 
   void draw(
       lvk::ICommandBuffer& buf, const mat4& view, const mat4& proj, lvk::TextureHandle texSkyboxIrradiance = {},
-      bool wireframe = false) const
+      bool wireframe = false, bool alphaToCoverage = false, float alphaToCoverageThickness = 1.0f) const
   {
     buf.cmdBindIndexBuffer(bufferIndices_, lvk::IndexFormat_UI32);
     buf.cmdBindVertexBuffer(0, bufferVertices_);
-    buf.cmdBindRenderPipeline(wireframe ? pipelineWireframe_ : pipeline_);
+    buf.cmdBindRenderPipeline(wireframe ? pipelineWireframe_ : (alphaToCoverage ? pipelineA2C_ : pipeline_));
     buf.cmdBindDepthState({ .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true });
     const struct {
       mat4 viewProj;
@@ -479,12 +496,14 @@ public:
       uint64_t bufferDrawData;
       uint64_t bufferMaterials;
       uint32_t texSkyboxIrradiance;
+      float alphaToCoverageThickness;
     } pc = {
-      .viewProj            = proj * view,
-      .bufferTransforms    = ctx->gpuAddress(bufferTransforms_),
-      .bufferDrawData      = ctx->gpuAddress(bufferDrawData_),
-      .bufferMaterials     = ctx->gpuAddress(bufferMaterials_),
-      .texSkyboxIrradiance = texSkyboxIrradiance.index(),
+      .viewProj                 = proj * view,
+      .bufferTransforms         = ctx->gpuAddress(bufferTransforms_),
+      .bufferDrawData           = ctx->gpuAddress(bufferDrawData_),
+      .bufferMaterials          = ctx->gpuAddress(bufferMaterials_),
+      .texSkyboxIrradiance      = texSkyboxIrradiance.index(),
+      .alphaToCoverageThickness = alphaToCoverageThickness,
     };
     static_assert(sizeof(pc) <= 128);
     buf.cmdPushConstants(pc);
@@ -521,6 +540,7 @@ public:
 
   lvk::Holder<lvk::RenderPipelineHandle> pipeline_;
   lvk::Holder<lvk::RenderPipelineHandle> pipelineWireframe_;
+  lvk::Holder<lvk::RenderPipelineHandle> pipelineA2C_;
 
   TextureFiles textureFiles_;
   mutable TextureCache textureCache_;
