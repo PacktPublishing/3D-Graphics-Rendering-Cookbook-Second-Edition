@@ -40,9 +40,11 @@ int main()
       .debugName  = "msaaDepth",
   });
 
-  bool enableMSAA        = true;
   bool drawWireframe     = false;
   bool drawBoundingBoxes = false;
+  bool enableMSAA        = true;
+  bool enableA2C         = true;
+  float a2cThickness     = 4.0f;
 
   const VKMesh mesh(ctx, meshData, scene, ctx->getSwapchainFormat(), app.getDepthFormat());
   const VKMesh meshMSAA(ctx, meshData, scene, ctx->getSwapchainFormat(), app.getDepthFormat(), kNumSamples);
@@ -70,7 +72,9 @@ int main()
       },
           framebufferOffscreen);
       buf.cmdPushDebugGroupLabel("Mesh", 0xff0000ff);
-      (enableMSAA ? meshMSAA : mesh).draw(buf, view, proj, texSkyboxIrradiance, drawWireframe);
+      // alpha-to-coverage requires MSAA to produce sub-pixel coverage for the foliage
+      (enableMSAA ? meshMSAA : mesh)
+          .draw(buf, view, proj, texSkyboxIrradiance, drawWireframe, enableMSAA && enableA2C, a2cThickness);
       buf.cmdPopDebugGroupLabel();
       app.drawGrid(buf, proj, vec3(0, -1.0f, 0), enableMSAA ? kNumSamples : 1);
       canvas3d.render(*ctx.get(), framebufferOffscreen, buf, enableMSAA ? kNumSamples : 1);
@@ -106,6 +110,12 @@ int main()
         ImGui::Begin(
             "MSAA", nullptr, ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_AlwaysAutoResize);
         ImGui::Checkbox("Enable MSAA", &enableMSAA);
+        ImGui::BeginDisabled(!enableMSAA);
+        ImGui::Checkbox("Alpha-to-coverage (foliage)", &enableA2C);
+        ImGui::EndDisabled();
+        ImGui::BeginDisabled(!enableMSAA || !enableA2C);
+        ImGui::SliderFloat("A2C thickness", &a2cThickness, 0.0f, 10.0f);
+        ImGui::EndDisabled();
         ImGui::Checkbox("Draw wireframe", &drawWireframe);
         ImGui::Checkbox("Draw bounding boxes", &drawBoundingBoxes);
         ImGui::End();

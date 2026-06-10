@@ -25,4 +25,5 @@ layout(push_constant) uniform PerFrameData {
   DrawDataBuffer drawData;
   MaterialBuffer materials;
   uint texSkyboxIrradiance;
+  float alphaToCoverageThickness; // edge softness for alpha-to-coverage foliage (only read when A2C is enabled)
 } pc;
