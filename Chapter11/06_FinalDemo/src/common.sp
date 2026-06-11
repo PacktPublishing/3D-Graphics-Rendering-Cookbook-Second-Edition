@@ -29,6 +29,25 @@ layout(std430, buffer_reference) readonly buffer LightBuffer {
   vec4 lightDir;
   uint shadowTexture;
   uint shadowSampler;
+  // ray-traced ambient occlusion with spatial hashing (Gautron et al. 2020)
+  // NOTE: this struct is shared with the vertex stage (no int64 there), so the hash-map
+  // device address is stored as a uvec2 and reconstructed into a HashSlot reference in AO.sp
+  uint tlas;
+  uint frameId;
+  uvec2 hashSlot;
+  uint enableAO;
+  uint enableSpatialHash;
+  uint enableFiltering;
+  uint aoSamples;
+  float aoRadius;
+  float aoPower;
+  float sp;            // target screen-space cell size in pixels
+  float smin;          // minimal world-space cell size
+  uint maxSamples;     // max accumulated samples per hash cell
+  uint hashMapSize;    // number of hash slots (power of two)
+  float resolutionY;
+  float projScaleY;    // proj[1][1] = 1/tan(fovY/2)
+  float a2cThickness;  // alpha-to-coverage edge softness (only read when A2C is enabled)
 };
 
 layout(std430, buffer_reference) buffer OIT {

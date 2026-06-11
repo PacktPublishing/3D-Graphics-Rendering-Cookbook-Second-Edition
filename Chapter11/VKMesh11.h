@@ -56,20 +56,29 @@ class VKPipeline11 final
 public:
   VKPipeline11(
       const std::unique_ptr<lvk::IContext>& ctx, const lvk::VertexInput& streams, lvk::Format colorFormat, lvk::Format depthFormat,
-      uint32_t numSamples = 1, lvk ::Holder<lvk::ShaderModuleHandle>&& vert = {}, lvk::Holder<lvk::ShaderModuleHandle>&& frag = {})
+      uint32_t numSamples = 1, lvk ::Holder<lvk::ShaderModuleHandle>&& vert = {}, lvk::Holder<lvk::ShaderModuleHandle>&& frag = {},
+      bool alphaToCoverage = false)
   {
     vert_ = vert.valid() ? std::move(vert) : loadShaderModule(ctx, "Chapter08/02_SceneGraph/src/main.vert");
     frag_ = frag.valid() ? std::move(frag) : loadShaderModule(ctx, "Chapter08/02_SceneGraph/src/main.frag");
 
+    // alpha-to-coverage anti-aliases alpha-tested foliage by turning the fragment alpha into an MSAA
+    // coverage mask; the fragment shader switches behavior via the kEnableAlphaToCoverage spec constant
+    const uint32_t kEnableAlphaToCoverage = 1;
     pipeline_ = ctx->createRenderPipeline({
         .vertexInput      = streams,
         .smVert           = vert_,
         .smFrag           = frag_,
+        .specInfo         = alphaToCoverage ? lvk::SpecializationConstantDesc{ .entries  = { { .constantId = 0, .size = sizeof(uint32_t) } },
+                                                                               .data     = &kEnableAlphaToCoverage,
+                                                                               .dataSize = sizeof(uint32_t) }
+                                            : lvk::SpecializationConstantDesc{},
         .color            = { { .format = colorFormat } },
         .depthFormat      = depthFormat,
         .cullMode         = lvk::CullMode_None,
         .samplesCount     = numSamples,
         .minSampleShading = numSamples > 1 ? 0.25f : 0.0f,
+        .alphaToCoverage  = alphaToCoverage,
     });
 
     pipelineWireframe_ = ctx->createRenderPipeline({
