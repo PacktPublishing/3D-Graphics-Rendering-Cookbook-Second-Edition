@@ -11,16 +11,28 @@
 #include "Chapter10/Skybox.h"
 #include "Chapter11/VKMesh11Lazy.h"
 
+// 64M hash slots * 8 bytes = 512 MB world-space AO cache
+constexpr uint32_t kAOHashMapSize = 64u * 1024u * 1024u;
+
 bool drawMeshesOpaque      = true;
 bool drawMeshesTransparent = true;
 bool drawWireframe         = false;
 bool drawBoxes             = false;
 bool drawLightFrustum      = false;
-// SSAO
-bool ssaoEnable          = true;
-bool ssaoEnableBlur      = true;
-int ssaoNumBlurPasses    = 1;
-float ssaoDepthThreshold = 30.0f; // bilateral blur
+// alpha-to-coverage (anti-aliases alpha-tested foliage; requires MSAA)
+bool enableA2C     = true;
+float a2cThickness = 8.0f;
+// Ray-traced ambient occlusion with world-space spatial hashing (Gautron 2020)
+bool aoEnable           = true;
+bool aoSpatialHash      = true;
+bool aoFiltering        = false;
+bool aoTimeVaryingNoise = true;
+int aoSamples           = 2;      // per-pixel samples when spatial hashing is off (sample default)
+float aoRadius          = 1.5f;   // world-space ray length (~sample's 8.0 scaled to this scene)
+float aoPower           = 0.75f;
+float aoPixelSize       = 6.0f;   // target cell size in screen pixels (sp)
+float aoMinCellSize     = 0.01f;  // minimal world-space cell size (smin)
+int aoMaxSamples        = 192;    // max accumulated samples per hash cell
 // OIT
 bool oitShowHeatmap   = false;
 float oitOpacityBoost = 0.0f;
@@ -104,13 +116,7 @@ int main()
       .debugName  = "opaqueColor",
   });
 
-  lvk::Holder<lvk::TextureHandle> texOpaqueColorWithSSAO = ctx->createTexture({
-      .format     = kOffscreenFormat,
-      .dimensions = sizeFb,
-      .usage      = lvk::TextureUsageBits_Attachment | lvk::TextureUsageBits_Sampled | lvk::TextureUsageBits_Storage,
-      .debugName  = "opaqueColorWithSSAO",
-  });
-  // final HDR scene color (SSAO + OIT)
+  // final HDR scene color (AO is applied in the opaque pass; this holds opaque + OIT)
   lvk::Holder<lvk::TextureHandle> texSceneColor = ctx->createTexture({
       .format     = kOffscreenFormat,
       .dimensions = sizeFb,
@@ -201,34 +207,30 @@ int main()
     vec4 lightDir;
     uint32_t shadowTexture;
     uint32_t shadowSampler;
-  };
+    // ray-traced AO with spatial hashing - layout must match LightBuffer in common.sp
+    uint32_t tlas              = 0;
+    uint32_t frameId           = 0;
+    uint64_t hashSlot          = 0; // device address, read as uvec2 in the shader
+    uint32_t enableAO          = 0;
+    uint32_t enableSpatialHash = 0;
+    uint32_t enableFiltering   = 0;
+    uint32_t aoSamples         = 0;
+    float aoRadius             = 0;
+    float aoPower              = 0;
+    float sp                   = 0;
+    float smin                 = 0;
+    uint32_t maxSamples        = 0;
+    uint32_t hashMapSize       = 0;
+    float resolutionY          = 0;
+    float projScaleY           = 0;
+    float a2cThickness         = 0;
+  } lightData;
   lvk::Holder<lvk::BufferHandle> bufferLight = ctx->createBuffer({
       .usage     = lvk::BufferUsageBits_Storage,
       .storage   = lvk::StorageType_Device,
       .size      = sizeof(LightData),
       .debugName = "Buffer: light",
   });
-
-  lvk::Holder<lvk::TextureHandle> texSSAO                = ctx->createTexture({
-                     .format     = ctx->getSwapchainFormat(),
-                     .dimensions = ctx->getDimensions(ctx->getCurrentSwapchainTexture()),
-                     .usage      = lvk::TextureUsageBits_Sampled | lvk::TextureUsageBits_Storage,
-                     .debugName  = "texSSAO",
-  });
-  lvk::Holder<lvk::TextureHandle> texBlur[]              = {
-    ctx->createTexture({
-                     .format     = ctx->getSwapchainFormat(),
-                     .dimensions = ctx->getDimensions(ctx->getCurrentSwapchainTexture()),
-                     .usage      = lvk::TextureUsageBits_Sampled | lvk::TextureUsageBits_Storage,
-                     .debugName  = "texBlur0",
-    }),
-    ctx->createTexture({
-                     .format     = ctx->getSwapchainFormat(),
-                     .dimensions = ctx->getDimensions(ctx->getCurrentSwapchainTexture()),
-                     .usage      = lvk::TextureUsageBits_Sampled | lvk::TextureUsageBits_Storage,
-                     .debugName  = "texBlur1",
-    }),
-  };
 
   lvk::Holder<lvk::SamplerHandle> samplerClamp = ctx->createSampler({
       .wrapU = lvk::SamplerWrap_Clamp,
@@ -243,6 +245,11 @@ int main()
   const VKPipeline11 pipelineOpaque(
       ctx, meshData.streams, kOffscreenFormat, app.getDepthFormat(), kNumSamples,
       loadShaderModule(ctx, "Chapter11/06_FinalDemo/src/main.vert"), loadShaderModule(ctx, "Chapter11/06_FinalDemo/src/opaque.frag"));
+  // alpha-to-coverage variant of the opaque pipeline (kEnableAlphaToCoverage spec constant + .alphaToCoverage)
+  const VKPipeline11 pipelineOpaqueA2C(
+      ctx, meshData.streams, kOffscreenFormat, app.getDepthFormat(), kNumSamples,
+      loadShaderModule(ctx, "Chapter11/06_FinalDemo/src/main.vert"), loadShaderModule(ctx, "Chapter11/06_FinalDemo/src/opaque.frag"),
+      true);
   const VKPipeline11 pipelineTransparent(
       ctx, meshData.streams, kOffscreenFormat, app.getDepthFormat(), kNumSamples,
       loadShaderModule(ctx, "Chapter11/06_FinalDemo/src/main.vert"), loadShaderModule(ctx, "Chapter11/06_FinalDemo/src/transparent.frag"));
@@ -287,36 +294,153 @@ int main()
       .color  = { { .format = ctx->getSwapchainFormat() } },
   });
 
-  lvk::Holder<lvk::ShaderModuleHandle> compSSAO        = loadShaderModule(ctx, "Chapter10/04_SSAO/src/SSAO.comp");
-  lvk::Holder<lvk::ComputePipelineHandle> pipelineSSAO = ctx->createComputePipeline({
-      .smComp = compSSAO,
-  });
-
-  // SSAO
-  lvk::Holder<lvk::TextureHandle> texRotations = loadTexture(ctx, "data/rot_texture.bmp");
-
-  lvk::Holder<lvk::ShaderModuleHandle> compBlur         = loadShaderModule(ctx, "data/shaders/Blur.comp");
-  lvk::Holder<lvk::ComputePipelineHandle> pipelineBlurX = ctx->createComputePipeline({
-      .smComp   = compBlur,
-      .specInfo = {.entries = { { .constantId = 0, .size = sizeof(uint32_t) } }, .data = &kHorizontal, .dataSize = sizeof(uint32_t)},
-  });
-  lvk::Holder<lvk::ComputePipelineHandle> pipelineBlurY = ctx->createComputePipeline({
-      .smComp   = compBlur,
-      .specInfo = {.entries = { { .constantId = 0, .size = sizeof(uint32_t) } }, .data = &kVertical, .dataSize = sizeof(uint32_t)},
-  });
-
-  lvk::Holder<lvk::ShaderModuleHandle> vertCombine       = loadShaderModule(ctx, "data/shaders/QuadFlip.vert");
-  lvk::Holder<lvk::ShaderModuleHandle> fragCombine       = loadShaderModule(ctx, "Chapter10/04_SSAO/src/combine.frag");
-  lvk::Holder<lvk::RenderPipelineHandle> pipelineCombineSSAO = ctx->createRenderPipeline({
-      .smVert = vertCombine,
-      .smFrag = fragCombine,
-      .color  = { { .format = kOffscreenFormat } },
-  });
-
   lvk::Holder<lvk::ShaderModuleHandle> compCulling        = loadShaderModule(ctx, "Chapter11/02_CullingGPU/src/FrustumCulling.comp");
   lvk::Holder<lvk::ComputePipelineHandle> pipelineCulling = ctx->createComputePipeline({
       .smComp = compCulling,
   });
+
+  // ---------------------------------------------------------------------------------------------
+  // Ray-traced AO: build acceleration structures from the scene geometry.
+  // We bake a world-space triangle soup that replicates exactly what the rasterizer fetches:
+  // for every triangle index the GPU reads vertex (mesh.vertexOffset + indexData[...]) and the
+  // vertex shader transforms it by scene.globalTransform[node]. We do the same on the CPU and
+  // build a single identity-instance TLAS, so AO rays hit precisely the rasterized surfaces.
+  // (NOTE: indices in MeshData are local per source file but offset-baked across merged files,
+  //  so 'mesh.vertexOffset + index' is the correct absolute vertex - see mergeMeshData().)
+  // ---------------------------------------------------------------------------------------------
+  lvk::Holder<lvk::BufferHandle> bufferAOVertices;
+  lvk::Holder<lvk::BufferHandle> bufferAOIndices;
+  lvk::Holder<lvk::BufferHandle> bufferAOInstances;
+  std::vector<lvk::Holder<lvk::AccelStructHandle>> aoBLAS;
+  lvk::Holder<lvk::AccelStructHandle> aoTLAS;
+  lvk::Holder<lvk::BufferHandle> bufferAOHash;
+  {
+    const uint32_t stride     = meshData.streams.getVertexSize();
+    const uint32_t totalVerts = (uint32_t)(meshData.vertexData.size() / stride);
+    std::vector<vec3> aoVertices; // world-space triangle soup (3 verts per triangle)
+    aoVertices.reserve(meshData.indexData.size());
+    for (const auto& p : scene.meshForNode) {
+      const Mesh& m         = meshData.meshes[p.second];
+      const Material& mtl   = meshData.materials[m.materialID];
+      // Skip transparent (glass) geometry - it is not a solid occluder. (NOTE: most Bistro materials
+      // carry alphaTest=0.5 from the OBJ export, so alphaTest is not usable to single out foliage.)
+      if (mtl.flags & sMaterialFlags_Transparent)
+        continue;
+      const mat4 model        = scene.globalTransform[p.first];
+      const uint32_t idxCount = m.getLODIndicesCount(0);
+      for (uint32_t i = 0; i < idxCount; i++) {
+        const uint32_t vIdx = m.vertexOffset + meshData.indexData[m.indexOffset + i];
+        LVK_ASSERT(vIdx < totalVerts);
+        const float* pos = reinterpret_cast<const float*>(meshData.vertexData.data() + size_t(vIdx) * stride);
+        aoVertices.push_back(vec3(model * vec4(pos[0], pos[1], pos[2], 1.0f)));
+      }
+    }
+    // identity index buffer (the soup is already expanded - no shared vertices)
+    std::vector<uint32_t> aoIndices(aoVertices.size());
+    for (uint32_t i = 0; i < (uint32_t)aoIndices.size(); i++)
+      aoIndices[i] = i;
+    LLOGL("[AO] world-space occluder soup: %zu verts, %zu tris\n", aoVertices.size(), aoVertices.size() / 3);
+
+    bufferAOVertices = ctx->createBuffer({
+        .usage     = lvk::BufferUsageBits_Storage | lvk::BufferUsageBits_AccelStructBuildInputReadOnly,
+        .storage   = lvk::StorageType_Device,
+        .size      = sizeof(vec3) * aoVertices.size(),
+        .data      = aoVertices.data(),
+        .debugName = "Buffer: AO vertices (world space)",
+    });
+    bufferAOIndices = ctx->createBuffer({
+        .usage     = lvk::BufferUsageBits_Index | lvk::BufferUsageBits_AccelStructBuildInputReadOnly,
+        .storage   = lvk::StorageType_Device,
+        .size      = sizeof(uint32_t) * aoIndices.size(),
+        .data      = aoIndices.data(),
+        .debugName = "Buffer: AO indices",
+    });
+
+    const glm::mat3x4 identity(1.0f);
+    lvk::Holder<lvk::BufferHandle> transformBuffer = ctx->createBuffer({
+        .usage   = lvk::BufferUsageBits_AccelStructBuildInputReadOnly,
+        .storage = lvk::StorageType_HostVisible,
+        .size    = sizeof(glm::mat3x4),
+        .data    = &identity,
+    });
+
+    const uint32_t totalPrimitiveCount = (uint32_t)aoIndices.size() / 3;
+    lvk::AccelStructDesc blasDesc{
+        .type            = lvk::AccelStructType_BLAS,
+        .geometryType    = lvk::AccelStructGeomType_Triangles,
+        .vertexFormat    = lvk::VertexFormat_Float3,
+        .vertexBuffer    = bufferAOVertices,
+        .vertexStride    = sizeof(vec3),
+        .numVertices     = (uint32_t)aoVertices.size(),
+        .indexFormat     = lvk::IndexFormat_UI32,
+        .indexBuffer     = bufferAOIndices,
+        .transformBuffer = transformBuffer,
+        .buildRange      = { .primitiveCount = totalPrimitiveCount },
+        .buildFlags      = lvk::AccelStructBuildFlagBits_PreferFastTrace,
+        .debugName       = "BLAS: AO",
+    };
+    const lvk::AccelStructSizes blasSizes = ctx->getAccelStructSizes(blasDesc);
+    const uint32_t maxStorageBufferSize   = ctx->getMaxStorageBufferRange();
+
+    // a single BLAS may exceed the maximum storage buffer size - split it into several
+    const uint32_t requiredBlasCount = [&blasSizes, maxStorageBufferSize]() {
+      const uint32_t count1 = (uint32_t)(blasSizes.buildScratchSize / maxStorageBufferSize);
+      const uint32_t count2 = (uint32_t)(blasSizes.accelerationStructureSize / maxStorageBufferSize);
+      return 1 + (count1 > count2 ? count1 : count2);
+    }();
+    blasDesc.buildRange.primitiveCount = totalPrimitiveCount / requiredBlasCount;
+
+    aoBLAS.reserve(requiredBlasCount);
+    std::vector<lvk::AccelStructInstance> instances;
+    instances.reserve(requiredBlasCount);
+    const uint32_t primitiveCount = blasDesc.buildRange.primitiveCount;
+    for (uint32_t i = 0; i < totalPrimitiveCount; i += primitiveCount) {
+      const uint32_t rest                 = totalPrimitiveCount - i;
+      blasDesc.buildRange.primitiveOffset = i * 3 * sizeof(uint32_t);
+      blasDesc.buildRange.primitiveCount  = (primitiveCount < rest) ? primitiveCount : rest;
+      aoBLAS.emplace_back(ctx->createAccelerationStructure(blasDesc));
+      instances.emplace_back(lvk::AccelStructInstance{
+          .transform                              = (const lvk::mat3x4&)identity,
+          .instanceCustomIndex                    = 0,
+          .mask                                   = 0xff,
+          .instanceShaderBindingTableRecordOffset = 0,
+          .flags                                  = lvk::AccelStructInstanceFlagBits_TriangleFacingCullDisable,
+          .accelerationStructureReference         = ctx->gpuAddress(aoBLAS.back()),
+      });
+    }
+
+    bufferAOInstances = ctx->createBuffer(lvk::BufferDesc{
+        .usage     = lvk::BufferUsageBits_AccelStructBuildInputReadOnly,
+        .storage   = lvk::StorageType_HostVisible,
+        .size      = sizeof(lvk::AccelStructInstance) * instances.size(),
+        .data      = instances.data(),
+        .debugName = "Buffer: AO TLAS instances",
+    });
+    aoTLAS = ctx->createAccelerationStructure({
+        .type            = lvk::AccelStructType_TLAS,
+        .geometryType    = lvk::AccelStructGeomType_Instances,
+        .instancesBuffer = bufferAOInstances,
+        .buildRange      = { .primitiveCount = (uint32_t)instances.size() },
+        .buildFlags      = lvk::AccelStructBuildFlagBits_PreferFastTrace,
+    });
+    printf("[AO] TLAS done (%zu instances)\n", instances.size());
+  }
+
+  // world-space AO hash map (zero-initialized)
+  {
+    bufferAOHash = ctx->createBuffer({
+        .usage     = lvk::BufferUsageBits_Storage,
+        .storage   = lvk::StorageType_Device,
+        .size      = sizeof(uint64_t) * kAOHashMapSize,
+        .debugName = "Buffer: AO hash map",
+    });
+    lvk::ICommandBuffer& buf = ctx->acquireCommandBuffer();
+    buf.cmdFillBuffer(bufferAOHash, 0, lvk::LVK_WHOLE_SIZE, 0);
+    ctx->submit(buf);
+  }
+
+  uint32_t aoFrameId = 0;
+  bool aoResetHash   = false;
 
   app.addKeyCallback([](GLFWwindow* window, int key, int scancode, int action, int mods) {
     const bool pressed = action != GLFW_RELEASE;
@@ -468,42 +592,6 @@ int main()
   };
 
   struct {
-    uint32_t texDepth;
-    uint32_t texRotation;
-    uint32_t texOut;
-    uint32_t sampler;
-    float zNear;
-    float zFar;
-    float radius;
-    float attScale;
-    float distScale;
-  } pcSSAO = {
-    .texDepth    = texOpaqueDepth.index(),
-    .texRotation = texRotations.index(),
-    .texOut      = texSSAO.index(),
-    .sampler     = samplerClamp.index(),
-    .zNear       = 0.01f,
-    .zFar        = 200.0f,
-    .radius      = 0.01f,
-    .attScale    = 0.95f,
-    .distScale   = 1.7f,
-  };
-
-  struct {
-    uint32_t texColor;
-    uint32_t texSSAO;
-    uint32_t sampler;
-    float scale;
-    float bias;
-  } pcCombineSSAO = {
-    .texColor = texOpaqueColor.index(),
-    .texSSAO  = texSSAO.index(),
-    .sampler  = samplerClamp.index(),
-    .scale    = 1.1f,
-    .bias     = 0.1f,
-  };
-
-  struct {
     uint32_t texColor;
     uint32_t texLuminance;
     uint32_t texBloom;
@@ -538,7 +626,7 @@ int main()
     LVK_PROFILER_FUNCTION();
 
     const mat4 view = app.camera_.getViewMatrix();
-    const mat4 proj = glm::perspective(45.0f, aspectRatio, pcSSAO.zNear, pcSSAO.zFar);
+    const mat4 proj = glm::perspective(45.0f, aspectRatio, 0.01f, 200.0f);
 
     // prepare culling data
     if (!freezeCullingView)
@@ -613,14 +701,30 @@ int main()
         buf.cmdSetDepthBiasEnable(false);
         buf.cmdPopDebugGroupLabel();
         buf.cmdEndRendering();
-        buf.cmdUpdateBuffer(
-            bufferLight, LightData{
-                             .viewProjBias  = scaleBias * lightProj * lightView,
-                             .lightDir      = vec4(lightDir, 0.0f),
-                             .shadowTexture = texShadowMap.index(),
-                             .shadowSampler = samplerShadow.index(),
-                         });
+        lightData.viewProjBias  = scaleBias * lightProj * lightView;
+        lightData.lightDir      = vec4(lightDir, 0.0f);
+        lightData.shadowTexture = texShadowMap.index();
+        lightData.shadowSampler = samplerShadow.index();
       }
+
+      // update light + ray-traced AO parameters (uploaded every frame for frameId/live tweaks)
+      lightData.tlas              = aoTLAS.index();
+      lightData.frameId           = aoTimeVaryingNoise ? aoFrameId++ : 0;
+      lightData.hashSlot          = ctx->gpuAddress(bufferAOHash);
+      lightData.enableAO          = aoEnable ? 1u : 0u;
+      lightData.enableSpatialHash = aoSpatialHash ? 1u : 0u;
+      lightData.enableFiltering   = aoFiltering ? 1u : 0u;
+      lightData.aoSamples         = (uint32_t)aoSamples;
+      lightData.aoRadius          = aoRadius;
+      lightData.aoPower           = aoPower;
+      lightData.sp                = aoPixelSize;
+      lightData.smin              = aoMinCellSize;
+      lightData.maxSamples        = (uint32_t)aoMaxSamples;
+      lightData.hashMapSize       = kAOHashMapSize;
+      lightData.resolutionY       = (float)sizeFb.height;
+      lightData.projScaleY        = proj[1][1];
+      lightData.a2cThickness      = a2cThickness;
+      buf.cmdUpdateBuffer(bufferLight, lightData);
 
       // 1. Render scene
       const lvk::Framebuffer framebufferMSAA = {
@@ -632,7 +736,12 @@ int main()
               .color = { { .loadOp = lvk::LoadOp_Clear, .storeOp = lvk::StoreOp_DontCare, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } } },
               .depth = { .loadOp = lvk::LoadOp_Clear, .storeOp = lvk::StoreOp_DontCare, .clearDepth = 1.0f }
       },
-          framebufferMSAA, { .buffers = { lvk::BufferHandle(meshesOpaque.bufferIndirect_) } });
+          framebufferMSAA,
+          { .buffers = {
+                lvk::BufferHandle(meshesOpaque.bufferIndirect_),
+                lvk::BufferHandle(bufferAOHash),
+                lvk::BufferHandle(bufferLight),
+            } });
       skyBox.draw(buf, view, proj);
       const struct {
         mat4 viewProj;
@@ -657,8 +766,10 @@ int main()
       };
       if (drawMeshesOpaque) {
         buf.cmdPushDebugGroupLabel("Mesh opaque", 0xff0000ff);
+        // alpha-to-coverage needs MSAA to produce sub-pixel coverage for the foliage
+        const VKPipeline11& opaquePipeline = (enableA2C && !drawWireframe) ? pipelineOpaqueA2C : pipelineOpaque;
         mesh.draw(
-            buf, pipelineOpaque, &pc, sizeof(pc), { .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true }, drawWireframe,
+            buf, opaquePipeline, &pc, sizeof(pc), { .compareOp = lvk::CompareOp_Less, .isDepthWriteEnabled = true }, drawWireframe,
             &meshesOpaque);
         buf.cmdPopDebugGroupLabel();
       }
@@ -697,74 +808,8 @@ int main()
       canvas3d.render(*ctx.get(), framebufferMSAA, buf, kNumSamples);
       buf.cmdEndRendering();
 
-      // 2. Compute SSAO
-      if (ssaoEnable) {
-        buf.cmdBindComputePipeline(pipelineSSAO);
-        buf.cmdPushConstants(pcSSAO);
-        // clang-format off
-        buf.cmdDispatch(
-            { .width  = 1 + (uint32_t)sizeFb.width  / 16,
-              .height = 1 + (uint32_t)sizeFb.height / 16 },
-            { .sampledImages = { lvk::TextureHandle(texOpaqueDepth) },
-              .storageImages = { lvk::TextureHandle(texSSAO) } });
-		  // clang-format on
-
-        // 3. Blur SSAO
-        if (ssaoEnableBlur) {
-          const lvk::Dimensions blurDim = {
-            .width  = 1 + (uint32_t)sizeFb.width / 16,
-            .height = 1 + (uint32_t)sizeFb.height / 16,
-          };
-          struct BlurPC {
-            uint32_t texDepth;
-            uint32_t texIn;
-            uint32_t texOut;
-            float depthThreshold;
-          };
-          struct BlurPass {
-            lvk::TextureHandle texIn;
-            lvk::TextureHandle texOut;
-          };
-          std::vector<BlurPass> passes;
-          {
-            passes.reserve(2 * ssaoNumBlurPasses);
-            passes.push_back({ texSSAO, texBlur[0] });
-            for (int i = 0; i != ssaoNumBlurPasses - 1; i++) {
-              passes.push_back({ texBlur[0], texBlur[1] });
-              passes.push_back({ texBlur[1], texBlur[0] });
-            }
-            passes.push_back({ texBlur[0], texSSAO });
-          }
-          for (uint32_t i = 0; i != passes.size(); i++) {
-            const BlurPass p = passes[i];
-            buf.cmdBindComputePipeline(i & 1 ? pipelineBlurX : pipelineBlurY);
-            buf.cmdPushConstants(BlurPC{
-                .texDepth       = texOpaqueDepth.index(),
-                .texIn          = p.texIn.index(),
-                .texOut         = p.texOut.index(),
-                .depthThreshold = pcSSAO.zFar * ssaoDepthThreshold,
-            });
-            buf.cmdDispatch(
-                blurDim, {
-                             .sampledImages = { p.texIn, lvk::TextureHandle(texOpaqueDepth) },
-                             .storageImages = { p.texOut },
-            });
-          }
-        }
-
-        // combine SSAO
-        // clang-format off
-        buf.cmdBeginRendering(
-            { .color = {{ .loadOp = lvk::LoadOp_Load, .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f } }} },
-            { .color = { { .texture = texOpaqueColorWithSSAO } } },
-            { .sampledImages = { lvk::TextureHandle(texSSAO), lvk::TextureHandle(texOpaqueColor) } });
-        // clang-format on
-        buf.cmdBindRenderPipeline(pipelineCombineSSAO);
-        buf.cmdPushConstants(pcCombineSSAO);
-        buf.cmdBindDepthState({});
-        buf.cmdDraw(3);
-        buf.cmdEndRendering();
-      }
+      // Note: ambient occlusion is now ray-traced inside the opaque fragment shader (AO.sp) and
+      // already baked into texOpaqueColor - no separate SSAO compute/blur/combine passes here.
 
       // combine OIT
       const lvk::Framebuffer framebufferOffscreen = {
@@ -774,7 +819,7 @@ int main()
       buf.cmdBeginRendering(
           lvk::RenderPass{ .color = {{ .loadOp = lvk::LoadOp_Load, .storeOp = lvk::StoreOp_Store }} },
           framebufferOffscreen,
-          { .sampledImages = { lvk::TextureHandle(texOpaqueColor), lvk::TextureHandle(texOpaqueColorWithSSAO) },
+          { .sampledImages = { lvk::TextureHandle(texOpaqueColor) },
             .storageImages = { lvk::TextureHandle(texHeadsOIT) },
             .buffers  = { lvk::BufferHandle(bufferListsOIT) } });
 		// clang-format on
@@ -787,7 +832,7 @@ int main()
         uint32_t showHeatmap;
       } pcOIT = {
         .bufferTransparencyLists = ctx->gpuAddress(bufferListsOIT),
-        .texColor                = (ssaoEnable ? texOpaqueColorWithSSAO : texOpaqueColor).index(),
+        .texColor                = texOpaqueColor.index(),
         .texHeadsOIT             = texHeadsOIT.index(),
         .time                    = static_cast<float>(glfwGetTime()),
         .opacityBoost            = oitOpacityBoost,
@@ -923,6 +968,10 @@ int main()
         ImGui::Checkbox("Transparent meshes", &drawMeshesTransparent);
         ImGui::Checkbox("Bounding boxes", &drawBoxes);
         ImGui::Checkbox("Light frustum", &drawLightFrustum);
+        ImGui::Checkbox("Alpha-to-coverage (foliage)", &enableA2C);
+        ImGui::BeginDisabled(!enableA2C);
+        ImGui::SliderFloat("A2C thickness", &a2cThickness, 0.0f, 10.0f);
+        ImGui::EndDisabled();
         ImGui::Unindent(indentSize);
         ImGui::Separator();
         if (ImGui::CollapsingHeader("Frustum Culling")) {
@@ -957,22 +1006,28 @@ int main()
           ImGui::Unindent(indentSize);
           ImGui::Image(texShadowMap.index(), ImVec2(512, 512));
         }
-        if (ImGui::CollapsingHeader("SSAO")) {
+        if (ImGui::CollapsingHeader("Ray Traced Ambient Occlusion")) {
           ImGui::Indent(indentSize);
-          ImGui::Checkbox("Enable SSAO", &ssaoEnable);
-          ImGui::BeginDisabled(!ssaoEnable);
-          ImGui::Checkbox("Enable blur", &ssaoEnableBlur);
-          ImGui::BeginDisabled(!ssaoEnableBlur);
-          ImGui::SliderFloat("Blur depth threshold", &ssaoDepthThreshold, 0.0f, 50.0f);
-          ImGui::SliderInt("Blur num passes", &ssaoNumBlurPasses, 1, 5);
+          ImGui::Checkbox("Enable AO", &aoEnable);
+          ImGui::BeginDisabled(!aoEnable);
+          ImGui::SliderFloat("AO radius", &aoRadius, 0.1f, 8.0f);
+          ImGui::SliderFloat("AO power", &aoPower, 0.5f, 2.0f);
+          ImGui::Checkbox("Time-varying noise", &aoTimeVaryingNoise);
+          ImGui::Separator();
+          ImGui::Checkbox("Spatial hashing", &aoSpatialHash);
+          ImGui::Indent(indentSize);
+          ImGui::BeginDisabled(!aoSpatialHash);
+          ImGui::SliderFloat("Pixel size (sp)", &aoPixelSize, 1.0f, 10.0f);
+          ImGui::SliderFloat("Min cell size", &aoMinCellSize, 0.005f, 0.2f);
+          ImGui::SliderInt("Max samples/cell", &aoMaxSamples, 16, 250);
+          ImGui::Checkbox("Trilinear filtering", &aoFiltering);
+          if (ImGui::Button("Reset hash map"))
+            aoResetHash = true;
           ImGui::EndDisabled();
-          ImGui::SliderFloat("SSAO scale", &pcCombineSSAO.scale, 0.0f, 2.0f);
-          ImGui::SliderFloat("SSAO bias", &pcCombineSSAO.bias, 0.0f, 0.3f);
-          ImGui::SliderFloat("SSAO radius", &pcSSAO.radius, 0.001f, 0.02f);
-          ImGui::SliderFloat("SSAO attenuation scale", &pcSSAO.attScale, 0.5f, 1.5f);
-          ImGui::SliderFloat("SSAO distance scale", &pcSSAO.distScale, 0.0f, 2.0f);
-          if (ssaoEnable)
-            ImGui::Image(texSSAO.index(), ImVec2(windowWidth, windowWidth / aspectRatio));
+          ImGui::Unindent(indentSize);
+          ImGui::BeginDisabled(aoSpatialHash);
+          ImGui::SliderInt("Per-pixel samples", &aoSamples, 1, 32);
+          ImGui::EndDisabled();
           ImGui::EndDisabled();
           ImGui::Unindent(indentSize);
           ImGui::Separator();
@@ -1071,6 +1126,12 @@ int main()
       app.imgui_->endFrame(buf);
 
       buf.cmdEndRendering();
+
+      // clear the world-space AO cache on request (e.g. after changing cell-size parameters)
+      if (aoResetHash) {
+        buf.cmdFillBuffer(bufferAOHash, 0, lvk::LVK_WHOLE_SIZE, 0);
+        aoResetHash = false;
+      }
     }
     submitHandle[currentBufferId] = ctx->submit(buf, ctx->getCurrentSwapchainTexture());
 
