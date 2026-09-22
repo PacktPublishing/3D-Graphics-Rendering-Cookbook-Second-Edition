@@ -26,16 +26,16 @@ jobs:
             }
           - {
               name: "Ubuntu - Clang",
-              os: ubuntu-latest,
+              os: ubuntu-26.04,
               build_type: "Debug",
-              cc: "clang-16",
-              cxx: "clang++-16",
+              cc: "clang-21",
+              cxx: "clang++-21",
               generators: "Unix Makefiles",
             }
       runs-on: ${{ matrix.config.os }}
 
       steps:
-        - uses: actions/checkout@v5
+        - uses: actions/checkout@v6
           with:
             submodules: recursive
 
@@ -47,16 +47,13 @@ jobs:
 
         - if: startsWith(matrix.config.os, 'ubuntu')
           run: |
-            sudo sed -i 's/azure\.//' /etc/apt/sources.list
             sudo apt-get update
-            sudo apt-get install -y gcc-13 clang-16 xorg-dev libxinerama-dev libxcursor-dev libgles2-mesa-dev libegl1-mesa-dev libglfw3-dev libglew-dev libstdc++-12-dev extra-cmake-modules libxkbcommon-x11-dev wayland-protocols libtbb-dev
-            sudo apt remove cmake -y
-            sudo pip install cmake --upgrade
+            sudo apt-get install -y cmake gcc-15 clang-21 xorg-dev libxinerama-dev libxcursor-dev libgles2-mesa-dev libegl1-mesa-dev libglfw3-dev libglew-dev libstdc++-15-dev extra-cmake-modules libxkbcommon-x11-dev wayland-protocols libtbb-dev
 
         - name: Install Vulkan SDK
           uses: jakoch/install-vulkan-sdk-action@v1.5.5
           with:
-            vulkan_version: 1.4.309.0
+            vulkan_version: 1.4.350.0
             install_runtime: true
             cache: true
             stripdown: true
