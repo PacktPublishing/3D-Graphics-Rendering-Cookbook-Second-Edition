@@ -210,20 +210,20 @@ int main()
   });
 
   lvk::Holder<lvk::TextureHandle> texSSAO                = ctx->createTexture({
-                     .format     = ctx->getSwapchainFormat(),
+                     .format     = lvk::Format_RGBA_UN8,
                      .dimensions = ctx->getDimensions(ctx->getCurrentSwapchainTexture()),
                      .usage      = lvk::TextureUsageBits_Sampled | lvk::TextureUsageBits_Storage,
                      .debugName  = "texSSAO",
   });
   lvk::Holder<lvk::TextureHandle> texBlur[]              = {
     ctx->createTexture({
-                     .format     = ctx->getSwapchainFormat(),
+                     .format     = lvk::Format_RGBA_UN8,
                      .dimensions = ctx->getDimensions(ctx->getCurrentSwapchainTexture()),
                      .usage      = lvk::TextureUsageBits_Sampled | lvk::TextureUsageBits_Storage,
                      .debugName  = "texBlur0",
     }),
     ctx->createTexture({
-                     .format     = ctx->getSwapchainFormat(),
+                     .format     = lvk::Format_RGBA_UN8,
                      .dimensions = ctx->getDimensions(ctx->getCurrentSwapchainTexture()),
                      .usage      = lvk::TextureUsageBits_Sampled | lvk::TextureUsageBits_Storage,
                      .debugName  = "texBlur1",
